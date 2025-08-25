@@ -5,14 +5,18 @@ export default function Header() {
     <header className="header-home">
       {/* Logo */}
       <div className="logo">
-        La Lengua 😜    
+        The Language 😜    
       </div>
 
       {/* Navegación */}
       <nav className="nav">
         <a href="#" className="active">Home</a>
-        <a href="#">Info</a>
-        <a href="#">Contact</a>
+        <a href="#info">Info</a>
+        <a href="#contact">Contact</a>
+        <a href="#" className="login-btn">
+          <span className="btn-text">The Language</span>
+          <span className="btn-hover">Login</span>
+        </a>
       </nav>
     </header>
   );
