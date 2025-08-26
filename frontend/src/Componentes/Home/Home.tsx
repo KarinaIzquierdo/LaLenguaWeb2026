@@ -1,11 +1,28 @@
 import "./Home.css";
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import ScrollIndicator from "../ScrollIndicator/ScrollIndicator";
 import ScrollReveal from "../ScrollReveal/ScrollReveal";
-import CountrySelector from "../CountrySelector/CountrySelector";
+import { sendContactEmail, validateFormData } from "../../services/emailService.ts";
 
 export default function Home() {
   const containerRef = useRef(null);
+  const [showContent, setShowContent] = useState(false);
+  const [hideScrollIndicator, setHideScrollIndicator] = useState(false);
+  const [typewriterText1, setTypewriterText1] = useState('');
+  const [typewriterText2, setTypewriterText2] = useState('');
+  const [showCursor1, setShowCursor1] = useState(true);
+  const [showCursor2, setShowCursor2] = useState(false);
+  const [particles, setParticles] = useState<Array<{
+    id: number;
+    x: number;
+    y: number;
+    size: number;
+    speed: number;
+    opacity: number;
+  }>>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitMessage, setSubmitMessage] = useState('');
+  const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -19,44 +36,175 @@ export default function Home() {
     contactMethod: ''
   });
 
-  const handleCountryChange = (country: string) => {
-    setFormData(prev => ({ ...prev, country }));
+  // Efecto typewriter
+  useEffect(() => {
+    const text1 = '3D ART';
+    const text2 = 'TREND';
+    let index1 = 0;
+    let index2 = 0;
+
+    const typeFirstLine = () => {
+      if (index1 < text1.length) {
+        setTypewriterText1(text1.slice(0, index1 + 1));
+        index1++;
+        setTimeout(typeFirstLine, 150);
+      } else {
+        setTimeout(() => {
+          setShowCursor1(false);
+          setShowCursor2(true);
+          typeSecondLine();
+        }, 500);
+      }
+    };
+
+    const typeSecondLine = () => {
+      if (index2 < text2.length) {
+        setTypewriterText2(text2.slice(0, index2 + 1));
+        index2++;
+        setTimeout(typeSecondLine, 150);
+      } else {
+        setTimeout(() => setShowCursor2(false), 1000);
+      }
+    };
+
+    const startAnimation = setTimeout(typeFirstLine, 500);
+    return () => clearTimeout(startAnimation);
+  }, []);
+
+  // Generar partículas
+  useEffect(() => {
+    const generateParticles = () => {
+      const newParticles = [];
+      for (let i = 0; i < 20; i++) {
+        newParticles.push({
+          id: i,
+          x: Math.random() * 100,
+          y: Math.random() * 100,
+          size: Math.random() * 4 + 2,
+          speed: Math.random() * 2 + 1,
+          opacity: Math.random() * 0.5 + 0.2
+        });
+      }
+      setParticles(newParticles);
+    };
+
+    generateParticles();
+  }, []);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollPosition = window.scrollY;
+      const triggerPoint = window.innerHeight * 0.1;
+      
+      if (scrollPosition > triggerPoint && !showContent) {
+        setShowContent(true);
+        setHideScrollIndicator(true);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [showContent]);
+
+  const handleScrollIndicatorClick = () => {
+    setShowContent(true);
+    setHideScrollIndicator(true);
   };
 
-  const handleCityChange = (city: string) => {
-    setFormData(prev => ({ ...prev, city }));
-  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Form data:', formData);
-    // Aquí puedes agregar la lógica para enviar los datos
+    
+    // Validar datos del formulario
+    const validation = validateFormData(formData);
+    if (!validation.isValid) {
+      setSubmitMessage(validation.message || 'Error de validación');
+      setSubmitStatus('error');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setSubmitMessage('');
+    setSubmitStatus('idle');
+
+    try {
+      // Enviar email usando EmailJS
+      const result = await sendContactEmail(formData);
+      
+      if (result.success) {
+        setSubmitMessage('¡Gracias! Tu mensaje ha sido enviado correctamente. Te contactaremos pronto.');
+        setSubmitStatus('success');
+        // Limpiar formulario después del éxito
+        setFormData({
+          firstName: '',
+          lastName: '',
+          email: '',
+          phone: '',
+          country: '',
+          city: '',
+          level: '',
+          reason: '',
+          source: '',
+          contactMethod: ''
+        });
+      } else {
+        setSubmitMessage(result.message);
+        setSubmitStatus('error');
+      }
+    } catch (error) {
+      setSubmitMessage('Error inesperado. Por favor, intenta nuevamente.');
+      setSubmitStatus('error');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <div className="home-container" ref={containerRef}>
-      {/* Scroll Progress Indicator */}
-      <ScrollIndicator />
+      {/* Partículas de fondo */}
+      <div className="particles-container">
+        {particles.map((particle) => (
+          <div
+            key={particle.id}
+            className="particle"
+            style={{
+              left: `${particle.x}%`,
+              top: `${particle.y}%`,
+              width: `${particle.size}px`,
+              height: `${particle.size}px`,
+              opacity: particle.opacity,
+              animationDuration: `${particle.speed * 10}s`,
+              animationDelay: `${particle.id * 0.2}s`
+            }}
+          />
+        ))}
+      </div>
 
-      {/* Hero Section - Sin animación */}
+      {/* Hero Section */}
       <section className="hero-section">
         <div className="hero-container">
           <div className="hero-content">
             <h1 className="hero-title">
-              <span className="title-3d">3D ART</span>
-              <span className="title-trend">TREND</span>
+              <span className="title-3d typewriter">
+                {typewriterText1}
+                {showCursor1 && <span className="cursor">|</span>}
+              </span>
+              <span className="title-trend typewriter">
+                {typewriterText2}
+                {showCursor2 && <span className="cursor">|</span>}
+              </span>
             </h1>
-            <div className="workshop-info">
+            <div className="workshop-info staggered-animation" style={{animationDelay: '2.5s'}}>
               <h2>WORKSHOP STARTS AT</h2>
               <h2>5 PM EVERYDAY</h2>
               <h3 className="free-text">FREE FOR STUDENTS</h3>
             </div>
-            <p className="description">
+            <p className="description staggered-animation" style={{animationDelay: '3s'}}>
               This class will help students understand how powerful 3D is and
               how to take advantage of different techniques to translate 2D
               skills into full 3D scenes.
@@ -71,270 +219,310 @@ export default function Home() {
           </div>
         </div>
       </section>
+      
+      {/* Scroll Progress Indicator */}
+      <div 
+        className={`scroll-indicator-wrapper ${hideScrollIndicator ? 'fade-out' : 'fade-in'}`}
+        onClick={handleScrollIndicatorClick}
+      >
+        <ScrollIndicator />
+      </div>
 
       {/* Programs Section - Con animación scroll reveal */}
-      <ScrollReveal delay={0.1}>
+      <div className="content-sections">
         <section 
           id="info" 
           className="programs-section"
         >
-        <div className="programs-header">
-          <h2 className="section-subtitle">El futuro empieza aquí</h2>
-          <h1 className="programs-title">
-            CONOCE NUESTROS<br />
-            <span className="programs-highlight">PROGRAMAS POR NIVEL</span>
-          </h1>
-        </div>
-
-        <div className="programs-content">
-          <div className="programs-text">
-            <div className="program-info">
-              <h3 className="program-name">
-                PROGRAMA<br />
-                <span className="program-highlight">JAMESTOWN</span>
-                <br />
-                POR NIVEL 1
-              </h3>
-              <div className="program-number">1</div>
+          <ScrollReveal delay={0.1}>
+            <div className="programs-header">
+              <h2 className="section-subtitle staggered-animation" style={{animationDelay: '0.2s'}}>El futuro empieza aquí</h2>
+              <h1 className="programs-title staggered-animation" style={{animationDelay: '0.5s'}}>
+                CONOCE NUESTROS<br />
+                <span className="programs-highlight">PROGRAMAS POR NIVEL</span>
+              </h1>
             </div>
 
-            <p className="program-description">
-              Estos programas son ideales para quienes desean aprender inglés
-              desde su nivel actual. Ya sea que empiecen sin conocimientos
-              previos o tengan un nivel básico (A2) o intermedio (B1), están
-              diseñados según los estándares del Marco Común Europeo de
-              Referencia para las Lenguas (MCER).
-            </p>
+            <div className="programs-content">
+              <div className="programs-text">
+                <div className="program-info staggered-animation" style={{animationDelay: '0.8s'}}>
+                  <h3 className="program-name">
+                    PROGRAMA<br />
+                    <span className="program-highlight">JAMESTOWN</span>
+                    <br />
+                    POR NIVEL 1
+                  </h3>
+                  <div className="program-number">1</div>
+                </div>
 
-            <button className="info-button">Solicitar información</button>
-          </div>
+                <p className="program-description staggered-animation" style={{animationDelay: '1.1s'}}>
+                  Estos programas son ideales para quienes desean aprender inglés
+                  desde su nivel actual. Ya sea que empiecen sin conocimientos
+                  previos o tengan un nivel básico (A2) o intermedio (B1), están
+                  diseñados según los estándares del Marco Común Europeo de
+                  Referencia para las Lenguas (MCER).
+                </p>
 
-          <img
-            src="/Image/Relajado.jpg"
-            alt="Estudiante relajado"
-            className="student-img"
-          />
-        </div>
+                <button className="info-button shimmer-button staggered-animation" style={{animationDelay: '1.4s'}}>Solicitar información</button>
+              </div>
+
+              <img
+                src="/Image/Relajado.jpg"
+                alt="Estudiante relajado"
+                className="student-img staggered-animation"
+                style={{animationDelay: '1.7s'}}
+              />
+            </div>
+          </ScrollReveal>
         </section>
-      </ScrollReveal>
 
-      {/* Program Level 2 Section */}
-      <ScrollReveal delay={0.2}>
-      <section className="program-level2-section">
-        <div className="program-level2-content">
-          <img
-            src="/Image/Chicarompecabezas.jpg"
-            alt="Chica con rompecabezas"
-            className="puzzle-img"
-          />
+        {/* Program Level 2 Section */}
+        <section className="program-level2-section">
+          <ScrollReveal delay={0.2}>
+            <div className="program-level2-content">
+              <img
+                src="/Image/Chicarompecabezas.jpg"
+                alt="Chica con rompecabezas"
+                className="puzzle-img staggered-animation"
+                style={{animationDelay: '0.2s'}}
+              />
 
-          <div className="program-level2-text">
-            <div className="program-level2-info">
-              <h3 className="program-level2-name">
-                PROGRAMA<br />
-                <span className="program-highlight">JAMESTOWN</span>
-                <br />
-                POR NIVEL 2
-              </h3>
-              <div className="program-level2-number">2</div>
-            </div>
-
-            <p className="program-level2-description">
-              Nuestra opción por nivel 2 es perfecta para quienes quieren
-              aprender inglés desde su nivel actual, ya sea que no tengan
-              conocimientos previos o tengan un nivel básico (A2) o intermedio
-              (B1), y busquen mejorar sus habilidades.
-            </p>
-
-            <button className="info-button">Solicitar información</button>
-          </div>
-        </div>
-      </section>
-      </ScrollReveal>
-
-      {/* Program Level 3 Section */}
-      <ScrollReveal delay={0.3}>
-      <section className="program-level3-section">
-        <div className="program-level3-content">
-          <div className="program-level3-text">
-            <div className="program-level3-info">
-              <h3 className="program-level3-name">
-                PROGRAMA<br />
-                <span className="program-highlight">JAMESTOWN</span>
-                <br />
-                POR NIVEL 3
-              </h3>
-              <div className="program-level3-number">3</div>
-            </div>
-
-            <p className="program-level3-description">
-              Estos programas son ideales para quienes quieren aprender inglés
-              desde cero y avanzar de forma continua. Nuestra metodología se
-              centra en el uso del idioma en situaciones reales, permitiendo a
-              los estudiantes practicar y aprender habilidades útiles para su
-              vida diaria, trabajo y estudios.
-            </p>
-
-            <button className="info-button">Solicitar información</button>
-          </div>
-
-          <img
-            src="/Image/Exito.jpg"
-            alt="Imagen de éxito"
-            className="success-img"
-          />
-        </div>
-      </section>
-      </ScrollReveal>
-
-      {/* Contact Form Section */}
-      <ScrollReveal delay={0.4}>
-      <section 
-        id="contact" 
-        className="contact-form-section"
-      >
-        <div className="contact-form-container">
-          <h1 className="contact-title">
-            ¿QUIERES
-            <br />
-            <span className="contact-highlight">
-              TRANSFORMAR TU
-              <br />
-              VIDA?
-            </span>
-          </h1>
-
-          <div className="form-card">
-            <h2 className="form-title">Solicita información</h2>
-            <p className="form-subtitle">¡Déjanos tus datos!</p>
-
-            <form className="contact-form" onSubmit={handleSubmit}>
-              <div className="form-row names-row">
-                <div className="form-group">
-                  <input
-                    type="text"
-                    name="firstName"
-                    placeholder="Nombres*"
-                    className="form-input"
-                    value={formData.firstName}
-                    onChange={handleInputChange}
-                    required
-                  />
+              <div className="program-level2-text">
+                <div className="program-level2-info staggered-animation" style={{animationDelay: '0.5s'}}>
+                  <h3 className="program-level2-name">
+                    PROGRAMA<br />
+                    <span className="program-highlight">JAMESTOWN</span>
+                    <br />
+                    POR NIVEL 2
+                  </h3>
+                  <div className="program-level2-number">2</div>
                 </div>
-                <div className="form-group">
-                  <input
-                    type="text"
-                    name="lastName"
-                    placeholder="Apellidos*"
-                    className="form-input"
-                    value={formData.lastName}
-                    onChange={handleInputChange}
-                    required
-                  />
+
+                <p className="program-level2-description staggered-animation" style={{animationDelay: '0.8s'}}>
+                  Nuestra opción por nivel 2 es perfecta para quienes quieren
+                  aprender inglés desde su nivel actual, ya sea que no tengan
+                  conocimientos previos o tengan un nivel básico (A2) o intermedio
+                  (B1), y busquen mejorar sus habilidades.
+                </p>
+
+                <button className="info-button shimmer-button staggered-animation" style={{animationDelay: '1.1s'}}>Solicitar información</button>
+              </div>
+            </div>
+          </ScrollReveal>
+        </section>
+
+        {/* Program Level 3 Section */}
+        <section className="program-level3-section">
+          <ScrollReveal delay={0.3}>
+            <div className="program-level3-content">
+              <div className="program-level3-text">
+                <div className="program-level3-info staggered-animation" style={{animationDelay: '0.2s'}}>
+                  <h3 className="program-level3-name">
+                    PROGRAMA<br />
+                    <span className="program-highlight">JAMESTOWN</span>
+                    <br />
+                    POR NIVEL 3
+                  </h3>
+                  <div className="program-level3-number">3</div>
                 </div>
+
+                <p className="program-level3-description staggered-animation" style={{animationDelay: '0.5s'}}>
+                  Estos programas son ideales para quienes quieren aprender inglés
+                  desde cero y avanzar de forma continua. Nuestra metodología se
+                  centra en el uso del idioma en situaciones reales, permitiendo a
+                  los estudiantes practicar y aprender habilidades útiles para su
+                  vida diaria, trabajo y estudios.
+                </p>
+
+                <button className="info-button shimmer-button staggered-animation" style={{animationDelay: '0.8s'}}>Solicitar información</button>
               </div>
 
-              <div className="form-row">
-                <div className="form-group phone-group">
-                  <div className="phone-input">
-                    <select className="country-code">
-                      <option value="+57">🇨🇴 +57</option>
-                    </select>
-                    <input
-                      type="tel"
-                      name="phone"
-                      placeholder="321 1234567"
-                      className="form-input phone-number"
-                      value={formData.phone}
-                      onChange={handleInputChange}
-                    />
+              <img
+                src="/Image/Exito.jpg"
+                alt="Imagen de éxito"
+                className="success-img staggered-animation"
+                style={{animationDelay: '1.1s'}}
+              />
+            </div>
+          </ScrollReveal>
+        </section>
+
+        {/* Contact Form Section */}
+        <section 
+          id="contact" 
+          className="contact-form-section"
+        >
+          <ScrollReveal delay={0.4}>
+            <div className="contact-form-container">
+              <h1 className="contact-title staggered-animation" style={{animationDelay: '0.2s'}}>
+                ¿QUIERES
+                <br />
+                <span className="contact-highlight">
+                  TRANSFORMAR TU
+                  <br />
+                  VIDA?
+                </span>
+              </h1>
+
+              <div className="form-card staggered-animation" style={{animationDelay: '0.5s'}}>
+                <h2 className="form-title">Solicita información</h2>
+                <p className="form-subtitle">¡Déjanos tus datos!</p>
+
+                <form className="contact-form" onSubmit={handleSubmit}>
+                  <div className="form-row names-row">
+                    <div className="form-group">
+                      <input
+                        type="text"
+                        name="firstName"
+                        placeholder="Nombres*"
+                        className="form-input"
+                        value={formData.firstName}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </div>
+                    <div className="form-group">
+                      <input
+                        type="text"
+                        name="lastName"
+                        placeholder="Apellidos*"
+                        className="form-input"
+                        value={formData.lastName}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </div>
                   </div>
-                </div>
-                <div className="form-group">
-                  <input
-                    type="email"
-                    name="email"
-                    placeholder="Ingresa tu email*"
-                    className="form-input"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-              </div>
 
-              <div className="form-row">
-                <div className="form-group">
-                  <select 
-                    name="level"
-                    className="form-select"
-                    value={formData.level}
-                    onChange={handleInputChange}
-                  >
-                    <option value="">Elige el programa que más se adapte a ti</option>
-                    <option value="nivel1">Programa Jamestown Nivel 1</option>
-                    <option value="nivel2">Programa Jamestown Nivel 2</option>
-                    <option value="nivel3">Programa Jamestown Nivel 3</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <select 
-                    name="reason"
-                    className="form-select"
-                    value={formData.reason}
-                    onChange={handleInputChange}
-                  >
-                    <option value="">Quiero aprender inglés por tema de:</option>
-                    <option value="trabajo">Trabajo</option>
-                    <option value="estudios">Estudios</option>
-                    <option value="viajes">Viajes</option>
-                    <option value="desarrollo">Desarrollo personal</option>
-                  </select>
-                </div>
-              </div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <input
+                        type="tel"
+                        name="phone"
+                        placeholder="+57 321 1234567"
+                        className="form-input"
+                        value={formData.phone}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <input
+                        type="email"
+                        name="email"
+                        placeholder="Ingresa tu email*"
+                        className="form-input"
+                        value={formData.email}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </div>
+                  </div>
 
-              <div className="form-row">
-                <div className="form-group">
-                  <select 
-                    name="source"
-                    className="form-select"
-                    value={formData.source}
-                    onChange={handleInputChange}
-                  >
-                    <option value="">¿Por cuál medio te enteraste de nosotros?</option>
-                    <option value="redes">Redes sociales</option>
-                    <option value="recomendacion">Recomendación</option>
-                    <option value="google">Búsqueda en Google</option>
-                    <option value="publicidad">Publicidad</option>
-                  </select>
-                </div>
-                <CountrySelector 
-                  onCountryChange={handleCountryChange}
-                  onCityChange={handleCityChange}
-                />
-                <div className="form-group">
-                  <select 
-                    name="contactMethod"
-                    className="form-select"
-                    value={formData.contactMethod}
-                    onChange={handleInputChange}
-                  >
-                    <option value="">¿Te contactamos por?</option>
-                    <option value="whatsapp">WhatsApp</option>
-                    <option value="llamada">Llamada</option>
-                    <option value="email">Email</option>
-                  </select>
-                </div>
-              </div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <select 
+                        name="level"
+                        className="form-select"
+                        value={formData.level}
+                        onChange={handleInputChange}
+                      >
+                        <option value="">Elige el programa que más se adapte a ti</option>
+                        <option value="nivel1">Programa Jamestown Nivel 1</option>
+                        <option value="nivel2">Programa Jamestown Nivel 2</option>
+                        <option value="nivel3">Programa Jamestown Nivel 3</option>
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <select 
+                        name="reason"
+                        className="form-select"
+                        value={formData.reason}
+                        onChange={handleInputChange}
+                      >
+                        <option value="">Quiero aprender inglés por tema de:</option>
+                        <option value="trabajo">Trabajo</option>
+                        <option value="estudios">Estudios</option>
+                        <option value="viajes">Viajes</option>
+                        <option value="desarrollo">Desarrollo personal</option>
+                      </select>
+                    </div>
+                  </div>
 
-              <button type="submit" className="submit-button">
-                ¡Empezar hoy!
-              </button>
-            </form>
-          </div>
-        </div>
-      </section>
-      </ScrollReveal>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <select 
+                        name="source"
+                        className="form-select"
+                        value={formData.source}
+                        onChange={handleInputChange}
+                      >
+                        <option value="">¿Por cuál medio te enteraste de nosotros?</option>
+                        <option value="redes">Redes sociales</option>
+                        <option value="recomendacion">Recomendación</option>
+                        <option value="google">Búsqueda en Google</option>
+                        <option value="publicidad">Publicidad</option>
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <select 
+                        name="contactMethod"
+                        className="form-select"
+                        value={formData.contactMethod}
+                        onChange={handleInputChange}
+                      >
+                        <option value="">¿Te contactamos por?</option>
+                        <option value="whatsapp">WhatsApp</option>
+                        <option value="llamada">Llamada</option>
+                        <option value="email">Email</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="form-row country-city-row">
+                    <div className="form-group">
+                      <input
+                        type="text"
+                        name="country"
+                        placeholder="País*"
+                        className="form-input"
+                        value={formData.country}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </div>
+                    <div className="form-group">
+                      <input
+                        type="text"
+                        name="city"
+                        placeholder="Ciudad*"
+                        className="form-input"
+                        value={formData.city}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  {/* Mensaje de estado */}
+                  {submitMessage && (
+                    <div className={`submit-message ${submitStatus}`}>
+                      {submitMessage}
+                    </div>
+                  )}
+
+                  <button 
+                    type="submit" 
+                    className="submit-button shimmer-button"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? 'Enviando...' : '¡Empezar hoy!'}
+                  </button>
+                </form>
+              </div>
+            </div>
+          </ScrollReveal>
+        </section>
+      </div>
     </div>
   );
 }

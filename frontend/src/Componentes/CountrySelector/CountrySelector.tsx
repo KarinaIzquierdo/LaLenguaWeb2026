@@ -53,45 +53,23 @@ export default function CountrySelector({ onCountryChange, onCityChange }: Count
       const fetchCities = async () => {
         setLoadingCities(true);
         try {
-          // Intentar con REST Countries + Geonames API
-          const geonamesResponse = await fetch(
-            `http://api.geonames.org/searchJSON?country=${selectedCountry}&featureClass=P&maxRows=100&username=demo`
-          );
-          
-          if (geonamesResponse.ok) {
-            const geonamesData = await geonamesResponse.json();
-            if (geonamesData.geonames && geonamesData.geonames.length > 0) {
-              const cityList = geonamesData.geonames.map((city: any) => ({
-                name: city.name,
-                country: selectedCountry
-              }));
-              setCities(cityList);
-              setLoadingCities(false);
-              return;
-            }
-          }
-
-          // Si Geonames falla, intentar con REST Countries
+          // Primero intentar obtener la capital del país desde REST Countries
           const restCountriesResponse = await fetch(
             `https://restcountries.com/v3.1/alpha/${selectedCountry}`
           );
           
+          let capitalCity = null;
           if (restCountriesResponse.ok) {
             const countryData = await restCountriesResponse.json();
-            if (countryData[0]?.capital) {
-              // Usar fallback extendido que incluye la capital
-              const fallbackCities = getFallbackCities(selectedCountry);
-              setCities(fallbackCities);
-            } else {
-              setCities(getFallbackCities(selectedCountry));
-            }
-          } else {
-            // Usar ciudades de fallback completas
-            setCities(getFallbackCities(selectedCountry));
+            capitalCity = countryData[0]?.capital?.[0];
           }
+
+          // Usar nuestro sistema de fallback robusto que incluye la capital
+          const fallbackCities = getFallbackCities(selectedCountry, capitalCity);
+          setCities(fallbackCities);
         } catch (error) {
           console.error('Error fetching cities:', error);
-          // Usar ciudades de fallback completas
+          // Usar ciudades de fallback sin capital
           setCities(getFallbackCities(selectedCountry));
         } finally {
           setLoadingCities(false);
@@ -105,13 +83,14 @@ export default function CountrySelector({ onCountryChange, onCityChange }: Count
     }
   }, [selectedCountry]);
 
-  const getFallbackCities = (countryCode: string): City[] => {
+  const getFallbackCities = (countryCode: string, capitalCity?: string): City[] => {
     const fallbackCities: { [key: string]: string[] } = {
       'US': ['New York', 'Los Angeles', 'Chicago', 'Houston', 'Phoenix', 'Philadelphia', 'San Antonio', 'San Diego', 'Dallas', 'San Jose', 'Austin', 'Jacksonville', 'Fort Worth', 'Columbus', 'Charlotte', 'San Francisco', 'Indianapolis', 'Seattle', 'Denver', 'Washington DC', 'Boston', 'El Paso', 'Nashville', 'Detroit', 'Oklahoma City', 'Portland', 'Las Vegas', 'Memphis', 'Louisville', 'Baltimore', 'Milwaukee', 'Albuquerque', 'Tucson', 'Fresno', 'Sacramento', 'Kansas City', 'Mesa', 'Atlanta', 'Omaha', 'Colorado Springs', 'Raleigh', 'Miami', 'Virginia Beach', 'Oakland', 'Minneapolis', 'Tulsa', 'Arlington', 'Tampa', 'New Orleans'],
       'MX': ['Ciudad de México', 'Guadalajara', 'Monterrey', 'Puebla', 'Tijuana', 'León', 'Juárez', 'Torreón', 'Querétaro', 'San Luis Potosí', 'Mérida', 'Mexicali', 'Aguascalientes', 'Cuernavaca', 'Saltillo', 'Hermosillo', 'Culiacán', 'Durango', 'Toluca', 'Tuxtla Gutiérrez', 'Reynosa', 'Chimalhuacán', 'Tlalnepantla', 'Morelia', 'Veracruz', 'Villahermosa', 'Irapuato', 'Gómez Palacio', 'Xalapa', 'Chihuahua', 'Mazatlán', 'Nuevo Laredo', 'Acapulco', 'Tlaquepaque', 'Cancún', 'Pachuca', 'Oaxaca'],
       'CA': ['Toronto', 'Montreal', 'Vancouver', 'Calgary', 'Edmonton', 'Ottawa', 'Winnipeg', 'Quebec City', 'Hamilton', 'Kitchener', 'London', 'Victoria', 'Halifax', 'Oshawa', 'Windsor', 'Saskatoon', 'Regina', 'Sherbrooke', 'St. Johns', 'Barrie', 'Kelowna', 'Abbotsford', 'Greater Sudbury', 'Kingston', 'Saguenay', 'Trois-Rivières', 'Guelph', 'Cambridge', 'Whitby', 'Coquitlam', 'Saanich', 'Burlington', 'Richmond', 'Oakville', 'Burnaby', 'Red Deer', 'Brantford', 'Lethbridge', 'Kamloops', 'Nanaimo'],
       'ES': ['Madrid', 'Barcelona', 'Valencia', 'Sevilla', 'Zaragoza', 'Málaga', 'Murcia', 'Palma', 'Las Palmas', 'Bilbao', 'Alicante', 'Córdoba', 'Valladolid', 'Vigo', 'Gijón', 'Hospitalet', 'Vitoria', 'A Coruña', 'Elche', 'Granada', 'Oviedo', 'Badalona', 'Cartagena', 'Terrassa', 'Jerez', 'Sabadell', 'Móstoles', 'Santa Cruz', 'Pamplona', 'Almería', 'Alcalá de Henares', 'Fuenlabrada', 'Leganés', 'Donostia', 'Burgos', 'Santander', 'Castellón', 'Alcorcón', 'Albacete', 'Getafe'],
       'CO': ['Bogotá', 'Medellín', 'Cali', 'Barranquilla', 'Cartagena', 'Cúcuta', 'Bucaramanga', 'Pereira', 'Santa Marta', 'Ibagué', 'Pasto', 'Manizales', 'Neiva', 'Soledad', 'Villavicencio', 'Bello', 'Valledupar', 'Montería', 'Itagüí', 'Palmira', 'Buenaventura', 'Floridablanca', 'Sincelejo', 'Popayán', 'Barrancabermeja', 'Dos Quebradas', 'Tulúa', 'Envigado', 'Cartago', 'Girardot', 'Buga', 'Tunja', 'Florencia', 'Malambo', 'Sogamoso', 'Facatativá', 'Riohacha', 'Duitama', 'Fusagasugá', 'Zipaquirá'],
+      'CU': ['La Habana', 'Santiago de Cuba', 'Camagüey', 'Holguín', 'Guantánamo', 'Santa Clara', 'Las Tunas', 'Bayamo', 'Cienfuegos', 'Pinar del Río', 'Matanzas', 'Ciego de Ávila', 'Sancti Spíritus', 'Manzanillo', 'Cardenas', 'Palma Soriano', 'Contramaestre', 'Morón', 'Florida', 'Placetas', 'Trinidad', 'Nueva Gerona', 'Artemisa', 'San José de las Lajas', 'Güines'],
       'AR': ['Buenos Aires', 'Córdoba', 'Rosario', 'Mendoza', 'Tucumán', 'La Plata', 'Mar del Plata', 'Salta', 'Santa Fe', 'San Juan', 'Resistencia', 'Santiago del Estero', 'Corrientes', 'Posadas', 'Neuquén', 'Bahía Blanca', 'Paraná', 'Formosa', 'San Luis', 'La Rioja', 'Catamarca', 'Río Cuarto', 'Comodoro Rivadavia', 'Concordia', 'San Nicolás', 'San Rafael', 'Tandil', 'Venado Tuerto', 'Junín', 'Olavarría', 'Azul', 'Pergamino', 'San Carlos de Bariloche', 'Zárate', 'Campana', 'Río Gallegos', 'Ushuaia', 'Puerto Madryn', 'Trelew', 'Rawson'],
       'BR': ['São Paulo', 'Rio de Janeiro', 'Brasília', 'Salvador', 'Fortaleza', 'Belo Horizonte', 'Manaus', 'Curitiba', 'Recife', 'Goiânia', 'Belém', 'Porto Alegre', 'Guarulhos', 'Campinas', 'São Luís', 'São Gonçalo', 'Maceió', 'Duque de Caxias', 'Nova Iguaçu', 'Teresina', 'Natal', 'Osasco', 'Campo Grande', 'Santo André', 'João Pessoa', 'Jaboatão dos Guararapes', 'Contagem', 'São Bernardo do Campo', 'Uberlândia', 'Sorocaba', 'Aracaju', 'Feira de Santana', 'Cuiabá', 'Joinville', 'Aparecida de Goiânia', 'Londrina', 'Ananindeua', 'Porto Velho', 'Serra', 'Niterói'],
       'PE': ['Lima', 'Arequipa', 'Trujillo', 'Chiclayo', 'Piura', 'Iquitos', 'Cusco', 'Chimbote', 'Huancayo', 'Tacna', 'Juliaca', 'Ica', 'Sullana', 'Ayacucho', 'Chincha Alta', 'Huánuco', 'Tarapoto', 'Pucallpa', 'Cajamarca', 'Puno', 'Tumbes', 'Talara', 'Huaraz', 'Jaén', 'Ilo', 'Moquegua', 'Abancay', 'Cerro de Pasco', 'Tingo María', 'Huacho'],
@@ -127,20 +106,35 @@ export default function CountrySelector({ onCountryChange, onCityChange }: Count
       'JP': ['Tokyo', 'Yokohama', 'Osaka', 'Nagoya', 'Sapporo', 'Fukuoka', 'Kobe', 'Kawasaki', 'Kyoto', 'Saitama', 'Hiroshima', 'Sendai', 'Kitakyushu', 'Chiba', 'Sakai', 'Niigata', 'Hamamatsu', 'Okayama', 'Sagamihara', 'Shizuoka', 'Kumamoto', 'Kagoshima', 'Matsuyama', 'Kanazawa', 'Utsunomiya', 'Matsudo', 'Kawaguchi', 'Ichikawa', 'Fukuyama', 'Iwaki'],
       'CN': ['Beijing', 'Shanghai', 'Guangzhou', 'Shenzhen', 'Tianjin', 'Wuhan', 'Dongguan', 'Chengdu', 'Nanjing', 'Chongqing', 'Shenyang', 'Hangzhou', 'Xian', 'Harbin', 'Suzhou', 'Qingdao', 'Dalian', 'Zhengzhou', 'Shantou', 'Jinan', 'Changchun', 'Kunming', 'Changsha', 'Taiyuan', 'Xiamen', 'Hefei', 'Shijiazhuang', 'Urumqi', 'Fuzhou', 'Wuxi'],
       'IN': ['Mumbai', 'Delhi', 'Bangalore', 'Hyderabad', 'Ahmedabad', 'Chennai', 'Kolkata', 'Surat', 'Pune', 'Jaipur', 'Lucknow', 'Kanpur', 'Nagpur', 'Indore', 'Thane', 'Bhopal', 'Visakhapatnam', 'Pimpri', 'Patna', 'Vadodara', 'Ghaziabad', 'Ludhiana', 'Agra', 'Nashik', 'Faridabad', 'Meerut', 'Rajkot', 'Kalyan', 'Vasai', 'Varanasi'],
-      'AU': ['Sydney', 'Melbourne', 'Brisbane', 'Perth', 'Adelaide', 'Gold Coast', 'Newcastle', 'Canberra', 'Sunshine Coast', 'Wollongong', 'Hobart', 'Geelong', 'Townsville', 'Cairns', 'Darwin', 'Toowoomba', 'Ballarat', 'Bendigo', 'Albury', 'Launceston', 'Mackay', 'Rockhampton', 'Bunbury', 'Bundaberg', 'Coffs Harbour', 'Wagga Wagga', 'Hervey Bay', 'Mildura', 'Shepparton', 'Port Macquarie']
+      'AU': ['Sydney', 'Melbourne', 'Brisbane', 'Perth', 'Adelaide', 'Gold Coast', 'Newcastle', 'Canberra', 'Sunshine Coast', 'Wollongong', 'Hobart', 'Geelong', 'Townsville', 'Cairns', 'Darwin', 'Toowoomba', 'Ballarat', 'Bendigo', 'Albury', 'Launceston', 'Mackay', 'Rockhampton', 'Bunbury', 'Bundaberg', 'Coffs Harbour', 'Wagga Wagga', 'Hervey Bay', 'Mildura', 'Shepparton', 'Port Macquarie'],
+      'DO': ['Santo Domingo', 'Santiago', 'San Pedro de Macorís', 'La Romana', 'San Francisco de Macorís', 'Puerto Plata', 'San Cristóbal', 'Higüey', 'Concepción de La Vega', 'Azua', 'Baní', 'Moca', 'Bonao', 'San Juan', 'Barahona', 'Cotuí', 'Nagua', 'Monte Cristi', 'Hato Alcántara', 'Esperanza'],
+      'PA': ['Ciudad de Panamá', 'San Miguelito', 'Tocumen', 'David', 'Arraiján', 'Colón', 'Las Cumbres', 'Pacora', 'Chitré', 'Santiago', 'Vista Alegre', 'La Chorrera', 'Pedregal', 'Chepo', 'Chilibre', 'Aguadulce', 'Penonomé', 'Las Tablas', 'Capira', 'Bugaba'],
+      'CR': ['San José', 'Cartago', 'Puntarenas', 'Alajuela', 'Heredia', 'Limón', 'Desamparados', 'San Francisco', 'Goicoechea', 'Guadalupe', 'La Unión', 'Curridabat', 'San Isidro', 'Colón', 'Aserrí', 'Puriscal', 'Grecia', 'Santa Ana', 'Orotina', 'Atenas'],
+      'GT': ['Ciudad de Guatemala', 'Mixco', 'Villa Nueva', 'Petapa', 'San Juan Sacatepéquez', 'Quetzaltenango', 'Villa Canales', 'Escuintla', 'Chinautla', 'Chimaltenango', 'Huehuetenango', 'Amatitlán', 'Totonicapán', 'Santa Catarina Pinula', 'Santa Lucía Cotzumalguapa', 'Puerto Barrios', 'San Francisco El Alto', 'Cobán', 'San Pedro Ayampuc', 'Jalapa'],
+      'HN': ['Tegucigalpa', 'San Pedro Sula', 'Choloma', 'La Ceiba', 'El Progreso', 'Choluteca', 'Comayagua', 'Puerto Cortés', 'La Lima', 'Danlí', 'Siguatepeque', 'Juticalpa', 'Catacamas', 'Tocoa', 'Tela', 'Santa Rosa de Copán', 'Olanchito', 'Potrerillos', 'Santa Bárbara', 'Villanueva'],
+      'NI': ['Managua', 'León', 'Masaya', 'Matagalpa', 'Chinandega', 'Granada', 'Estelí', 'Tipitapa', 'Jinotepe', 'Juigalpa', 'Rivas', 'Nueva Guinea', 'Boaco', 'Ocotal', 'Somoto', 'San Carlos', 'Carazo', 'Chichigalpa', 'Nagarote', 'El Viejo'],
+      'SV': ['San Salvador', 'Soyapango', 'Santa Ana', 'San Miguel', 'Mejicanos', 'Santa Tecla', 'Apopa', 'Delgado', 'Ilopango', 'Cojutepeque', 'Ahuachapán', 'Usulután', 'Zacatecoluca', 'Chalchuapa', 'Quezaltepeque', 'Sensuntepeque', 'San Marcos', 'San Rafael Oriente', 'Antiguo Cuscatlán', 'La Unión']
     };
 
     const cityNames = fallbackCities[countryCode];
     if (!cityNames) {
-      // Si no hay ciudades específicas para el país, usar algunas genéricas
-      return [
-        { name: 'Capital', country: countryCode },
-        { name: 'Ciudad Principal', country: countryCode },
-        { name: 'Segunda Ciudad', country: countryCode },
-        { name: 'Tercera Ciudad', country: countryCode }
+      // Si no hay ciudades específicas para el país, usar la capital si está disponible
+      const genericCities = [
+        capitalCity || 'Capital',
+        'Ciudad Principal',
+        'Segunda Ciudad',
+        'Tercera Ciudad'
       ];
+      return genericCities.map(name => ({ name, country: countryCode }));
     }
-    return cityNames.map(name => ({ name, country: countryCode }));
+    
+    // Si tenemos ciudades específicas, agregar la capital al inicio si no está ya incluida
+    let cities = [...cityNames];
+    if (capitalCity && !cities.includes(capitalCity)) {
+      cities = [capitalCity, ...cities];
+    }
+    
+    return cities.map(name => ({ name, country: countryCode }));
   };
 
   const handleCountryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {

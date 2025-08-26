@@ -46,6 +46,44 @@ html {
   }
 }
 
+@keyframes particleFloat {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-20px) rotate(180deg);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+@keyframes cursorBlink {
+  0%, 50% {
+    opacity: 1;
+  }
+  51%, 100% {
+    opacity: 0;
+  }
+}
+
+@keyframes staggeredFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* Scroll offset for fixed header */
 #contact {
   scroll-margin-top: 100px;
@@ -66,6 +104,40 @@ html {
   margin: 0;
   padding-left: 0;
   padding-right: 0;
+}
+
+/* Partículas de fondo */
+.particles-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.particle {
+  position: absolute;
+  background: linear-gradient(45deg, #4A90E2, #7BB3F0);
+  border-radius: 50%;
+  animation: particleFloat linear infinite;
+  opacity: 0.3;
+}
+
+.particle:nth-child(odd) {
+  background: linear-gradient(45deg, #FF6B6B, #FF8E8E);
+}
+
+.particle:nth-child(3n) {
+  background: linear-gradient(45deg, #4ECDC4, #6EDDD6);
+  border-radius: 20%;
+}
+
+.particle:nth-child(4n) {
+  background: linear-gradient(45deg, #FFE66D, #FFF176);
+  border-radius: 0;
+  transform: rotate(45deg);
 }
 
 /* Hero Section */
@@ -94,6 +166,33 @@ html {
   max-width: 500px;
   animation: fadeInLeft 1s ease-out 0.3s both;
   z-index: 10;
+}
+
+/* Typewriter Effect */
+.typewriter {
+  display: block;
+  overflow: hidden;
+}
+
+.cursor {
+  animation: cursorBlink 1s infinite;
+  font-weight: normal;
+  color: #4A90E2;
+}
+
+/* Staggered Animation */
+.staggered-animation {
+  opacity: 0;
+  animation: staggeredFadeIn 0.8s ease-out forwards;
+}
+
+/* Staggered Animation específica para imágenes */
+.student-img.staggered-animation,
+.puzzle-img.staggered-animation,
+.success-img.staggered-animation {
+  opacity: 0;
+  animation: staggeredFadeIn 0.8s ease-out forwards, float3d 4s ease-in-out infinite;
+  animation-delay: inherit, 2s;
 }
 
 .hero-title {
@@ -242,13 +341,24 @@ html {
 /* Programs Section */
 .programs-section {
   padding: 6rem 2rem;
-  background: rgba(255, 255, 255, 0.9);
+  background: linear-gradient(180deg, rgba(245, 247, 250, 0.8) 0%, rgba(255, 255, 255, 0.95) 50%, rgba(255, 255, 255, 1) 100%);
   backdrop-filter: blur(10px);
-  animation: fadeInUp 1s ease-out 0.8s both;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  position: relative;
+}
+
+.programs-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100px;
+  background: linear-gradient(180deg, rgba(245, 247, 250, 1) 0%, rgba(245, 247, 250, 0) 100%);
+  pointer-events: none;
 }
 
 .programs-header {
@@ -363,6 +473,38 @@ html {
   transform: translateY(-2px);
 }
 
+/* Shimmer Effect */
+.shimmer-button {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(
+    90deg,
+    #333 0%,
+    #333 40%,
+    #555 50%,
+    #333 60%,
+    #333 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 3s ease-in-out infinite;
+}
+
+.shimmer-button:hover {
+  animation-duration: 1s;
+}
+
+.submit-button.shimmer-button {
+  background: linear-gradient(
+    90deg,
+    #333 0%,
+    #333 40%,
+    #666 50%,
+    #333 60%,
+    #333 100%
+  );
+  background-size: 200% 100%;
+}
+
 .programs-image {
   flex: 1;
   display: flex;
@@ -442,10 +584,22 @@ html {
 /* Program Level 2 Section */
 .program-level2-section {
   padding: 6rem 3rem;
-  background: linear-gradient(135deg, #e8d5ff 0%, #c3a6ff 100%);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 1) 0%, rgba(248, 245, 255, 0.8) 50%, rgba(240, 235, 255, 0.9) 100%);
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+}
+
+.program-level2-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 80px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0) 100%);
+  pointer-events: none;
 }
 
 .program-level2-content {
@@ -561,13 +715,23 @@ html {
 
 /* Program Level 3 Section */
 .program-level3-section {
-  padding: 4rem 2rem;
-  max-width: 1200px;
-  margin: 0 auto;
+  padding: 6rem 2rem;
+  background: linear-gradient(180deg, rgba(240, 235, 255, 0.9) 0%, rgba(250, 248, 255, 0.8) 50%, rgba(255, 255, 255, 1) 100%);
   display: flex;
   align-items: center;
-  font-size: 4rem;
   justify-content: center;
+  position: relative;
+}
+
+.program-level3-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 80px;
+  background: linear-gradient(180deg, rgba(240, 235, 255, 0.9) 0%, rgba(240, 235, 255, 0) 100%);
+  pointer-events: none;
 }
 
 .program-level3-content {
@@ -693,14 +857,26 @@ html {
 
 /* Contact Form Section */
 .contact-form-section {
-  padding: 4rem 2rem;
-  background: #4a5568;
-  color: white;
+  padding: 6rem 2rem;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 1) 0%, rgba(245, 247, 250, 0.9) 30%, rgba(230, 235, 245, 1) 100%);
+  color: #333;
   text-align: center;
   display: flex;
   align-items: center;
   justify-content: center;
   min-height: 100vh;
+  position: relative;
+}
+
+.contact-form-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 120px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0) 100%);
+  pointer-events: none;
 }
 
 .contact-form-container {
@@ -715,7 +891,7 @@ html {
 .contact-title {
   font-size: 4rem;
   font-weight: bold;
-  color: white;
+  color: #333;
   text-align: center;
   line-height: 1.1;
   margin-bottom: 2rem;
@@ -782,12 +958,90 @@ html {
 
 .form-row {
   display: flex;
-  gap: 1rem;
+  gap: 2.5rem;
   flex-wrap: wrap;
 }
 
 .form-row.names-row {
   gap: 3rem;
+}
+
+.form-row.country-city-row {
+  gap: 3rem;
+  justify-content: space-between;
+  margin: 1.5rem 0;
+}
+
+.form-row.country-city-row .form-group {
+  flex: 1;
+}
+
+/* Content sections - siempre visibles */
+.content-sections {
+  opacity: 1;
+  transform: translateY(0);
+  visibility: visible;
+  height: auto;
+}
+
+/* Scroll Indicator animations */
+.scroll-indicator-wrapper {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  padding: 2rem 0;
+  z-index: 10;
+  transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-origin: center;
+}
+
+.scroll-indicator-wrapper.fade-in {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+  visibility: visible;
+  animation: bounceIn 1.2s ease-out;
+}
+
+.scroll-indicator-wrapper.fade-out {
+  opacity: 0;
+  transform: scale(0.8) translateY(-20px);
+  visibility: hidden;
+  pointer-events: none;
+  animation: fadeOutUp 0.6s ease-in forwards;
+}
+
+@keyframes bounceIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.3) translateY(30px);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05) translateY(-5px);
+  }
+  70% {
+    transform: scale(0.95) translateY(2px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes fadeOutUp {
+  0% {
+    opacity: 1;
+    transform: scale(1) translateY(0) rotate(0deg);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(0.9) translateY(-10px) rotate(5deg);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.7) translateY(-30px) rotate(10deg);
+    visibility: hidden;
+  }
 }
 
 .form-group {
@@ -848,6 +1102,53 @@ html {
 .submit-button:hover {
   background: #555;
   transform: translateY(-2px);
+}
+
+.submit-button.shimmer-button:hover {
+  background: linear-gradient(
+    90deg,
+    #555 0%,
+    #555 40%,
+    #777 50%,
+    #555 60%,
+    #555 100%
+  );
+  background-size: 200% 100%;
+  animation-duration: 1s;
+}
+
+/* Mensajes de estado del formulario */
+.submit-message {
+  padding: 1rem;
+  border-radius: 8px;
+  margin: 1rem 0;
+  font-weight: 500;
+  text-align: center;
+  animation: fadeInUp 0.5s ease-out;
+}
+
+.submit-message.success {
+  background: linear-gradient(135deg, #d4edda, #c3e6cb);
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.submit-message.error {
+  background: linear-gradient(135deg, #f8d7da, #f5c6cb);
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.submit-button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  animation: none;
+}
+
+.submit-button:disabled:hover {
+  background: #ccc;
+  transform: none;
+  animation: none;
 }
 
 
