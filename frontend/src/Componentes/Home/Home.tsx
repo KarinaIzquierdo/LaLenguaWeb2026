@@ -125,6 +125,10 @@ export default function Home() {
     if (!validation.isValid) {
       setSubmitMessage(validation.message || 'Error de validación');
       setSubmitStatus('error');
+      setTimeout(() => {
+        setSubmitMessage('');
+        setSubmitStatus('idle');
+      }, 3000);
       return;
     }
 
@@ -512,7 +516,7 @@ export default function Home() {
 
                   <button 
                     type="submit" 
-                    className="submit-button shimmer-button"
+                    className="submit-button"
                     disabled={isSubmitting}
                   >
                     {isSubmitting ? 'Enviando...' : '¡Empezar hoy!'}

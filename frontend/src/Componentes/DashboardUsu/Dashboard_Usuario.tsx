@@ -1,7 +1,56 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import "./Dashboard.css";
+import ProfileModal from "../Profile/ProfileModal";
+// @ts-ignore
+import SettingsModal from "../Settings/SettingsModal";
 
-export default function LingoLearn() {
+interface DashboardProps {
+  onLogout?: () => void;
+}
+
+export default function LingoLearn({ onLogout }: DashboardProps = {}) {
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [candies, setCandies] = useState(42); // Dulces acumulados
+  const [experience, setExperience] = useState(1250); // XP acumulado
+  const [showPrizeModal, setShowPrizeModal] = useState(false);
+  const [currentPrize, setCurrentPrize] = useState<{title: string, description: string, icon: string} | null>(null);
+
+  // Definir premios por niveles de dulces
+  const prizeThresholds = [
+    { candies: 50, title: "Explorador Novato", description: "¡Has comenzado tu aventura con Lingo!", icon: "🎒" },
+    { candies: 100, title: "Coleccionista de Palabras", description: "¡Dominas el vocabulario básico!", icon: "📚" },
+    { candies: 200, title: "Maestro de Gramática", description: "¡Las reglas gramaticales son tu fuerte!", icon: "✏️" },
+    { candies: 350, title: "Conversador Experto", description: "¡Puedes mantener conversaciones fluidas!", icon: "💬" },
+    { candies: 500, title: "Guía de Lingo", description: "¡Eres un verdadero compañero de viaje!", icon: "🗺️" },
+    { candies: 750, title: "Leyenda del Aprendizaje", description: "¡Tu dedicación es inspiradora!", icon: "👑" }
+  ];
+
+  // Función para verificar y otorgar premios
+  const checkForPrize = (newCandyCount: number) => {
+    const availablePrize = prizeThresholds.find(prize => 
+      newCandyCount >= prize.candies && candies < prize.candies
+    );
+    
+    if (availablePrize) {
+      setCurrentPrize(availablePrize);
+      setShowPrizeModal(true);
+    }
+  };
+
+  // Función para ganar dulces y experiencia
+  const earnRewards = (candiesEarned: number, xpEarned: number) => {
+    const newCandyCount = candies + candiesEarned;
+    setCandies(newCandyCount);
+    setExperience(prev => prev + xpEarned);
+    
+    // Verificar si se ganó un premio
+    setTimeout(() => checkForPrize(newCandyCount), 500);
+    
+    // Mostrar notificación de recompensa
+    alert(`¡Felicidades! 🎉\nGanaste ${candiesEarned} dulces 🍬 y ${xpEarned} XP ⭐`);
+  };
   useEffect(() => {
     // Progress bar inicial
     setTimeout(() => {
@@ -63,7 +112,15 @@ export default function LingoLearn() {
         btn.addEventListener("click", function () {
           const card = this.closest(".mission-card");
           const title = card?.querySelector(".mission-title")?.textContent;
-          alert(`¡Iniciando misión: ${title}!`);
+          
+          // Ganar recompensas por completar misión
+          if (title?.includes("Vocabulario")) {
+            earnRewards(5, 50); // 5 dulces, 50 XP por vocabulario
+          } else if (title?.includes("Gramática")) {
+            earnRewards(8, 75); // 8 dulces, 75 XP por gramática
+          } else if (title?.includes("Conversación")) {
+            earnRewards(10, 100); // 10 dulces, 100 XP por conversación
+          }
         });
       }
     });
@@ -97,6 +154,72 @@ export default function LingoLearn() {
 
   return (
     <div className="container">
+      {/* Header con botón de logout */}
+      <div className="dashboard-header">
+        <h1>The Language</h1>
+        <div className="header-actions">
+          {/* Sistema de Dulces y Experiencia */}
+          <div className="rewards-section">
+            <div className="candy-counter">
+              <span className="candy-icon">🍬</span>
+              <span className="candy-count">{candies}</span>
+            </div>
+            <div className="xp-counter">
+              <span className="xp-icon">⭐</span>
+              <span className="xp-count">{experience} XP</span>
+            </div>
+          </div>
+          
+          <div className="profile-dropdown-container">
+            <div className="profile-icon" onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <circle cx="12" cy="7" r="4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+            {isProfileDropdownOpen && (
+              <div className="profile-dropdown">
+                <div className="dropdown-item" onClick={() => {
+                  setIsProfileModalOpen(true);
+                  setIsProfileDropdownOpen(false);
+                }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <circle cx="12" cy="7" r="4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  Ver Perfil
+                </div>
+                <div className="dropdown-item" onClick={() => {
+                  setIsProfileModalOpen(true);
+                  setIsProfileDropdownOpen(false);
+                }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="m18.5 2.5 a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  Editar Perfil
+                </div>
+                <div className="dropdown-item" onClick={() => {
+                  setIsSettingsModalOpen(true);
+                  setIsProfileDropdownOpen(false);
+                }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2"/>
+                    <path d="m12 1 l1.09 3.26 L16 4 l-1.91 2.26 L16 8 l-2.91.74 L12 12 l-1.09-3.26 L8 8 l1.91-2.26 L8 4 l2.91-.74 L12 1z" stroke="currentColor" strokeWidth="2"/>
+                  </svg>
+                  Configuración
+                </div>
+              </div>
+            )}
+          </div>
+          {onLogout && (
+            <button className="logout-btn" onClick={onLogout}>
+              Cerrar Sesión
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* Hero */}
       <section className="hero">
         <div className="hero-content">
@@ -110,7 +233,7 @@ export default function LingoLearn() {
         <div className="hero-image">
           <div className="flamingo">
             <img
-              src="/flamingo.png"
+              src="Image/flamingo.png"
               alt="Flamingo"
               className="flamingo-img"
             />
@@ -124,7 +247,7 @@ export default function LingoLearn() {
         <div className="card avatar-card">
           <div className="card-header">
             <div className="card-icon">
-              <img src="./usuario.png" alt="User Avatar" className="icon-img" />
+              <img src="Image/usuario.png" alt="User Avatar" className="icon-img" />
             </div>
             <h3>Tu Avatar</h3>
           </div>
@@ -147,7 +270,7 @@ export default function LingoLearn() {
         <div className="card progress-card">
           <div className="card-header">
             <div className="card-icon">
-              <img src="./grafico-de-barras.png" className="icon-img" />
+              <img src="Image/grafico-de-barras.png" className="icon-img" />
             </div>
             <h3>Tu Progreso</h3>
           </div>
@@ -186,7 +309,7 @@ export default function LingoLearn() {
 
           <div className="card-header">
             <div className="card-icon">
-              <img src="./fuego.png" className="icon-img" />
+              <img src="Image/fuego.png" className="icon-img" />
             </div>
             <h3>Reto Diario</h3>
           </div>
@@ -210,7 +333,7 @@ export default function LingoLearn() {
           <div className="challenge-reward">
             Próxima recompensa: 50 puntos
           </div>
-          <button className="btn-challenge">Completar reto de hoy</button>
+          <button className="btn-challenge" onClick={() => earnRewards(3, 25)}>Completar reto de hoy</button>
         </div>
       </div>
 
@@ -292,8 +415,7 @@ export default function LingoLearn() {
       {/* Classes Section */}
       <div className="classes-section">
         <div className="section-header">
-          <h2 className="section-title">Programa tus Clases</h2>
-          <button className="new-class-btn">+ Nueva clase</button>
+          <h2 className="section-title">Clases Programadas</h2>
         </div>
 
         <div className="classes-table">
@@ -350,6 +472,48 @@ export default function LingoLearn() {
           </div>
         </div>
       </div>
+
+      {/* Profile Modal */}
+      <ProfileModal 
+        isOpen={isProfileModalOpen} 
+        onClose={() => setIsProfileModalOpen(false)} 
+      />
+
+      {/* Settings Modal */}
+      <SettingsModal 
+        isOpen={isSettingsModalOpen} 
+        onClose={() => setIsSettingsModalOpen(false)} 
+      />
+
+      {/* Prize Modal */}
+      {showPrizeModal && currentPrize && (
+        <div className="prize-modal-backdrop" onClick={() => setShowPrizeModal(false)}>
+          <div className="prize-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="prize-modal-header">
+              <div className="prize-icon">{currentPrize.icon}</div>
+              <h2>¡Felicidades!</h2>
+            </div>
+            
+            <div className="prize-modal-body">
+              <h3 className="prize-title">{currentPrize.title}</h3>
+              <p className="prize-description">{currentPrize.description}</p>
+              <div className="prize-candy-count">
+                <span className="candy-icon">🍬</span>
+                <span>Has acumulado {candies} dulces</span>
+              </div>
+            </div>
+            
+            <div className="prize-modal-footer">
+              <button 
+                className="prize-close-btn" 
+                onClick={() => setShowPrizeModal(false)}
+              >
+                ¡Continuar aventura!
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -473,36 +473,8 @@ html {
   transform: translateY(-2px);
 }
 
-/* Shimmer Effect */
-.shimmer-button {
-  position: relative;
-  overflow: hidden;
-  background: linear-gradient(
-    90deg,
-    #333 0%,
-    #333 40%,
-    #555 50%,
-    #333 60%,
-    #333 100%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 3s ease-in-out infinite;
-}
-
-.shimmer-button:hover {
-  animation-duration: 1s;
-}
-
 .submit-button.shimmer-button {
-  background: linear-gradient(
-    90deg,
-    #333 0%,
-    #333 40%,
-    #666 50%,
-    #333 60%,
-    #333 100%
-  );
-  background-size: 200% 100%;
+  background: #333;
 }
 
 .programs-image {
@@ -1095,8 +1067,10 @@ html {
   font-size: 1.2rem;
   font-weight: bold;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: background-color 0.3s ease, transform 0.2s ease;
   margin-top: 1rem;
+  position: relative;
+  overflow: hidden;
 }
 
 .submit-button:hover {
@@ -1105,16 +1079,9 @@ html {
 }
 
 .submit-button.shimmer-button:hover {
-  background: linear-gradient(
-    90deg,
-    #555 0%,
-    #555 40%,
-    #777 50%,
-    #555 60%,
-    #555 100%
-  );
-  background-size: 200% 100%;
-  animation-duration: 1s;
+  background: #555 !important;
+  transform: translateY(-2px) !important;
+  animation: none !important;
 }
 
 /* Mensajes de estado del formulario */
@@ -1140,15 +1107,17 @@ html {
 }
 
 .submit-button:disabled {
-  background: #ccc;
+  background: #ccc !important;
   cursor: not-allowed;
-  animation: none;
+  animation: none !important;
+  transform: none !important;
+  opacity: 0.7;
 }
 
 .submit-button:disabled:hover {
-  background: #ccc;
-  transform: none;
-  animation: none;
+  background: #ccc !important;
+  transform: none !important;
+  animation: none !important;
 }
 
 

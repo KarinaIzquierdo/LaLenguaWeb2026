@@ -1,6 +1,10 @@
 import './Header.css';
 
-export default function Header() {
+interface HeaderProps {
+  onLoginClick: () => void;
+}
+
+export default function Header({ onLoginClick }: HeaderProps) {
   return (
     <header className="header-home">
       {/* Logo */}
@@ -13,10 +17,10 @@ export default function Header() {
         <a href="#" className="active">Home</a>
         <a href="#info">Info</a>
         <a href="#contact">Contact</a>
-        <a href="#" className="login-btn">
+        <button onClick={onLoginClick} className="login-btn">
           <span className="btn-text">The Language</span>
           <span className="btn-hover">Login</span>
-        </a>
+        </button>
       </nav>
     </header>
   );
