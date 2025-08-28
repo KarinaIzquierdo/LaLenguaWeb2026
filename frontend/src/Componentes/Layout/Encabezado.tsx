@@ -9,7 +9,7 @@ export default function Header({ onLoginClick }: HeaderProps) {
     <header className="header-home">
       {/* Logo */}
       <div className="logo">
-        The Language 😜    
+        The Tongue 😜    
       </div>
 
       {/* Navegación */}

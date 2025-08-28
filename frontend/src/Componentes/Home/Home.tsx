@@ -38,8 +38,8 @@ export default function Home() {
 
   // Efecto typewriter
   useEffect(() => {
-    const text1 = '3D ART';
-    const text2 = 'TREND';
+    const text1 = 'ENGLISH THAT TRANSFORMS';
+    const text2 = 'YOUR FUTURE';
     let index1 = 0;
     let index2 = 0;
 
@@ -204,14 +204,15 @@ export default function Home() {
               </span>
             </h1>
             <div className="workshop-info staggered-animation" style={{animationDelay: '2.5s'}}>
-              <h2>WORKSHOP STARTS AT</h2>
-              <h2>5 PM EVERYDAY</h2>
-              <h3 className="free-text">FREE FOR STUDENTS</h3>
+              <h2>Develop the skills you need</h2>
+              <h2>for study, work, and everyday life</h2>
+              <h3 className="free-text">through our level-based programs</h3>
             </div>
             <p className="description staggered-animation" style={{animationDelay: '3s'}}>
-              This class will help students understand how powerful 3D is and
-              how to take advantage of different techniques to translate 2D
-              skills into full 3D scenes.
+            "Learn English in a practical and dynamic way. Step by step, 
+you’ll build the skills and confidence to study, work, 
+and live without limits."
+
             </p>
           </div>
           <div className="hero-image">
@@ -240,10 +241,10 @@ export default function Home() {
         >
           <ScrollReveal delay={0.1}>
             <div className="programs-header">
-              <h2 className="section-subtitle staggered-animation" style={{animationDelay: '0.2s'}}>El futuro empieza aquí</h2>
+              <h2 className="section-subtitle staggered-animation" style={{animationDelay: '0.2s'}}>The future starts here</h2>
               <h1 className="programs-title staggered-animation" style={{animationDelay: '0.5s'}}>
-                CONOCE NUESTROS<br />
-                <span className="programs-highlight">PROGRAMAS POR NIVEL</span>
+                KNOW OUR<br />
+                <span className="programs-highlight">PROGRAMS BY LEVEL</span>
               </h1>
             </div>
 
@@ -251,28 +252,24 @@ export default function Home() {
               <div className="programs-text">
                 <div className="program-info staggered-animation" style={{animationDelay: '0.8s'}}>
                   <h3 className="program-name">
-                    PROGRAMA<br />
-                    <span className="program-highlight">JAMESTOWN</span>
+                  ENGLISH<br />
+                    <span className="program-highlight">PROGRAM</span>
                     <br />
-                    POR NIVEL 1
+                    LEVEL 
                   </h3>
                   <div className="program-number">1</div>
                 </div>
 
                 <p className="program-description staggered-animation" style={{animationDelay: '1.1s'}}>
-                  Estos programas son ideales para quienes desean aprender inglés
-                  desde su nivel actual. Ya sea que empiecen sin conocimientos
-                  previos o tengan un nivel básico (A2) o intermedio (B1), están
-                  diseñados según los estándares del Marco Común Europeo de
-                  Referencia para las Lenguas (MCER).
+                "Start your English journey with our Level 1 program. Designed for complete beginners or learners with a basic foundation, this course builds strong communication skills step by step. You’ll develop confidence in everyday conversations while following international standards (CEFR A2–B1)."
                 </p>
 
-                <button className="info-button shimmer-button staggered-animation" style={{animationDelay: '1.4s'}}>Solicitar información</button>
+                <button className="info-button shimmer-button staggered-animation" style={{animationDelay: '1.4s'}}>Request Information</button>
               </div>
 
               <img
                 src="/Image/Relajado.jpg"
-                alt="Estudiante relajado"
+                alt="Student relaxing"
                 className="student-img staggered-animation"
                 style={{animationDelay: '1.7s'}}
               />
@@ -294,22 +291,19 @@ export default function Home() {
               <div className="program-level2-text">
                 <div className="program-level2-info staggered-animation" style={{animationDelay: '0.5s'}}>
                   <h3 className="program-level2-name">
-                    PROGRAMA<br />
-                    <span className="program-highlight">JAMESTOWN</span>
+                    ENGLISH<br />
+                    <span className="program-highlight">PROGRAM </span>
                     <br />
-                    POR NIVEL 2
+                    LEVEL 
                   </h3>
                   <div className="program-level2-number">2</div>
                 </div>
 
                 <p className="program-level2-description staggered-animation" style={{animationDelay: '0.8s'}}>
-                  Nuestra opción por nivel 2 es perfecta para quienes quieren
-                  aprender inglés desde su nivel actual, ya sea que no tengan
-                  conocimientos previos o tengan un nivel básico (A2) o intermedio
-                  (B1), y busquen mejorar sus habilidades.
+                "Level 2 is ideal for learners who already have some knowledge of English and want to improve their fluency. Through interactive lessons and real-life practice, you will expand your vocabulary, strengthen grammar, and gain confidence in expressing yourself in more complex situations."
                 </p>
 
-                <button className="info-button shimmer-button staggered-animation" style={{animationDelay: '1.1s'}}>Solicitar información</button>
+                <button className="info-button shimmer-button staggered-animation" style={{animationDelay: '1.1s'}}>Request Information</button>
               </div>
             </div>
           </ScrollReveal>
@@ -322,23 +316,19 @@ export default function Home() {
               <div className="program-level3-text">
                 <div className="program-level3-info staggered-animation" style={{animationDelay: '0.2s'}}>
                   <h3 className="program-level3-name">
-                    PROGRAMA<br />
-                    <span className="program-highlight">JAMESTOWN</span>
+                    ENGLISH<br />
+                    <span className="program-highlight">PROGRAM</span>
                     <br />
-                    POR NIVEL 3
+                    LEVEL 
                   </h3>
                   <div className="program-level3-number">3</div>
                 </div>
 
                 <p className="program-level3-description staggered-animation" style={{animationDelay: '0.5s'}}>
-                  Estos programas son ideales para quienes quieren aprender inglés
-                  desde cero y avanzar de forma continua. Nuestra metodología se
-                  centra en el uso del idioma en situaciones reales, permitiendo a
-                  los estudiantes practicar y aprender habilidades útiles para su
-                  vida diaria, trabajo y estudios.
+                "Level 3 prepares you to achieve advanced communication skills. You will focus on mastering professional and academic English, participate in debates, write structured texts, and understand more complex materials. This program is designed to help you succeed in work, study, and international environments."
                 </p>
 
-                <button className="info-button shimmer-button staggered-animation" style={{animationDelay: '0.8s'}}>Solicitar información</button>
+                <button className="info-button shimmer-button staggered-animation" style={{animationDelay: '0.8s'}}>Request Information</button>
               </div>
 
               <img
@@ -359,18 +349,18 @@ export default function Home() {
           <ScrollReveal delay={0.4}>
             <div className="contact-form-container">
               <h1 className="contact-title staggered-animation" style={{animationDelay: '0.2s'}}>
-                ¿QUIERES
+                DO YOU WANT TO
                 <br />
                 <span className="contact-highlight">
-                  TRANSFORMAR TU
+                  TRANSFORM YOUR
                   <br />
-                  VIDA?
+                  LIFE?
                 </span>
               </h1>
 
               <div className="form-card staggered-animation" style={{animationDelay: '0.5s'}}>
-                <h2 className="form-title">Solicita información</h2>
-                <p className="form-subtitle">¡Déjanos tus datos!</p>
+                <h2 className="form-title">Request Information</h2>
+                <p className="form-subtitle">¡Leave us your data!</p>
 
                 <form className="contact-form" onSubmit={handleSubmit}>
                   <div className="form-row names-row">

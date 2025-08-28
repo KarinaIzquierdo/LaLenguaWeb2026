@@ -158,12 +158,12 @@ html {
   justify-content: space-between;
   max-width: 1200px;
   width: 100%;
-  gap: 4rem;
+  gap: 3rem;
 }
 
 .hero-content {
   flex: 1;
-  max-width: 500px;
+  max-width: 550px;
   animation: fadeInLeft 1s ease-out 0.3s both;
   z-index: 10;
 }
@@ -201,19 +201,21 @@ html {
 
 .title-3d {
   display: block;
-  font-size: 6rem;
+  font-size: 3.5rem;
   font-weight: bold;
   color: #4A90E2;
-  line-height: 0.9;
+  line-height: 1.1;
   margin-bottom: 0.5rem;
+  text-transform: uppercase;
 }
 
 .title-trend {
   display: block;
-  font-size: 6rem;
+  font-size: 3.5rem;
   font-weight: bold;
   color: #333;
-  line-height: 0.9;
+  line-height: 1.1;
+  text-transform: uppercase;
 }
 
 .workshop-info {
@@ -287,17 +289,17 @@ html {
 }
 
 .character-img {
-  max-width: 120%;
+  max-width: 100%;
   height: auto;
-  max-height: 90vh;
+  max-height: 70vh;
   object-fit: contain;
-  transform: scale(1.2);
+  transform: scale(1.0);
   animation: float 3s ease-in-out infinite;
   transition: transform 0.3s ease;
 }
 
 .character-img:hover {
-  transform: scale(1.25);
+  transform: scale(1.05);
 }
 
 /* Responsive */
@@ -310,7 +312,7 @@ html {
   
   .title-3d,
   .title-trend {
-    font-size: 4rem;
+    font-size: 2.8rem;
   }
   
   .hero-content {
@@ -319,8 +321,8 @@ html {
   }
   
   .character-img {
-    max-height: 60vh;
-    transform: scale(1.1);
+    max-height: 50vh;
+    transform: scale(1.0);
   }
   
   .workshop-info h2 {

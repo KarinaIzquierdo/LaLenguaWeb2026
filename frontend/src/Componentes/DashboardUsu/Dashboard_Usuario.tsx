@@ -1,21 +1,56 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import "./Dashboard.css";
-import ProfileModal from "../Profile/ProfileModal";
-// @ts-ignore
-import SettingsModal from "../Settings/SettingsModal";
+import NavUsu from "./Nav_Usu";
+import OnboardingTour from "../Onboarding/OnboardingTour";
+import ChallengeModal from "./ChallengeModal";
+import Toast from "./Toast";
+import { useDashboardEvents } from "./DashboardEvents";
 
 interface DashboardProps {
   onLogout?: () => void;
 }
 
 export default function LingoLearn({ onLogout }: DashboardProps = {}) {
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
-  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  
   const [candies, setCandies] = useState(42); // Dulces acumulados
   const [experience, setExperience] = useState(1250); // XP acumulado
   const [showPrizeModal, setShowPrizeModal] = useState(false);
   const [currentPrize, setCurrentPrize] = useState<{title: string, description: string, icon: string} | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [isNewUser, setIsNewUser] = useState(false);
+  const [showChallengeModal, setShowChallengeModal] = useState(false);
+  const [challengeProgress, setChallengeProgress] = useState(() => {
+    const saved = localStorage.getItem('challengeProgress');
+    return saved ? parseInt(saved) : 0;
+  });
+  const [hasCompletedToday, setHasCompletedToday] = useState(() => {
+    const today = new Date().toDateString();
+    const lastCompleted = localStorage.getItem('lastCompletedDate');
+    return lastCompleted === today;
+  });
+  const [streakLevel, setStreakLevel] = useState(() => {
+    const saved = localStorage.getItem('streakLevel');
+    return saved ? parseInt(saved) : 0;
+  });
+  const [currentChallenge, setCurrentChallenge] = useState<{
+    question: string;
+    options: string[];
+    correctAnswer: number;
+    explanation: string;
+  } | null>(null);
+  
+  // Estado para notificaciones toast
+  const [showToast, setShowToast] = useState(false);
+  const [toastData, setToastData] = useState<{
+    type: 'success' | 'error' | 'info';
+    title: string;
+    message: string;
+    rewards?: { candies?: number; xp?: number };
+  }>({
+    type: 'success',
+    title: '',
+    message: ''
+  });
 
   // Definir premios por niveles de dulces
   const prizeThresholds = [
@@ -48,186 +83,154 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
     // Verificar si se ganó un premio
     setTimeout(() => checkForPrize(newCandyCount), 500);
     
-    // Mostrar notificación de recompensa
-    alert(`¡Felicidades! 🎉\nGanaste ${candiesEarned} dulces 🍬 y ${xpEarned} XP ⭐`);
+    // Mostrar notificación Toast en lugar de alert
+    showNotification('success', '¡Felicidades! 🎉', `¡Recompensas ganadas!`, { candies: candiesEarned, xp: xpEarned });
   };
-  useEffect(() => {
-    // Progress bar inicial
-    setTimeout(() => {
-      const progressFill = document.querySelector<HTMLElement>(".progress-fill");
-      if (progressFill) progressFill.style.width = "35%";
 
-      const challengeFill = document.querySelector<HTMLElement>(
-        ".challenge-progress-fill"
-      );
-      if (challengeFill) challengeFill.style.width = "60%";
-    }, 500);
+  const handleOnboardingComplete = () => {
+    localStorage.setItem('hasSeenOnboarding', 'true');
+    setIsNewUser(false);
+    setShowOnboarding(false);
+  };
 
-    // Avatar color picker
-    document.querySelectorAll<HTMLElement>(".color-option").forEach((option) => {
-      option.addEventListener("click", function () {
-        document
-          .querySelectorAll<HTMLElement>(".color-option")
-          .forEach((opt) => opt.classList.remove("active"));
-        this.classList.add("active");
+  // Función para forzar onboarding (temporal para pruebas)
+  const forceOnboarding = () => {
+    localStorage.removeItem('hasSeenOnboarding');
+    setIsNewUser(true);
+    setShowOnboarding(true);
+  };
 
-        const avatar = document.querySelector<HTMLElement>(".avatar-preview");
-        const colorClass = this.className.split(" ")[1];
-        if (!avatar) return;
+  // Banco de preguntas para retos diarios
+  const dailyChallenges = [
+    {
+      question: "What is the correct way to say 'I am going to the store'?",
+      options: ["I go to the store", "I am going to the store", "I going to store", "I will go store"],
+      correctAnswer: 1,
+      explanation: "We use 'am going' for present continuous tense to express future plans."
+    },
+    {
+      question: "Choose the correct plural form of 'child':",
+      options: ["childs", "children", "childes", "child's"],
+      correctAnswer: 1,
+      explanation: "'Children' is the irregular plural form of 'child'."
+    },
+    {
+      question: "Which sentence is grammatically correct?",
+      options: ["She don't like pizza", "She doesn't like pizza", "She not like pizza", "She no likes pizza"],
+      correctAnswer: 1,
+      explanation: "We use 'doesn't' (does not) with third person singular subjects like 'she'."
+    },
+    {
+      question: "What does 'How are you?' mean?",
+      options: ["¿Cómo estás?", "¿Qué haces?", "¿Dónde estás?", "¿Cuándo vienes?"],
+      correctAnswer: 0,
+      explanation: "'How are you?' is a common greeting asking about someone's well-being."
+    },
+    {
+      question: "Complete: 'I _____ English every day.'",
+      options: ["study", "studies", "studying", "studied"],
+      correctAnswer: 0,
+      explanation: "We use the base form 'study' with 'I' in present simple tense."
+    }
+  ];
 
-        switch (colorClass) {
-          case "color-red":
-            avatar.style.background = "#fecaca";
-            avatar.style.color = "#dc2626";
-            break;
-          case "color-green":
-            avatar.style.background = "#bbf7d0";
-            avatar.style.color = "#059669";
-            break;
-          case "color-purple":
-            avatar.style.background = "#ddd6fe";
-            avatar.style.color = "#7c3aed";
-            break;
-          case "color-yellow":
-            avatar.style.background = "#fef3c7";
-            avatar.style.color = "#d97706";
-            break;
-        }
-      });
-    });
+  // Función para abrir modal de reto diario
+  const openChallengeModal = () => {
+    if (hasCompletedToday) {
+      alert("⏰ Ya completaste tu reto de hoy. ¡Vuelve mañana para continuar tu racha!");
+      return;
+    }
+    const randomChallenge = dailyChallenges[Math.floor(Math.random() * dailyChallenges.length)];
+    setCurrentChallenge(randomChallenge);
+    setShowChallengeModal(true);
+  };
 
-    // Hover en botones
-    document.querySelectorAll<HTMLButtonElement>("button").forEach((button) => {
-      button.addEventListener("mouseenter", function () {
-        this.style.transform = "translateY(-1px)";
-      });
-      button.addEventListener("mouseleave", function () {
-        this.style.transform = "translateY(0)";
-      });
-    });
+  // Función para cerrar modal de reto
+  const closeChallengeModal = () => {
+    setShowChallengeModal(false);
+    setCurrentChallenge(null);
+  };
 
-    // Misiones: click en botón
-    document.querySelectorAll<HTMLButtonElement>(".mission-button").forEach((btn) => {
-      if (!btn.disabled) {
-        btn.addEventListener("click", function () {
-          const card = this.closest(".mission-card");
-          const title = card?.querySelector(".mission-title")?.textContent;
-          
-          // Ganar recompensas por completar misión
-          if (title?.includes("Vocabulario")) {
-            earnRewards(5, 50); // 5 dulces, 50 XP por vocabulario
-          } else if (title?.includes("Gramática")) {
-            earnRewards(8, 75); // 8 dulces, 75 XP por gramática
-          } else if (title?.includes("Conversación")) {
-            earnRewards(10, 100); // 10 dulces, 100 XP por conversación
-          }
-        });
+  // Función para mostrar notificación toast
+  const showNotification = (type: 'success' | 'error' | 'info', title: string, message: string, rewards?: { candies?: number; xp?: number }) => {
+    setToastData({ type, title, message, rewards });
+    setShowToast(true);
+  };
+
+  // Usar hook de eventos DOM con función de notificación
+  useDashboardEvents(showNotification);
+
+
+  // Función para verificar respuesta del reto
+  const checkChallengeAnswer = (selectedAnswer: number) => {
+    const today = new Date().toDateString();
+    setHasCompletedToday(true);
+    localStorage.setItem('lastCompletedDate', today);
+    
+    if (currentChallenge && selectedAnswer === currentChallenge.correctAnswer) {
+      // Respuesta correcta - continúa la racha
+      const newProgress = challengeProgress + 1;
+      setChallengeProgress(newProgress);
+      localStorage.setItem('challengeProgress', newProgress.toString());
+      
+      // Si completa los 7 días, dar recompensa especial y reiniciar
+      if (newProgress >= 7) {
+        const newStreakLevel = streakLevel + 1;
+        setStreakLevel(newStreakLevel);
+        localStorage.setItem('streakLevel', newStreakLevel.toString());
+        setCandies(prev => prev + 15); // 15 dulces por completar semana
+        setExperience(prev => prev + 50); // 50 XP por completar semana
+        setChallengeProgress(0); // Reiniciar racha
+        localStorage.setItem('challengeProgress', '0');
+        showNotification('success', '¡Felicidades! 🎉', `¡Increíble! Completaste 7 días de racha!\n🌟 ¡Nivel de racha: ${newStreakLevel}!\n¡La tarjeta evoluciona!`, { candies: 15, xp: 50 });
+      } else {
+        setCandies(prev => prev + 3); // 3 dulces por día
+        setExperience(prev => prev + 10); // 10 XP por día
+        showNotification('success', '¡Correcto! ✅', `¡Excelente! Día ${newProgress} de racha`, { candies: 3, xp: 10 });
       }
-    });
+      
+      closeChallengeModal();
+    } else {
+      // Respuesta incorrecta - reiniciar racha a cero y mostrar respuesta correcta
+      setChallengeProgress(0);
+      localStorage.setItem('challengeProgress', '0');
+      const correctOption = currentChallenge?.options[currentChallenge.correctAnswer];
+      showNotification('error', 'Respuesta incorrecta ❌', `Tu racha se reinicia a 0.\n\nRespuesta correcta: ${correctOption}\n\n${currentChallenge?.explanation}`);
+      closeChallengeModal();
+    }
+  };
 
-    // Nueva clase
-    const newClassBtn = document.querySelector<HTMLButtonElement>(".new-class-btn");
-    newClassBtn?.addEventListener("click", () => {
-      alert("¡Programar nueva clase!");
-    });
-
-    // Editar clase
-    document.querySelectorAll<HTMLButtonElement>(".edit-btn").forEach((btn) => {
-      btn.addEventListener("click", function () {
-        const row = this.closest(".table-row");
-        const teacher = row?.querySelector(".teacher-name")?.textContent;
-        alert(`Reprogramar clase con ${teacher}`);
-      });
-    });
-
-    // Eliminar clase
-    document.querySelectorAll<HTMLButtonElement>(".delete-btn").forEach((btn) => {
-      btn.addEventListener("click", function () {
-        const row = this.closest(".table-row");
-        const teacher = row?.querySelector(".teacher-name")?.textContent;
-        if (confirm(`¿Cancelar clase con ${teacher}?`)) {
-          row?.remove();
-        }
-      });
-    });
+  useEffect(() => {
+    // Verificar si es un usuario nuevo - con delay para asegurar que el DOM esté listo
+    setTimeout(() => {
+      const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding');
+      console.log('Verificando onboarding:', hasSeenOnboarding); // Debug
+      if (!hasSeenOnboarding) {
+        console.log('Usuario nuevo detectado, iniciando onboarding'); // Debug
+        setIsNewUser(true);
+        setShowOnboarding(true);
+      }
+    }, 1500);
   }, []);
 
   return (
-    <div className="container">
-      {/* Header con botón de logout */}
-      <div className="dashboard-header">
-        <h1>The Language</h1>
-        <div className="header-actions">
-          {/* Sistema de Dulces y Experiencia */}
-          <div className="rewards-section">
-            <div className="candy-counter">
-              <span className="candy-icon">🍬</span>
-              <span className="candy-count">{candies}</span>
-            </div>
-            <div className="xp-counter">
-              <span className="xp-icon">⭐</span>
-              <span className="xp-count">{experience} XP</span>
-            </div>
-          </div>
-          
-          <div className="profile-dropdown-container">
-            <div className="profile-icon" onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                <circle cx="12" cy="7" r="4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
-            {isProfileDropdownOpen && (
-              <div className="profile-dropdown">
-                <div className="dropdown-item" onClick={() => {
-                  setIsProfileModalOpen(true);
-                  setIsProfileDropdownOpen(false);
-                }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    <circle cx="12" cy="7" r="4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                  Ver Perfil
-                </div>
-                <div className="dropdown-item" onClick={() => {
-                  setIsProfileModalOpen(true);
-                  setIsProfileDropdownOpen(false);
-                }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    <path d="m18.5 2.5 a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                  Editar Perfil
-                </div>
-                <div className="dropdown-item" onClick={() => {
-                  setIsSettingsModalOpen(true);
-                  setIsProfileDropdownOpen(false);
-                }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2"/>
-                    <path d="m12 1 l1.09 3.26 L16 4 l-1.91 2.26 L16 8 l-2.91.74 L12 12 l-1.09-3.26 L8 8 l1.91-2.26 L8 4 l2.91-.74 L12 1z" stroke="currentColor" strokeWidth="2"/>
-                  </svg>
-                  Configuración
-                </div>
-              </div>
-            )}
-          </div>
-          {onLogout && (
-            <button className="logout-btn" onClick={onLogout}>
-              Cerrar Sesión
-            </button>
-          )}
-        </div>
-      </div>
+    <>
+      {/* Navigation Header - Outside container for full width */}
+      <NavUsu 
+        candies={candies} 
+        experience={experience} 
+        onLogout={onLogout} 
+      />
+      
+      <div className="container">
+        {/* Content wrapper */}
+        <div className="dashboard-content">
 
       {/* Hero */}
       <section className="hero">
         <div className="hero-content">
-          <h1>¡Ayuda a Lingo a migrar mientras aprendes inglés!</h1>
-          <p>
-            Acompaña a Lingo el flamingo en su viaje migratorio mientras mejoras
-            tu inglés con lecciones divertidas y desafíos emocionantes.
-          </p>
+          <h1>¡Bienvenido a tu aventura con Lingo! 🦩</h1>
+          <p>Acompaña a nuestro flamenco en su viaje migratorio mientras aprendes inglés</p>
           <button className="btn-adventure">¡Comenzar aventura!</button>
         </div>
         <div className="hero-image">
@@ -247,7 +250,7 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
         <div className="card avatar-card">
           <div className="card-header">
             <div className="card-icon">
-              <img src="Image/usuario.png" alt="User Avatar" className="icon-img" />
+              <img src="Image/usuario.png" className="icon-img" />
             </div>
             <h3>Tu Avatar</h3>
           </div>
@@ -301,11 +304,30 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
         </div>
 
         {/* Daily Challenge Card */}
-        <div className="card challenge-card">
+        <div className={`card challenge-card streak-level-${streakLevel}`}>
           <div className="star large"></div>
           <div className="star medium"></div>
           <div className="star small-left"></div>
           <div className="star small-right"></div>
+          
+          {/* Efectos especiales según nivel de racha */}
+          {streakLevel >= 1 && (
+            <>
+              <div className="floating-stars">
+                <div className="floating-star star-1">⭐</div>
+                <div className="floating-star star-2">✨</div>
+                <div className="floating-star star-3">🌟</div>
+              </div>
+            </>
+          )}
+          
+          {streakLevel >= 2 && (
+            <div className="magic-glow"></div>
+          )}
+          
+          {streakLevel >= 3 && (
+            <div className="rainbow-border"></div>
+          )}
 
           <div className="card-header">
             <div className="card-icon">
@@ -315,25 +337,33 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
           </div>
 
           <div className="challenge-badge">¡En racha!</div>
-          <div className="challenge-day">Día 3 de racha</div>
+          <div className="challenge-day">Día {challengeProgress} de racha</div>
           <div className="challenge-desc">
             Completa el reto de hoy para mantener tu racha invicta.
           </div>
 
           <div className="challenge-progress-container">
-            <div className="challenge-segment completed"></div>
-            <div className="challenge-segment completed"></div>
-            <div className="challenge-segment current"></div>
-            <div className="challenge-segment"></div>
-            <div className="challenge-segment"></div>
-            <div className="challenge-segment"></div>
-            <div className="challenge-segment"></div>
+            {[...Array(7)].map((_, index) => (
+              <div 
+                key={index}
+                className={`challenge-segment ${
+                  index < challengeProgress ? 'completed' : 
+                  index === challengeProgress ? 'current' : ''
+                }`}
+              ></div>
+            ))}
           </div>
 
           <div className="challenge-reward">
             Próxima recompensa: 50 puntos
           </div>
-          <button className="btn-challenge" onClick={() => earnRewards(3, 25)}>Completar reto de hoy</button>
+          <button 
+            className={`btn-challenge ${hasCompletedToday ? 'disabled' : ''}`}
+            onClick={openChallengeModal}
+            disabled={hasCompletedToday}
+          >
+            {hasCompletedToday ? 'Completado hoy ✓' : 'Completar reto de hoy'}
+          </button>
         </div>
       </div>
 
@@ -347,68 +377,87 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
 
       <div className="missions-grid">
         {/* Vocabulario de Viaje */}
-        <div className="mission-card vocabulary-card">
+        <div className="mission-card vocabulary">
+          <div className="mission-header">
+            <div className="mission-icon">📚</div>
+            <div className="mission-info">
+              <h3>Vocabulario de Viaje</h3>
+              <span className="mission-type">Quiz Interactivo</span>
+            </div>
+          </div>
           <div className="mission-content">
-            <h2 className="mission-title">Vocabulario de Viaje</h2>
-            <div className="progress-info">
-              <div className="progress-text">
-                <span>Progreso: 2/5</span>
-                <span className="status-badge">En progreso</span>
+            <p>
+              Aprende palabras esenciales que Lingo necesita conocer 
+              durante su viaje. ¡Juega y aprende con Gimkit!
+            </p>
+            <div className="mission-stats">
+              <div className="stat">
+                <span className="stat-icon">🍬</span>
+                <span>+10 Dulces</span>
               </div>
-              <div className="progress-bar">
-                <div className="progress-fill vocabulary-progress"></div>
+              <div className="stat">
+                <span className="stat-icon">⭐</span>
+                <span>+25 XP</span>
               </div>
             </div>
-            <p className="mission-description">
-              Aprende palabras esenciales para ayudar a Lingo a comunicarse
-              durante su viaje.
-            </p>
           </div>
-          <button className="mission-button">Continuar</button>
+          <button className="mission-button">Jugar Ahora</button>
         </div>
 
         {/* Gramática Básica */}
-        <div className="mission-card grammar-card">
+        <div className="mission-card grammar">
+          <div className="mission-header">
+            <div className="mission-icon">✏️</div>
+            <div className="mission-info">
+              <h3>Gramática Básica</h3>
+              <span className="mission-type">Ejercicios Prácticos</span>
+            </div>
+          </div>
           <div className="mission-content">
-            <h2 className="mission-title">Gramática Básica</h2>
-            <div className="progress-info">
-              <div className="progress-text">
-                <span>Progreso: 1/5</span>
-                <span className="status-badge status-new">Nuevo</span>
+            <p>
+              Domina las estructuras gramaticales para ayudar a Lingo en su 
+              ruta migratoria. ¡Practica con ejercicios interactivos!
+            </p>
+            <div className="mission-stats">
+              <div className="stat">
+                <span className="stat-icon">🍬</span>
+                <span>+10 Dulces</span>
               </div>
-              <div className="progress-bar">
-                <div className="progress-fill grammar-progress"></div>
+              <div className="stat">
+                <span className="stat-icon">⭐</span>
+                <span>+25 XP</span>
               </div>
             </div>
-            <p className="mission-description">
-              Domina los tiempos verbales para ayudar a Lingo a planificar su
-              ruta migratoria.
-            </p>
           </div>
-          <button className="mission-button">Continuar</button>
+          <button className="mission-button">Jugar Ahora</button>
         </div>
 
         {/* Conversación Práctica */}
-        <div className="mission-card conversation-card">
+        <div className="mission-card conversation">
+          <div className="mission-header">
+            <div className="mission-icon">💬</div>
+            <div className="mission-info">
+              <h3>Conversación Práctica</h3>
+              <span className="mission-type">Juego en Tiempo Real</span>
+            </div>
+          </div>
           <div className="mission-content">
-            <h2 className="mission-title">Conversación Práctica</h2>
-            <div className="progress-info">
-              <div className="progress-text">
-                <span>Progreso: 0/5</span>
-                <span className="status-badge status-blocked">Bloqueado</span>
+            <p>
+              Practica conversaciones reales que Lingo podría necesitar 
+              durante su viaje. ¡Interactúa en tiempo real!
+            </p>
+            <div className="mission-stats">
+              <div className="stat">
+                <span className="stat-icon">🍬</span>
+                <span>+10 Dulces</span>
               </div>
-              <div className="progress-bar">
-                <div className="progress-fill conversation-progress"></div>
+              <div className="stat">
+                <span className="stat-icon">⭐</span>
+                <span>+25 XP</span>
               </div>
             </div>
-            <p className="mission-description">
-              Practica diálogos para que Lingo pueda interactuar con otros
-              durante su viaje.
-            </p>
           </div>
-          <button className="mission-button" disabled>
-            Desbloquear
-          </button>
+          <button className="mission-button">Jugar Ahora</button>
         </div>
       </div>
 
@@ -473,17 +522,6 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
         </div>
       </div>
 
-      {/* Profile Modal */}
-      <ProfileModal 
-        isOpen={isProfileModalOpen} 
-        onClose={() => setIsProfileModalOpen(false)} 
-      />
-
-      {/* Settings Modal */}
-      <SettingsModal 
-        isOpen={isSettingsModalOpen} 
-        onClose={() => setIsSettingsModalOpen(false)} 
-      />
 
       {/* Prize Modal */}
       {showPrizeModal && currentPrize && (
@@ -514,6 +552,43 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
           </div>
         </div>
       )}
-    </div>
+
+      {/* Componente de Onboarding */}
+      <OnboardingTour 
+        isNewUser={showOnboarding} 
+        onComplete={handleOnboardingComplete} 
+      />
+
+      {/* Botón flotante de ayuda */}
+      <button 
+        className="help-floating-btn"
+        onClick={forceOnboarding}
+        title="¿Necesitas ayuda? Haz clic para ver el tour guiado"
+      >
+        ?
+      </button>
+
+      {/* Modal de Reto Diario */}
+      {showChallengeModal && currentChallenge && (
+        <ChallengeModal
+          isOpen={showChallengeModal}
+          challenge={currentChallenge}
+          onClose={closeChallengeModal}
+          onAnswerSubmit={checkChallengeAnswer}
+        />
+      )}
+
+        {/* Toast Notification */}
+        <Toast
+          isVisible={showToast}
+          type={toastData.type}
+          title={toastData.title}
+          message={toastData.message}
+          rewards={toastData.rewards}
+          onClose={() => setShowToast(false)}
+        />
+        </div>
+      </div>
+    </>
   );
 }
