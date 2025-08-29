@@ -1,10 +1,14 @@
-import { useState, useEffect } from "react";
-import "./Dashboard.css";
-import NavUsu from "./Nav_Usu";
+import { useState, useEffect } from 'react';
+import './Dashboard.css';
+import PiePagina from '../Layout/PiePagina';
+import EvaluationModal from './EvaluationModal';
+import ResultsModal from './ResultsModal';
+import NotesModal from './NotesModal';
 import OnboardingTour from "../Onboarding/OnboardingTour";
 import ChallengeModal from "./ChallengeModal";
 import Toast from "./Toast";
 import { useDashboardEvents } from "./DashboardEvents";
+import NavUsu from "./Nav_Usu";
 
 interface DashboardProps {
   onLogout?: () => void;
@@ -51,6 +55,33 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
     title: '',
     message: ''
   });
+
+  // Evaluation states
+  const [showEvaluationModal, setShowEvaluationModal] = useState(false);
+  const [currentEvaluation, setCurrentEvaluation] = useState<string | null>(null);
+  const [showResultsModal, setShowResultsModal] = useState(false);
+  const [evaluationResults, setEvaluationResults] = useState<any>(null);
+  const [showNotesModal, setShowNotesModal] = useState(false);
+
+  // Evaluation functions
+  const startEvaluation = (type: string) => {
+    setCurrentEvaluation(type);
+    setShowEvaluationModal(true);
+    console.log(`Starting evaluation: ${type}`);
+  };
+
+  const viewResults = (type: string) => {
+    // Mock results data
+    const mockResults = {
+      type,
+      score: type === 'comprehension' ? 78 : 85,
+      totalQuestions: type === 'comprehension' ? 8 : 10,
+      correctAnswers: type === 'comprehension' ? 6 : 8,
+      timeSpent: '12:34'
+    };
+    setEvaluationResults(mockResults);
+    setShowResultsModal(true);
+  };
 
   // Definir premios por niveles de dulces
   const prizeThresholds = [
@@ -461,6 +492,102 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
         </div>
       </div>
 
+      {/* Evaluaciones Section */}
+      <div className="evaluations-section">
+        <div className="section-header">
+          <h2 className="section-title">Evaluaciones y Quizzes</h2>
+          <button className="view-notes-btn" onClick={() => setShowNotesModal(true)}>
+            📝 Ver Notas
+          </button>
+        </div>
+
+        <div className="evaluations-grid">
+          {/* Quiz de Vocabulario */}
+          <div className="evaluation-card vocabulary-quiz">
+            <div className="evaluation-header">
+              <div className="evaluation-icon">📚</div>
+              <div className="evaluation-info">
+                <h3>Quiz de Vocabulario</h3>
+                <span className="evaluation-type">10 preguntas • 15 min</span>
+              </div>
+              <div className="evaluation-status available">Disponible</div>
+            </div>
+            <div className="evaluation-content">
+              <p>Evalúa tu conocimiento de vocabulario básico en inglés. Palabras esenciales para el viaje de Lingo.</p>
+              <div className="evaluation-stats">
+                <div className="stat">
+                  <span className="stat-icon">🏆</span>
+                  <span>Mejor: 85%</span>
+                </div>
+                <div className="stat">
+                  <span className="stat-icon">🎯</span>
+                  <span>Intentos: 2</span>
+                </div>
+              </div>
+            </div>
+            <button className="evaluation-button" onClick={() => startEvaluation('vocabulary')}>
+              Comenzar Quiz
+            </button>
+          </div>
+
+          {/* Evaluación de Gramática */}
+          <div className="evaluation-card grammar-test">
+            <div className="evaluation-header">
+              <div className="evaluation-icon">✏️</div>
+              <div className="evaluation-info">
+                <h3>Evaluación de Gramática</h3>
+                <span className="evaluation-type">15 preguntas • 20 min</span>
+              </div>
+              <div className="evaluation-status available">Disponible</div>
+            </div>
+            <div className="evaluation-content">
+              <p>Pon a prueba tus conocimientos gramaticales con ejercicios de diferentes niveles de dificultad.</p>
+              <div className="evaluation-stats">
+                <div className="stat">
+                  <span className="stat-icon">🏆</span>
+                  <span>Mejor: 92%</span>
+                </div>
+                <div className="stat">
+                  <span className="stat-icon">🎯</span>
+                  <span>Intentos: 1</span>
+                </div>
+              </div>
+            </div>
+            <button className="evaluation-button" onClick={() => startEvaluation('grammar')}>
+              Comenzar Evaluación
+            </button>
+          </div>
+
+          {/* Quiz de Comprensión */}
+          <div className="evaluation-card comprehension-quiz">
+            <div className="evaluation-header">
+              <div className="evaluation-icon">🎧</div>
+              <div className="evaluation-info">
+                <h3>Comprensión Auditiva</h3>
+                <span className="evaluation-type">8 preguntas • 12 min</span>
+              </div>
+              <div className="evaluation-status completed">Completado</div>
+            </div>
+            <div className="evaluation-content">
+              <p>Evalúa tu capacidad de comprensión auditiva con diálogos y conversaciones reales.</p>
+              <div className="evaluation-stats">
+                <div className="stat">
+                  <span className="stat-icon">🏆</span>
+                  <span>Último: 78%</span>
+                </div>
+                <div className="stat">
+                  <span className="stat-icon">🎯</span>
+                  <span>Intentos: 3</span>
+                </div>
+              </div>
+            </div>
+            <button className="evaluation-button completed" onClick={() => viewResults('comprehension')}>
+              Ver Resultados
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Classes Section */}
       <div className="classes-section">
         <div className="section-header">
@@ -568,6 +695,31 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
         ?
       </button>
 
+      {/* Evaluation Modal */}
+      <EvaluationModal
+        isVisible={showEvaluationModal}
+        evaluationType={currentEvaluation || ''}
+        onClose={() => setShowEvaluationModal(false)}
+        onComplete={(results) => {
+          setEvaluationResults(results);
+          setShowEvaluationModal(false);
+          setShowResultsModal(true);
+        }}
+      />
+
+      {/* Results Modal */}
+      <ResultsModal
+        isVisible={showResultsModal}
+        results={evaluationResults}
+        onClose={() => setShowResultsModal(false)}
+      />
+
+      {/* Notes Modal */}
+      <NotesModal
+        isVisible={showNotesModal}
+        onClose={() => setShowNotesModal(false)}
+      />
+
       {/* Modal de Reto Diario */}
       {showChallengeModal && currentChallenge && (
         <ChallengeModal
@@ -589,6 +741,9 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
         />
         </div>
       </div>
+      
+      {/* Pie de Página */}
+      <PiePagina />
     </>
   );
 }
