@@ -7,7 +7,7 @@ class UserSerializer(serializers.ModelSerializer):
         model = CustomUser
         fields = ('id', 'username', 'email', 'first_name', 'last_name', 'phone', 'country', 'city', 'level', 
                  'birth_date', 'cedula', 'address', 'emergency_contact', 'emergency_phone', 
-                 'english_level', 'learning_goals', 'profile_completed')
+                 'english_level', 'learning_goals', 'profile_completed', 'role', 'is_profesor')
         read_only_fields = ('id',)
 
 class LoginSerializer(serializers.Serializer):
@@ -19,9 +19,9 @@ class LoginSerializer(serializers.Serializer):
         password = data.get('password')
 
         if email and password:
-            # Buscar usuario por email
+            # Buscar usuario por email (case insensitive)
             try:
-                user = CustomUser.objects.get(email=email)
+                user = CustomUser.objects.get(email__iexact=email)
                 # Verificar contraseña
                 if user.check_password(password):
                     if user.is_active:

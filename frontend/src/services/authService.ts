@@ -12,6 +12,7 @@ interface LoginResponse {
     email: string;
     first_name: string;
     last_name: string;
+    role?: 'student' | 'profesor' | 'admin';
   };
   message?: string;
 }

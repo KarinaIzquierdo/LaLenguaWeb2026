@@ -620,8 +620,13 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
               <span className="topic-badge">Conversación básica</span>
             </div>
             <div className="actions">
-              <button className="action-btn edit-btn">✏️</button>
-              <button className="action-btn delete-btn">🗑️</button>
+              <button 
+                className="action-btn access-btn"
+                onClick={() => window.open('https://meet.google.com/abc-defg-hij', '_blank')}
+                title="Acceder a la clase"
+              >
+                📹 Acceder
+              </button>
             </div>
           </div>
 
@@ -642,8 +647,13 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
               <span className="topic-badge">Vocabulario de viajes</span>
             </div>
             <div className="actions">
-              <button className="action-btn edit-btn">✏️</button>
-              <button className="action-btn delete-btn">🗑️</button>
+              <button 
+                className="action-btn access-btn"
+                onClick={() => window.open('https://meet.google.com/xyz-mnop-qrs', '_blank')}
+                title="Acceder a la clase"
+              >
+                📹 Acceder
+              </button>
             </div>
           </div>
         </div>

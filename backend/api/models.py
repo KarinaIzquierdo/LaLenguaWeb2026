@@ -23,9 +23,40 @@ class CustomUser(AbstractUser):
     learning_goals = models.TextField(blank=True, null=True)
     profile_completed = models.BooleanField(default=False)
     
+    # Campo para identificar si es profesor (mantener por compatibilidad)
+    is_profesor = models.BooleanField(default=False)
+    
+    # Roles del sistema
+    ROLE_CHOICES = [
+        ('student', 'Estudiante'),
+        ('profesor', 'Profesor'),
+        ('admin', 'Administrador'),
+    ]
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='student')
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True)
     
     def __str__(self):
         return f"{self.username} - {self.first_name} {self.last_name}"
+
+
+class Profesor(models.Model):
+    """
+    Modelo para información específica de profesores
+    """
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='profesor_profile')
+    especialidad = models.CharField(max_length=100, blank=True, null=True)
+    biografia = models.TextField(blank=True, null=True)
+    experiencia_anos = models.IntegerField(default=0)
+    certificaciones = models.JSONField(default=list, blank=True)
+    telefono = models.CharField(max_length=20, blank=True, null=True)
+    disponibilidad = models.JSONField(default=dict, blank=True)  # Horarios disponibles
+    tarifa_por_hora = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"Prof. {self.user.first_name} {self.user.last_name} - {self.especialidad}"

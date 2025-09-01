@@ -4,15 +4,16 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
-from .models import CustomUser
+from .models import CustomUser, Profesor
 from .serializers import UserSerializer, LoginSerializer, ChangePasswordSerializer
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def login_view(request):
     """
-    Endpoint para autenticar usuarios y generar tokens JWT
+    Endpoint unificado para autenticar usuarios de todos los roles y generar tokens JWT
     """
+    print(f"Login request data: {request.data}")  # Debug
     serializer = LoginSerializer(data=request.data)
     if serializer.is_valid():
         user = serializer.validated_data['user']
@@ -21,20 +22,28 @@ def login_view(request):
         refresh = RefreshToken.for_user(user)
         access_token = refresh.access_token
         
-        # Serializar datos del usuario
+        # Serializar datos del usuario con rol incluido
         user_serializer = UserSerializer(user)
+        user_data = user_serializer.data
+        
+        # Asegurar que el rol esté correctamente asignado
+        if user.is_profesor and user.role == 'student':
+            user.role = 'profesor'
+            user.save()
         
         return Response({
             'success': True,
             'token': str(access_token),
             'refresh': str(refresh),
-            'user': user_serializer.data,
+            'user': user_data,
             'message': 'Login exitoso'
         }, status=status.HTTP_200_OK)
     
+    print(f"Login validation errors: {serializer.errors}")  # Debug
     return Response({
         'success': False,
-        'message': 'Credenciales inválidas'
+        'message': 'Credenciales inválidas',
+        'errors': serializer.errors
     }, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
@@ -137,3 +146,165 @@ def update_profile_view(request):
             'success': False,
             'message': f'Error al actualizar perfil: {str(e)}'
         }, status=status.HTTP_400_BAD_REQUEST)
+
+
+# ==================== ENDPOINTS PARA PROFESORES ====================
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def profesor_login_view(request):
+    """
+    Endpoint para autenticar profesores y generar tokens JWT
+    """
+    serializer = LoginSerializer(data=request.data)
+    if serializer.is_valid():
+        user = serializer.validated_data['user']
+        
+        # Verificar que el usuario sea profesor
+        if not user.is_profesor:
+            return Response({
+                'success': False,
+                'message': 'Este usuario no tiene permisos de profesor'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        # Generar tokens JWT
+        refresh = RefreshToken.for_user(user)
+        access_token = refresh.access_token
+        
+        # Obtener información del profesor
+        try:
+            profesor_profile = user.profesor_profile
+            profesor_data = {
+                'id': str(user.id),
+                'email': user.email,
+                'nombre': f"{user.first_name} {user.last_name}",
+                'especialidad': profesor_profile.especialidad,
+                'is_profesor': True,
+                'telefono': profesor_profile.telefono,
+                'biografia': profesor_profile.biografia,
+                'experiencia': profesor_profile.experiencia_anos,
+                'certificaciones': profesor_profile.certificaciones
+            }
+        except Profesor.DoesNotExist:
+            profesor_data = {
+                'id': str(user.id),
+                'email': user.email,
+                'nombre': f"{user.first_name} {user.last_name}",
+                'especialidad': 'No especificada',
+                'is_profesor': True
+            }
+        
+        return Response({
+            'success': True,
+            'access': str(access_token),
+            'refresh': str(refresh),
+            'user': profesor_data,
+            'message': 'Login de profesor exitoso'
+        }, status=status.HTTP_200_OK)
+    
+    return Response({
+        'success': False,
+        'message': 'Credenciales inválidas'
+    }, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def profesor_verify_token_view(request):
+    """
+    Endpoint para verificar si el token JWT de profesor es válido
+    """
+    user = request.user
+    
+    if not user.is_profesor:
+        return Response({
+            'success': False,
+            'message': 'Token no válido para profesor'
+        }, status=status.HTTP_403_FORBIDDEN)
+    
+    return Response({
+        'success': True,
+        'user': {
+            'id': str(user.id),
+            'email': user.email,
+            'nombre': f"{user.first_name} {user.last_name}",
+            'is_profesor': True
+        }
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def profesor_profile_view(request):
+    """
+    Endpoint para obtener el perfil del profesor autenticado
+    """
+    user = request.user
+    
+    if not user.is_profesor:
+        return Response({
+            'success': False,
+            'message': 'Usuario no es profesor'
+        }, status=status.HTTP_403_FORBIDDEN)
+    
+    try:
+        profesor_profile = user.profesor_profile
+        profesor_data = {
+            'id': str(user.id),
+            'email': user.email,
+            'nombre': f"{user.first_name} {user.last_name}",
+            'especialidad': profesor_profile.especialidad,
+            'biografia': profesor_profile.biografia,
+            'experiencia_anos': profesor_profile.experiencia_anos,
+            'certificaciones': profesor_profile.certificaciones,
+            'telefono': profesor_profile.telefono,
+            'disponibilidad': profesor_profile.disponibilidad,
+            'tarifa_por_hora': str(profesor_profile.tarifa_por_hora),
+            'is_profesor': True
+        }
+    except Profesor.DoesNotExist:
+        profesor_data = {
+            'id': str(user.id),
+            'email': user.email,
+            'nombre': f"{user.first_name} {user.last_name}",
+            'especialidad': 'No especificada',
+            'is_profesor': True
+        }
+    
+    return Response({
+        'success': True,
+        'user': profesor_data
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def profesor_change_password_view(request):
+    """
+    Endpoint para cambiar la contraseña del profesor autenticado
+    """
+    if not request.user.is_profesor:
+        return Response({
+            'success': False,
+            'message': 'Usuario no es profesor'
+        }, status=status.HTTP_403_FORBIDDEN)
+    
+    serializer = ChangePasswordSerializer(data=request.data, context={'request': request})
+    if serializer.is_valid():
+        user = request.user
+        new_password = serializer.validated_data['new_password']
+        
+        # Cambiar contraseña
+        user.set_password(new_password)
+        user.save()
+        
+        return Response({
+            'success': True,
+            'message': 'Contraseña cambiada exitosamente'
+        }, status=status.HTTP_200_OK)
+    
+    return Response({
+        'success': False,
+        'message': 'Error al cambiar contraseña',
+        'errors': serializer.errors
+    }, status=status.HTTP_400_BAD_REQUEST)
