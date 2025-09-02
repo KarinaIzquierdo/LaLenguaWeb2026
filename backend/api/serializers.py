@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import authenticate
-from .models import CustomUser
+from .models import CustomUser, Clase
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -52,3 +52,9 @@ class ChangePasswordSerializer(serializers.Serializer):
         if len(value) < 8:
             raise serializers.ValidationError('La nueva contraseña debe tener al menos 8 caracteres.')
         return value
+
+class ClaseSerializer(serializers.ModelSerializer):
+    estudiantes = serializers.PrimaryKeyRelatedField(many=True, queryset=CustomUser.objects.all())
+    class Meta:
+        model = Clase
+        fields = ['id', 'nombre', 'profesor', 'fecha', 'estudiantes', 'created_at', 'updated_at']

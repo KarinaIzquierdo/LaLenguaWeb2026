@@ -1,5 +1,10 @@
 from django.urls import path
+from rest_framework import routers
 from . import views
+from .views import ClaseViewSet
+
+router = routers.DefaultRouter()
+router.register(r'clases', ClaseViewSet)
 
 urlpatterns = [
     # Endpoints para estudiantes
@@ -15,3 +20,5 @@ urlpatterns = [
     path('auth/profesor/profile/', views.profesor_profile_view, name='profesor_profile'),
     path('auth/profesor/change-password/', views.profesor_change_password_view, name='profesor_change_password'),
 ]
+
+urlpatterns += router.urls

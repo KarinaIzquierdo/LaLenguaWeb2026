@@ -1,19 +1,27 @@
 import { useState, useEffect } from 'react'
+import { Navigate, Routes, Route } from 'react-router-dom'
 import Home from './Componentes/Home/Home'
 import Header from './Componentes/Layout/Encabezado'
 import Footer from './Componentes/Layout/PiePagina'
 import Dashboard from './Componentes/DashboardUsu/Dashboard_Usuario'
 import DashboardProfesor from './Componentes/DashboardProfesor/Dashboard_Profesor'
+import DashboardAdmin from './Componentes/DashboardAdmin/Dashboard_Admin'
 import LoginModal from './Componentes/Login/LoginModal'
 import UserInfoModal from './Componentes/UserInfo/UserInfoModal'
 import { authService } from './services/authService'
+import { AdminLayout } from './Componentes/DashboardAdmin/layout/AdminLayout'
+import FormularioUsuarios from './Componentes/DashboardAdmin/FormularioUsuarios'
+import GestionEstudiantes from './Componentes/DashboardAdmin/GestionEstudiantes'
+import ProgramarClases from './Componentes/DashboardAdmin/ProgramarClases'
+import GestionCursos from './Componentes/DashboardAdmin/GestionCursos'
+import { ThemeProvider } from './context/ThemeContext'
 
 function App() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [showUserInfoModal, setShowUserInfoModal] = useState(false)
-  const [userRole, setUserRole] = useState<'student' | 'profesor' | null>(null)
+  const [userRole, setUserRole] = useState<'student' | 'profesor' | 'admin' | null>(null)
 
   useEffect(() => {
     // Verificar si el usuario ya está autenticado al cargar la app
@@ -86,58 +94,57 @@ function App() {
     setShowUserInfoModal(false)
   }
 
-  if (isLoading) {
-    return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        height: '100vh',
-        fontSize: '1.2rem',
-        color: '#667eea'
-      }}>
-        Cargando...
-      </div>
-    )
-  }
-
-  // Si está autenticado, mostrar dashboard correspondiente según el rol
-  if (isAuthenticated) {
-    if (userRole === 'student') {
-      return (
+  return (
+    <ThemeProvider>
+      {isLoading ? (
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          height: '100vh',
+          fontSize: '1.2rem',
+          color: '#667eea'
+        }}>
+          Cargando...
+        </div>
+      ) : isAuthenticated ? (
+        userRole === 'student' ? (
+          <>
+            <Dashboard onLogout={handleLogout} />
+            <UserInfoModal 
+              isOpen={showUserInfoModal}
+              onClose={() => setShowUserInfoModal(false)}
+              onComplete={handleUserInfoComplete}
+            />
+          </>
+        ) : userRole === 'profesor' ? (
+          <DashboardProfesor onLogout={handleLogout} />
+        ) : userRole === 'admin' ? (
+          <Routes>
+            <Route path="/admin/*" element={<AdminLayout onLogout={handleLogout} />}>
+              <Route index element={<Navigate to="dashboard" />} />
+              <Route path="dashboard" element={<DashboardAdmin />} />
+              <Route path="usuarios" element={<FormularioUsuarios />} />
+              <Route path="gestion-estudiantes" element={<GestionEstudiantes />} />
+              <Route path="programar-clases" element={<ProgramarClases />} />
+              <Route path="gestion-cursos" element={<GestionCursos />} />
+            </Route>
+            <Route path="*" element={<h1>Error 404 - Página no encontrada</h1>} />
+          </Routes>
+        ) : null
+      ) : (
         <>
-          <Dashboard onLogout={handleLogout} />
-          <UserInfoModal 
-            isOpen={showUserInfoModal}
-            onClose={() => setShowUserInfoModal(false)}
-            onComplete={handleUserInfoComplete}
+          <Header onLoginClick={handleLoginClick} />
+          <Home />
+          <Footer />
+          <LoginModal 
+            isOpen={isLoginModalOpen}
+            onClose={handleCloseModal}
+            onLogin={handleLogin}
           />
         </>
-      )
-    }
-    
-    if (userRole === 'profesor') {
-      return (
-        <>
-          <DashboardProfesor onLogout={handleLogout} />
-        </>
-      )
-    }
-    
-  }
-
-  // Si no está autenticado, mostrar home con header, footer y modal de login unificado
-  return (
-    <>
-      <Header onLoginClick={handleLoginClick} />
-      <Home />
-      <Footer />
-      <LoginModal 
-        isOpen={isLoginModalOpen}
-        onClose={handleCloseModal}
-        onLogin={handleLogin}
-      />
-    </>
+      )}
+    </ThemeProvider>
   )
 }
 

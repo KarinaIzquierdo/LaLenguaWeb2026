@@ -1,8 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { ClaseService } from '../../services/claseService';
 import './MisClases.css';
 
 interface Clase {
-  id: string;
+  id: number;
+  nombre: string;
+  profesorId: number;
   fecha: string;
   hora: string;
   duracion: number;
@@ -14,47 +17,25 @@ interface Clase {
   tipoClase: 'individual' | 'grupal';
 }
 
-export default function MisClases() {
-  const [clases, setClases] = useState<Clase[]>([
-    {
-      id: '1',
-      fecha: '2024-09-01',
-      hora: '10:00',
-      duracion: 60,
-      tema: 'Conversación Básica',
-      descripcion: 'Práctica de conversación para nivel intermedio',
-      estudiantes: ['Ana García', 'Carlos López'],
-      meetLink: 'https://meet.google.com/abc-defg-hij',
-      estado: 'programada',
-      tipoClase: 'grupal'
-    },
-    {
-      id: '2',
-      fecha: '2024-09-01',
-      hora: '14:00',
-      duracion: 45,
-      tema: 'Gramática Avanzada',
-      descripcion: 'Tiempos verbales complejos',
-      estudiantes: ['María Rodríguez'],
-      meetLink: 'https://meet.google.com/xyz-mnop-qrs',
-      estado: 'programada',
-      tipoClase: 'individual'
-    },
-    {
-      id: '3',
-      fecha: '2024-08-30',
-      hora: '16:00',
-      duracion: 60,
-      tema: 'Vocabulario de Negocios',
-      descripcion: 'Terminología empresarial en inglés',
-      estudiantes: ['Pedro Martín', 'Laura Silva', 'José Hernández'],
-      meetLink: 'https://meet.google.com/def-uvw-xyz',
-      estado: 'completada',
-      tipoClase: 'grupal'
-    }
-  ]);
+export default function MisClases({ profesorId }: { profesorId: number }) {
+  const [clases, setClases] = useState<Clase[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  const iniciarClase = (claseId: string) => {
+  useEffect(() => {
+    const fetchClases = async () => {
+      setIsLoading(true);
+      try {
+        const data = await ClaseService.getClasesPorProfesor(profesorId);
+        setClases(data);
+      } catch (err) {
+        // Puedes mostrar un error aquí si lo deseas
+      }
+      setIsLoading(false);
+    };
+    fetchClases();
+  }, [profesorId]);
+
+  const iniciarClase = (claseId: number) => {
     const clase = clases.find(c => c.id === claseId);
     if (!clase) return;
 
@@ -70,7 +51,7 @@ export default function MisClases() {
     alert(`¡Clase "${clase.tema}" iniciada! Los estudiantes pueden acceder ahora.`);
   };
 
-  const finalizarClase = (claseId: string) => {
+  const finalizarClase = (claseId: number) => {
     setClases(prev => prev.map(c => 
       c.id === claseId ? { ...c, estado: 'completada' } : c
     ));
@@ -104,6 +85,8 @@ export default function MisClases() {
         <p>Gestiona y controla tus clases programadas</p>
       </div>
 
+      {isLoading && <div className="loading-spinner">Cargando clases...</div>}
+
       {/* Clases de Hoy */}
       {clasesHoy.length > 0 && (
         <div className="clases-section">
@@ -130,7 +113,7 @@ export default function MisClases() {
                   </div>
                   <div className="detalle-item">
                     <span className="detalle-icon">👥</span>
-                    <span>{clase.estudiantes.length} estudiante(s)</span>
+                    <span>{(clase.estudiantes ? clase.estudiantes.length : 0)} estudiante(s)</span>
                   </div>
                   <div className="detalle-item">
                     <span className="detalle-icon">📝</span>
@@ -141,7 +124,7 @@ export default function MisClases() {
                 <div className="estudiantes-lista">
                   <strong>Estudiantes:</strong>
                   <div className="estudiantes-tags">
-                    {clase.estudiantes.map((estudiante, index) => (
+                    {(clase.estudiantes || []).map((estudiante, index) => (
                       <span key={index} className="estudiante-tag">{estudiante}</span>
                     ))}
                   </div>
@@ -202,7 +185,7 @@ export default function MisClases() {
                       ⏱️ {clase.duracion} min
                     </span>
                     <span className="meta-item">
-                      👥 {clase.estudiantes.length} estudiante(s)
+                      👥 {(clase.estudiantes ? clase.estudiantes.length : 0)} estudiante(s)
                     </span>
                   </div>
                 </div>
@@ -227,7 +210,7 @@ export default function MisClases() {
                 <div className="historial-fecha">{formatearFecha(clase.fecha)}</div>
                 <div className="historial-info">
                   <span className="historial-tema">{clase.tema}</span>
-                  <span className="historial-estudiantes">{clase.estudiantes.length} estudiante(s)</span>
+                  <span className="historial-estudiantes">{(clase.estudiantes ? clase.estudiantes.length : 0)} estudiante(s)</span>
                 </div>
                 <div className="historial-estado">✅ Completada</div>
               </div>

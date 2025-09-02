@@ -60,3 +60,15 @@ class Profesor(models.Model):
     
     def __str__(self):
         return f"Prof. {self.user.first_name} {self.user.last_name} - {self.especialidad}"
+
+
+class Clase(models.Model):
+    nombre = models.CharField(max_length=100)
+    profesor = models.CharField(max_length=100)
+    fecha = models.DateField()
+    estudiantes = models.ManyToManyField(CustomUser, related_name='clases', blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.nombre} - {self.profesor} ({self.fecha})"

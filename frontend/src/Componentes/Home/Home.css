@@ -368,8 +368,8 @@ html {
   max-height: 70vh;
   object-fit: contain;
   transform: scale(1.0);
-  animation: float 3s ease-in-out infinite;
   transition: transform 0.3s ease;
+  /* Sin animación para que permanezca quieta */
 }
 
 .character-img:hover {
@@ -613,8 +613,6 @@ html {
   transition: all 0.4s ease;
   transform-style: preserve-3d;
   cursor: pointer;
-  animation: float3d 4s ease-in-out infinite;
-  animation-delay: 0s;
 }
 
 .student-img:hover {
@@ -719,8 +717,6 @@ html {
   transition: all 0.4s ease;
   transform-style: preserve-3d;
   cursor: pointer;
-  animation: float3d 4s ease-in-out infinite;
-  animation-delay: 1.3s;
 }
 
 .puzzle-img:hover {
@@ -885,8 +881,6 @@ html {
   transition: all 0.4s ease;
   transform-style: preserve-3d;
   cursor: pointer;
-  animation: float3d 4s ease-in-out infinite;
-  animation-delay: 2.6s;
 }
 
 .success-img:hover {

@@ -9,6 +9,7 @@ import ChallengeModal from "./ChallengeModal";
 import Toast from "./Toast";
 import { useDashboardEvents } from "./DashboardEvents";
 import NavUsu from "./Nav_Usu";
+import { ClaseService } from '../../services/claseService';
 
 interface DashboardProps {
   onLogout?: () => void;
@@ -62,6 +63,10 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
   const [showResultsModal, setShowResultsModal] = useState(false);
   const [evaluationResults, setEvaluationResults] = useState<any>(null);
   const [showNotesModal, setShowNotesModal] = useState(false);
+
+  // Clases states
+  const [clasesUsuario, setClasesUsuario] = useState([]);
+  const [isLoadingClases, setIsLoadingClases] = useState(false);
 
   // Evaluation functions
   const startEvaluation = (type: string) => {
@@ -242,6 +247,23 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
         setShowOnboarding(true);
       }
     }, 1500);
+  }, []);
+
+  useEffect(() => {
+    const fetchClasesUsuario = async () => {
+      setIsLoadingClases(true);
+      try {
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        if (user && user.id) {
+          const data = await ClaseService.getClasesPorUsuario(user.id);
+          setClasesUsuario(data);
+        }
+      } catch (err) {
+        setClasesUsuario([]);
+      }
+      setIsLoadingClases(false);
+    };
+    fetchClasesUsuario();
   }, []);
 
   return (
@@ -656,6 +678,36 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
               </button>
             </div>
           </div>
+        </div>
+
+        <div className="classes-table">
+          <div className="table-header">
+            <div>Fecha</div>
+            <div>Hora</div>
+            <div>Profesor</div>
+            <div>Tema</div>
+            <div>Acciones</div>
+          </div>
+
+          {isLoadingClases ? (
+            <div className="table-row"><td colSpan={5}>Cargando...</td></div>
+          ) : (
+            clasesUsuario.length > 0 ? (
+              clasesUsuario.map((clase: any) => (
+                <div className="table-row" key={clase.id}>
+                  <div className="date-cell">{clase.fecha}</div>
+                  <div className="time-cell">{clase.hora || ''}</div>
+                  <div className="teacher-info">{clase.profesor}</div>
+                  <div className="topic-cell">{clase.nombre}</div>
+                  <div className="actions">
+                    <button className="action-btn access-btn">📹 Acceder</button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="table-row"><td colSpan={5}>No tienes clases programadas</td></div>
+            )
+          )}
         </div>
       </div>
 

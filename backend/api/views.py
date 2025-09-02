@@ -1,11 +1,11 @@
-from rest_framework import status
+from rest_framework import status, viewsets
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
-from .models import CustomUser, Profesor
-from .serializers import UserSerializer, LoginSerializer, ChangePasswordSerializer
+from .models import CustomUser, Profesor, Clase
+from .serializers import UserSerializer, LoginSerializer, ChangePasswordSerializer, ClaseSerializer
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -308,3 +308,16 @@ def profesor_change_password_view(request):
         'message': 'Error al cambiar contraseña',
         'errors': serializer.errors
     }, status=status.HTTP_400_BAD_REQUEST)
+
+
+# ==================== ENDPOINTS PARA CLASES ====================
+
+class ClaseViewSet(viewsets.ModelViewSet):
+    queryset = Clase.objects.all()
+    serializer_class = ClaseSerializer
+
+    def get_queryset(self):
+        usuario_id = self.request.query_params.get('usuario')
+        if usuario_id:
+            return Clase.objects.filter(estudiantes__id=usuario_id)
+        return super().get_queryset().order_by('-created_at')
