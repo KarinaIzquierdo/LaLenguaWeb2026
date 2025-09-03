@@ -10,6 +10,7 @@ import Toast from "./Toast";
 import { useDashboardEvents } from "./DashboardEvents";
 import NavUsu from "./Nav_Usu";
 import { ClaseService } from '../../services/claseService';
+import { EvaluationService } from '../../services/evaluationService';
 
 interface DashboardProps {
   onLogout?: () => void;
@@ -67,6 +68,10 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
   // Clases states
   const [clasesUsuario, setClasesUsuario] = useState([]);
   const [isLoadingClases, setIsLoadingClases] = useState(false);
+
+  // Evaluaciones states
+  const [evaluaciones, setEvaluaciones] = useState<any[]>([]);
+  const [isLoadingEvaluaciones, setIsLoadingEvaluaciones] = useState(false);
 
   // Evaluation functions
   const startEvaluation = (type: string) => {
@@ -266,6 +271,23 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
     fetchClasesUsuario();
   }, []);
 
+  useEffect(() => {
+    const fetchEvaluaciones = async () => {
+      setIsLoadingEvaluaciones(true);
+      try {
+        const token = localStorage.getItem('token');
+        if (token) {
+          const data = await EvaluationService.getEvaluationsForUser(token);
+          setEvaluaciones(data);
+        }
+      } catch (err) {
+        setEvaluaciones([]);
+      }
+      setIsLoadingEvaluaciones(false);
+    };
+    fetchEvaluaciones();
+  }, []);
+
   return (
     <>
       {/* Navigation Header - Outside container for full width */}
@@ -289,7 +311,7 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
         <div className="hero-image">
           <div className="flamingo">
             <img
-              src="Image/flamingo.png"
+              src="/Image/flamingo.png"
               alt="Flamingo"
               className="flamingo-img"
             />
@@ -303,7 +325,7 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
         <div className="card avatar-card">
           <div className="card-header">
             <div className="card-icon">
-              <img src="Image/usuario.png" className="icon-img" />
+              <img src="/Image/usuario.png" className="icon-img" />
             </div>
             <h3>Tu Avatar</h3>
           </div>
@@ -326,7 +348,7 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
         <div className="card progress-card">
           <div className="card-header">
             <div className="card-icon">
-              <img src="Image/grafico-de-barras.png" className="icon-img" />
+              <img src="/Image/grafico-de-barras.png" className="icon-img" />
             </div>
             <h3>Tu Progreso</h3>
           </div>
@@ -384,7 +406,7 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
 
           <div className="card-header">
             <div className="card-icon">
-              <img src="Image/fuego.png" className="icon-img" />
+              <img src="/Image/fuego.png" className="icon-img" />
             </div>
             <h3>Reto Diario</h3>
           </div>
@@ -524,89 +546,50 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
         </div>
 
         <div className="evaluations-grid">
-          {/* Quiz de Vocabulario */}
-          <div className="evaluation-card vocabulary-quiz">
-            <div className="evaluation-header">
-              <div className="evaluation-icon">📚</div>
-              <div className="evaluation-info">
-                <h3>Quiz de Vocabulario</h3>
-                <span className="evaluation-type">10 preguntas • 15 min</span>
-              </div>
-              <div className="evaluation-status available">Disponible</div>
-            </div>
-            <div className="evaluation-content">
-              <p>Evalúa tu conocimiento de vocabulario básico en inglés. Palabras esenciales para el viaje de Lingo.</p>
-              <div className="evaluation-stats">
-                <div className="stat">
-                  <span className="stat-icon">🏆</span>
-                  <span>Mejor: 85%</span>
+          {isLoadingEvaluaciones ? (
+            <div>Cargando evaluaciones...</div>
+          ) : evaluaciones.length > 0 ? (
+            evaluaciones.map((evalItem: any) => (
+              <div className={`evaluation-card ${evalItem.tipo}-quiz`} key={evalItem.id}>
+                <div className="evaluation-header">
+                  <div className="evaluation-icon">
+                    {evalItem.tipo === 'vocabulary' && '📚'}
+                    {evalItem.tipo === 'grammar' && '✏️'}
+                    {evalItem.tipo === 'comprehension' && '🎧'}
+                  </div>
+                  <div className="evaluation-info">
+                    <h3>{evalItem.tipo === 'vocabulary' ? 'Quiz de Vocabulario' : evalItem.tipo === 'grammar' ? 'Evaluación de Gramática' : 'Comprensión Auditiva'}</h3>
+                    <span className="evaluation-type">{evalItem.detalles || ''}</span>
+                  </div>
+                  <div className={`evaluation-status ${evalItem.score > 0 ? 'completed' : 'available'}`}>{evalItem.score > 0 ? 'Completado' : 'Disponible'}</div>
                 </div>
-                <div className="stat">
-                  <span className="stat-icon">🎯</span>
-                  <span>Intentos: 2</span>
+                <div className="evaluation-content">
+                  <p>{evalItem.tipo === 'vocabulary' ? 'Evalúa tu conocimiento de vocabulario básico en inglés.' : evalItem.tipo === 'grammar' ? 'Pon a prueba tus conocimientos gramaticales.' : 'Evalúa tu capacidad de comprensión auditiva.'}</p>
+                  <div className="evaluation-stats">
+                    <div className="stat">
+                      <span className="stat-icon">🏆</span>
+                      <span>{evalItem.score > 0 ? `Mejor: ${evalItem.score}%` : 'Sin intentos'}</span>
+                    </div>
+                    <div className="stat">
+                      <span className="stat-icon">🎯</span>
+                      <span>Intentos: {evalItem.intentos}</span>
+                    </div>
+                  </div>
                 </div>
+                {evalItem.score > 0 ? (
+                  <button className="evaluation-button completed" onClick={() => viewResults(evalItem.tipo)}>
+                    Ver Resultados
+                  </button>
+                ) : (
+                  <button className="evaluation-button" onClick={() => startEvaluation(evalItem.tipo)}>
+                    Comenzar
+                  </button>
+                )}
               </div>
-            </div>
-            <button className="evaluation-button" onClick={() => startEvaluation('vocabulary')}>
-              Comenzar Quiz
-            </button>
-          </div>
-
-          {/* Evaluación de Gramática */}
-          <div className="evaluation-card grammar-test">
-            <div className="evaluation-header">
-              <div className="evaluation-icon">✏️</div>
-              <div className="evaluation-info">
-                <h3>Evaluación de Gramática</h3>
-                <span className="evaluation-type">15 preguntas • 20 min</span>
-              </div>
-              <div className="evaluation-status available">Disponible</div>
-            </div>
-            <div className="evaluation-content">
-              <p>Pon a prueba tus conocimientos gramaticales con ejercicios de diferentes niveles de dificultad.</p>
-              <div className="evaluation-stats">
-                <div className="stat">
-                  <span className="stat-icon">🏆</span>
-                  <span>Mejor: 92%</span>
-                </div>
-                <div className="stat">
-                  <span className="stat-icon">🎯</span>
-                  <span>Intentos: 1</span>
-                </div>
-              </div>
-            </div>
-            <button className="evaluation-button" onClick={() => startEvaluation('grammar')}>
-              Comenzar Evaluación
-            </button>
-          </div>
-
-          {/* Quiz de Comprensión */}
-          <div className="evaluation-card comprehension-quiz">
-            <div className="evaluation-header">
-              <div className="evaluation-icon">🎧</div>
-              <div className="evaluation-info">
-                <h3>Comprensión Auditiva</h3>
-                <span className="evaluation-type">8 preguntas • 12 min</span>
-              </div>
-              <div className="evaluation-status completed">Completado</div>
-            </div>
-            <div className="evaluation-content">
-              <p>Evalúa tu capacidad de comprensión auditiva con diálogos y conversaciones reales.</p>
-              <div className="evaluation-stats">
-                <div className="stat">
-                  <span className="stat-icon">🏆</span>
-                  <span>Último: 78%</span>
-                </div>
-                <div className="stat">
-                  <span className="stat-icon">🎯</span>
-                  <span>Intentos: 3</span>
-                </div>
-              </div>
-            </div>
-            <button className="evaluation-button completed" onClick={() => viewResults('comprehension')}>
-              Ver Resultados
-            </button>
-          </div>
+            ))
+          ) : (
+            <div>No tienes evaluaciones registradas.</div>
+          )}
         </div>
       </div>
 
@@ -614,70 +597,6 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
       <div className="classes-section">
         <div className="section-header">
           <h2 className="section-title">Clases Programadas</h2>
-        </div>
-
-        <div className="classes-table">
-          <div className="table-header">
-            <div>Fecha</div>
-            <div>Hora</div>
-            <div>Profesor</div>
-            <div>Tema</div>
-            <div>Acciones</div>
-          </div>
-
-          <div className="table-row">
-            <div className="date-cell">
-              15/06/2023
-              <div className="date-day">Jueves</div>
-            </div>
-            <div className="time-cell">10:00 - 11:00</div>
-            <div className="teacher-info">
-              <div className="teacher-avatar avatar-blue">JD</div>
-              <div className="teacher-details">
-                <span className="teacher-name">John Doe</span>
-                <span className="teacher-role">Profesor Nativo</span>
-              </div>
-            </div>
-            <div className="topic-cell">
-              <span className="topic-badge">Conversación básica</span>
-            </div>
-            <div className="actions">
-              <button 
-                className="action-btn access-btn"
-                onClick={() => window.open('https://meet.google.com/abc-defg-hij', '_blank')}
-                title="Acceder a la clase"
-              >
-                📹 Acceder
-              </button>
-            </div>
-          </div>
-
-          <div className="table-row">
-            <div className="date-cell">
-              18/06/2023
-              <div className="date-day">Domingo</div>
-            </div>
-            <div className="time-cell">15:30 - 16:30</div>
-            <div className="teacher-info">
-              <div className="teacher-avatar avatar-green">MS</div>
-              <div className="teacher-details">
-                <span className="teacher-name">Maria Smith</span>
-                <span className="teacher-role">Especialista</span>
-              </div>
-            </div>
-            <div className="topic-cell">
-              <span className="topic-badge">Vocabulario de viajes</span>
-            </div>
-            <div className="actions">
-              <button 
-                className="action-btn access-btn"
-                onClick={() => window.open('https://meet.google.com/xyz-mnop-qrs', '_blank')}
-                title="Acceder a la clase"
-              >
-                📹 Acceder
-              </button>
-            </div>
-          </div>
         </div>
 
         <div className="classes-table">

@@ -1,13 +1,13 @@
 from rest_framework import serializers
 from django.contrib.auth import authenticate
-from .models import CustomUser, Clase
+from .models import CustomUser, Clase, Evaluation
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
         fields = ('id', 'username', 'email', 'first_name', 'last_name', 'phone', 'country', 'city', 'level', 
                  'birth_date', 'cedula', 'address', 'emergency_contact', 'emergency_phone', 
-                 'english_level', 'learning_goals', 'profile_completed', 'role', 'is_profesor')
+                 'english_level', 'learning_goals', 'profile_completed', 'role', 'is_profesor', 'is_active')
         read_only_fields = ('id',)
 
 class LoginSerializer(serializers.Serializer):
@@ -58,3 +58,32 @@ class ClaseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Clase
         fields = ['id', 'nombre', 'profesor', 'fecha', 'estudiantes', 'created_at', 'updated_at']
+
+class UserRegisterSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, min_length=8)
+    role = serializers.ChoiceField(choices=CustomUser.ROLE_CHOICES)
+
+    class Meta:
+        model = CustomUser
+        fields = ('first_name', 'last_name', 'email', 'role', 'password')
+
+    def validate_email(self, value):
+        if CustomUser.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError('Ya existe un usuario con este correo electrónico.')
+        return value
+
+    def create(self, validated_data):
+        password = validated_data.pop('password')
+        user = CustomUser(**validated_data)
+        user.username = validated_data['email']  # Usar email como username
+        user.set_password(password)
+        if validated_data['role'] == 'profesor':
+            user.is_profesor = True
+        user.save()
+        return user
+
+class EvaluationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Evaluation
+        fields = ['id', 'usuario', 'tipo', 'score', 'intentos', 'fecha', 'detalles']
+        read_only_fields = ['id', 'usuario', 'fecha']

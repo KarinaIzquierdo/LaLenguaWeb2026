@@ -42,6 +42,7 @@ export const authService = {
         // Guardar token en localStorage
         if (data.token) {
           localStorage.setItem('authToken', data.token);
+          localStorage.setItem('token', data.token); // <- Asegura compatibilidad
           localStorage.setItem('user', JSON.stringify(data.user));
         }
         return { success: true, ...data };
@@ -57,6 +58,7 @@ export const authService = {
   // Logout del usuario
   logout(): void {
     localStorage.removeItem('authToken');
+    localStorage.removeItem('token'); // <- Limpia también 'token'
     localStorage.removeItem('user');
   },
 

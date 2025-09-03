@@ -4,8 +4,8 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
-from .models import CustomUser, Profesor, Clase
-from .serializers import UserSerializer, LoginSerializer, ChangePasswordSerializer, ClaseSerializer
+from .models import CustomUser, Profesor, Clase, Evaluation
+from .serializers import UserSerializer, LoginSerializer, ChangePasswordSerializer, ClaseSerializer, UserRegisterSerializer, EvaluationSerializer
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -204,7 +204,8 @@ def profesor_login_view(request):
     
     return Response({
         'success': False,
-        'message': 'Credenciales inválidas'
+        'message': 'Credenciales inválidas',
+        'errors': serializer.errors
     }, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -321,3 +322,66 @@ class ClaseViewSet(viewsets.ModelViewSet):
         if usuario_id:
             return Clase.objects.filter(estudiantes__id=usuario_id)
         return super().get_queryset().order_by('-created_at')
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def register_view(request):
+    """
+    Endpoint para registrar un nuevo usuario (estudiante, profesor o admin)
+    """
+    serializer = UserRegisterSerializer(data=request.data)
+    if serializer.is_valid():
+        user = serializer.save()
+        user_serializer = UserSerializer(user)
+        return Response({
+            'success': True,
+            'user': user_serializer.data,
+            'message': 'Usuario registrado exitosamente'
+        }, status=status.HTTP_201_CREATED)
+    else:
+        return Response({
+            'success': False,
+            'errors': serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def user_evaluations_view(request):
+    """
+    List evaluations/quizzes for the current user
+    """
+    evaluations = Evaluation.objects.filter(usuario=request.user)
+    serializer = EvaluationSerializer(evaluations, many=True)
+    return Response(serializer.data)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def toggle_user_active_view(request, user_id):
+    """
+    Endpoint para activar o desactivar un usuario por su id
+    """
+    try:
+        user = CustomUser.objects.get(id=user_id)
+        user.is_active = not user.is_active
+        user.save()
+        return Response({
+            'success': True,
+            'is_active': user.is_active,
+            'message': f'Usuario {"activado" if user.is_active else "desactivado"} correctamente.'
+        }, status=status.HTTP_200_OK)
+    except CustomUser.DoesNotExist:
+        return Response({
+            'success': False,
+            'message': 'Usuario no encontrado.'
+        }, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def list_users_view(request):
+    """
+    Endpoint para listar todos los usuarios
+    """
+    users = CustomUser.objects.all()
+    serializer = UserSerializer(users, many=True)
+    return Response(serializer.data)

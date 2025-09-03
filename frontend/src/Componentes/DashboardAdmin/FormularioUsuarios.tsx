@@ -4,8 +4,11 @@
  */
 
 import "./formulario-usuarios.css";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FaEdit, FaToggleOn, FaToggleOff, FaPlus, FaSpinner } from 'react-icons/fa';
+import { userService } from '../../services/userService';
+import type { RegisterData } from '../../services/userService';
+import { rolMapFrontendToBackend } from '../../services/rolMap';
 
 /**
  * @component FormularioUsuarios
@@ -34,40 +37,7 @@ export default function FormularioUsuarios() {
   /**
    * @state {Array<Object>} users - Lista de usuarios.
    */
-  const [users, setUsers] = useState<Usuario[]>([
-    {
-      id: 1,
-      nombres: 'Juan',
-      apellidos: 'Pérez',
-      correo: 'juan.perez@colegio.com',
-      rol: 'Profesor',
-      activo: true,
-    },
-    {
-      id: 2,
-      nombres: 'María',
-      apellidos: 'Gómez',
-      correo: 'maria.gomez@colegio.com',
-      rol: 'Estudiante',
-      activo: true,
-    },
-    {
-      id: 3,
-      nombres: 'Carlos',
-      apellidos: 'Ruiz',
-      correo: 'carlos.ruiz@colegio.com',
-      rol: 'Admin',
-      activo: true,
-    },
-    {
-      id: 4,
-      nombres: 'Ana',
-      apellidos: 'Díaz',
-      correo: 'ana.diaz@colegio.com',
-      rol: 'Estudiante',
-      activo: false,
-    },
-  ]);
+  const [users, setUsers] = useState<Usuario[]>([]);
 
   /**
    * @state {boolean} showForm - Controla la visibilidad del formulario de creación/edición.
@@ -124,8 +94,8 @@ export default function FormularioUsuarios() {
     
     if (!editingUser && !formData.contrasena.trim()) {
       errors.contrasena = 'La contraseña es obligatoria';
-    } else if (!editingUser && formData.contrasena.length < 6) {
-      errors.contrasena = 'La contraseña debe tener al menos 6 caracteres';
+    } else if (!editingUser && formData.contrasena.length < 8) {
+      errors.contrasena = 'La contraseña debe tener al menos 8 caracteres';
     }
     
     return errors;
@@ -138,12 +108,39 @@ export default function FormularioUsuarios() {
    */
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value,
-    }));
-    
-    // Limpiar error del campo cuando el usuario empiece a escribir
+    if (name === 'rol') {
+      let dominio = '@thelanguage.co';
+      if (value === 'Profesor') {
+        dominio = '@soy.thelanguage.co';
+      } else if (value === 'Admin') {
+        dominio = '@thelanguage.co';
+      }
+      // Solo deja la parte antes de la arroba
+      let correoBase = formData.correo.split('@')[0];
+      setFormData(prev => ({
+        ...prev,
+        rol: value,
+        correo: correoBase ? correoBase + dominio : '',
+      }));
+    } else if (name === 'correo') {
+      // Solo deja la parte antes de la arroba
+      let correoBase = value.split('@')[0];
+      let dominio = '@thelanguage.co';
+      if (formData.rol === 'Profesor') {
+        dominio = '@soy.thelanguage.co';
+      } else if (formData.rol === 'Admin') {
+        dominio = '@thelanguage.co';
+      }
+      setFormData(prev => ({
+        ...prev,
+        correo: correoBase ? correoBase + dominio : '',
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value,
+      }));
+    }
     if (formErrors[name]) {
       setFormErrors(prev => ({
         ...prev,
@@ -194,14 +191,10 @@ export default function FormularioUsuarios() {
    */
   const handleToggleActive = async (userId: number) => {
     setIsLoading(true);
-    
-    // Simular una operación asíncrona
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    setUsers(users.map(user =>
-      user.id === userId ? { ...user, activo: !user.activo } : user
-    ));
-    
+    await userService.toggleActive(userId);
+    // Refrescar usuarios desde backend
+    const data = await userService.getAll();
+    setUsers(data);
     setIsLoading(false);
   };
 
@@ -212,37 +205,40 @@ export default function FormularioUsuarios() {
    */
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
-    // Validar formulario
     const errors = validateForm();
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
       return;
     }
-
     setIsLoading(true);
-    
-    // Simular una operación asíncrona
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    // Excluir la contraseña del objeto que se guardará en el estado
-    const { contrasena, ...userData } = formData;
-    
-    if (editingUser) {
-      // Actualizar usuario existente
-      setUsers(users.map(user =>
-        user.id === editingUser.id ? { ...user, ...userData } : user
-      ));
-    } else {
-      // Crear nuevo usuario
-      const newUser = {
-        id: users.length > 0 ? Math.max(...users.map(u => u.id)) + 1 : 1,
-        ...userData,
-        activo: true,
+    if (!editingUser) {
+      // Registro en backend
+      const registerData: RegisterData = {
+        first_name: formData.nombres,
+        last_name: formData.apellidos,
+        email: formData.correo,
+        role: rolMapFrontendToBackend[formData.rol],
+        password: formData.contrasena,
       };
-      setUsers([...users, newUser]);
+      const result = await userService.register(registerData);
+      if (result.success) {
+        // Refrescar usuarios desde backend
+        const data = await userService.getAll();
+        setUsers(data);
+        setShowForm(false);
+        setEditingUser(null);
+        setFormErrors({});
+      } else {
+        setFormErrors(result.errors || { correo: result.message || 'Error al registrar usuario' });
+      }
+      setIsLoading(false);
+      return;
     }
-    
+    // Simular una operación asíncrona para editar (debería ser llamada real al backend)
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Refrescar usuarios desde backend
+    const data = await userService.getAll();
+    setUsers(data);
     setShowForm(false);
     setEditingUser(null);
     setFormErrors({});
@@ -258,6 +254,15 @@ export default function FormularioUsuarios() {
     setEditingUser(null);
     setFormErrors({});
   };
+
+  // Cargar usuarios reales al montar el componente
+  useEffect(() => {
+    const fetchUsers = async () => {
+      const data = await userService.getAll();
+      setUsers(data);
+    };
+    fetchUsers();
+  }, []);
 
   return (
     <div className="gestion-usuarios-container">
@@ -435,7 +440,7 @@ export default function FormularioUsuarios() {
                 name="contrasena"
                 value={formData.contrasena}
                 onChange={handleChange}
-                placeholder="Mínimo 6 caracteres"
+                placeholder="Mínimo 8 caracteres"
                 required
                 aria-describedby={formErrors.contrasena ? "contrasena-error" : undefined}
                 aria-invalid={!!formErrors.contrasena}
