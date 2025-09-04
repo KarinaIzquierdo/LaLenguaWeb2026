@@ -9,6 +9,7 @@ import { FaEdit, FaToggleOn, FaToggleOff, FaPlus, FaSpinner } from 'react-icons/
 import { userService } from '../../services/userService';
 import type { RegisterData } from '../../services/userService';
 import { rolMapFrontendToBackend } from '../../services/rolMap';
+import { bloqueService, type Bloque } from '../../services/bloqueService';
 
 /**
  * @component FormularioUsuarios
@@ -27,6 +28,7 @@ interface Usuario {
   correo: string;
   rol: string;
   activo: boolean;
+  bloque_asignado?: string;
 }
 
 interface FormErrors {
@@ -63,7 +65,19 @@ export default function FormularioUsuarios() {
     correo: '',
     rol: 'Estudiante',
     contrasena: '',
+    bloque_asignado: '',
   });
+
+  /**
+   * @state {Array<Bloque>} bloques - Lista de bloques disponibles.
+   */
+  const [bloques, setBloques] = useState<Bloque[]>([]);
+
+  // Cargar bloques al montar el componente
+  useEffect(() => {
+    const bloquesDisponibles = bloqueService.getBloques();
+    setBloques(bloquesDisponibles);
+  }, []);
 
   /**
    * @state {Object} formErrors - Estado para los errores de validación del formulario.
@@ -222,12 +236,30 @@ export default function FormularioUsuarios() {
       };
       const result = await userService.register(registerData);
       if (result.success) {
+        // Si es estudiante y tiene bloque asignado, guardarlo
+        if (formData.rol === 'Estudiante' && formData.bloque_asignado) {
+          bloqueService.assignBloqueToUser(result.user?.id?.toString() || '', formData.bloque_asignado);
+        }
         // Refrescar usuarios desde backend
-        const data = await userService.getAll();
-        setUsers(data);
+        try {
+          const data = await userService.getAll();
+          setUsers(data);
+        } catch (error) {
+          console.log('Usuario creado exitosamente, pero no se pudo refrescar la lista');
+        }
         setShowForm(false);
         setEditingUser(null);
         setFormErrors({});
+        
+        // Resetear formulario
+        setFormData({
+          nombres: '',
+          apellidos: '',
+          correo: '',
+          rol: 'Estudiante',
+          contrasena: '',
+          bloque_asignado: '',
+        });
       } else {
         setFormErrors(result.errors || { correo: result.message || 'Error al registrar usuario' });
       }
@@ -258,8 +290,14 @@ export default function FormularioUsuarios() {
   // Cargar usuarios reales al montar el componente
   useEffect(() => {
     const fetchUsers = async () => {
-      const data = await userService.getAll();
-      setUsers(data);
+      try {
+        const data = await userService.getAll();
+        setUsers(data);
+      } catch (error) {
+        console.error('Error loading users:', error);
+        // Si hay error de autorización, mostrar mensaje
+        setUsers([]);
+      }
     };
     fetchUsers();
   }, []);
@@ -289,25 +327,33 @@ export default function FormularioUsuarios() {
                   <th>Nombre Completo</th>
                   <th>Correo</th>
                   <th>Rol</th>
+                  <th>Bloque</th>
                   <th>Estado</th>
                   <th>Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                {users.map((user) => (
-                  <tr key={user.id}>
-                    <td>{user.id}</td>
-                    <td>{`${user.nombres} ${user.apellidos}`}</td>
-                    <td>{user.correo}</td>
-                    <td>{user.rol}</td>
-                    <td>
-                      <span 
-                        className={`status-badge ${user.activo ? 'status-active' : 'status-inactive'}`}
-                        aria-label={user.activo ? 'Usuario activo' : 'Usuario inactivo'}
-                      >
-                        {user.activo ? 'Activo' : 'Inactivo'}
-                      </span>
-                    </td>
+                {users.map((user) => {
+                  const bloqueAsignado = bloqueService.getUserAssignedBloque(user.id.toString());
+                  return (
+                    <tr key={user.id}>
+                      <td>{user.id}</td>
+                      <td>{`${user.nombres} ${user.apellidos}`}</td>
+                      <td>{user.correo}</td>
+                      <td>{user.rol}</td>
+                      <td>
+                        <span className="bloque-badge">
+                          {bloqueAsignado ? `${bloqueAsignado.nivel} ${bloqueAsignado.turno}` : 'Sin asignar'}
+                        </span>
+                      </td>
+                      <td>
+                        <span 
+                          className={`status-badge ${user.activo ? 'status-active' : 'status-inactive'}`}
+                          aria-label={user.activo ? 'Usuario activo' : 'Usuario inactivo'}
+                        >
+                          {user.activo ? 'Activo' : 'Inactivo'}
+                        </span>
+                      </td>
                     <td className="actions-cell">
                       <button 
                         onClick={() => handleEditUser(user)} 
@@ -337,10 +383,11 @@ export default function FormularioUsuarios() {
                       </button>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
                 {users.length === 0 && (
                   <tr>
-                    <td colSpan={6} style={{ textAlign: 'center', padding: '2rem' }}>
+                    <td colSpan={7} style={{ textAlign: 'center', padding: '2rem' }}>
                       No hay usuarios registrados
                     </td>
                   </tr>
@@ -430,6 +477,25 @@ export default function FormularioUsuarios() {
               <option value="Admin">Admin</option>
             </select>
           </div>
+
+          {formData.rol === 'Estudiante' && (
+            <div className="form-field">
+              <label htmlFor="bloque_asignado">Bloque Asignado</label>
+              <select
+                id="bloque_asignado"
+                name="bloque_asignado"
+                value={formData.bloque_asignado}
+                onChange={handleChange}
+              >
+                <option value="">Sin asignar</option>
+                {bloques.map((bloque) => (
+                  <option key={bloque.id} value={bloque.id}>
+                    {bloque.nivel} {bloque.turno}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {!editingUser && (
             <div className={`form-field ${formErrors.contrasena ? 'error' : ''}`}>

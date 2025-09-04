@@ -9,8 +9,10 @@ import ChallengeModal from "./ChallengeModal";
 import Toast from "./Toast";
 import { useDashboardEvents } from "./DashboardEvents";
 import NavUsu from "./Nav_Usu";
-import { ClaseService } from '../../services/claseService';
 import { EvaluationService } from '../../services/evaluationService';
+import { bloqueService } from '../../services/bloqueService';
+import { authService } from '../../services/authService';
+import { ClaseService } from '../../services/claseService';
 
 interface DashboardProps {
   onLogout?: () => void;
@@ -66,8 +68,16 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
   const [showNotesModal, setShowNotesModal] = useState(false);
 
   // Clases states
-  const [clasesUsuario, setClasesUsuario] = useState([]);
-  const [isLoadingClases, setIsLoadingClases] = useState(false);
+  const [clases, setClases] = useState<any[]>([]);
+  const [isLoadingClases, setIsLoadingClases] = useState(true);
+  const [bloqueInfo, setBloqueInfo] = useState<{
+    bloque: any;
+    clases: string[];
+    misiones: string[];
+    profesores: string[];
+    horarios: string[];
+  } | null>(null);
+  const [userId, setUserId] = useState<string>('');
 
   // Evaluaciones states
   const [evaluaciones, setEvaluaciones] = useState<any[]>([]);
@@ -242,33 +252,63 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
   };
 
   useEffect(() => {
-    // Verificar si es un usuario nuevo - con delay para asegurar que el DOM esté listo
-    setTimeout(() => {
-      const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding');
-      console.log('Verificando onboarding:', hasSeenOnboarding); // Debug
-      if (!hasSeenOnboarding) {
-        console.log('Usuario nuevo detectado, iniciando onboarding'); // Debug
-        setIsNewUser(true);
-        setShowOnboarding(true);
-      }
-    }, 1500);
-  }, []);
-
-  useEffect(() => {
-    const fetchClasesUsuario = async () => {
-      setIsLoadingClases(true);
+    const loadUserData = async () => {
       try {
-        const user = JSON.parse(localStorage.getItem('user') || '{}');
-        if (user && user.id) {
-          const data = await ClaseService.getClasesPorUsuario(user.id);
-          setClasesUsuario(data);
+        const profile = await authService.getUserProfile();
+        const userIdStr = profile.id?.toString() || '';
+        setUserId(userIdStr);
+        
+        // Obtener información del bloque del usuario
+        const userBloqueInfo = bloqueService.getUserBloqueInfo(userIdStr);
+        setBloqueInfo(userBloqueInfo);
+        
+        // Sistema híbrido: combinar clases del bloque + clases programadas por profesores
+        console.log('Bloque info:', userBloqueInfo);
+        console.log('Clases del bloque:', userBloqueInfo.clases);
+        
+        let clasesFinales: any[] = [];
+        
+        // 1. Agregar clases del bloque (programación base)
+        if (userBloqueInfo.bloque && userBloqueInfo.clases.length > 0) {
+          const clasesDelBloque = userBloqueInfo.clases.map((nombreClase: string, index: number) => ({
+            id: `bloque-${userBloqueInfo.bloque?.id}-${index}`,
+            nombre: nombreClase,
+            fecha: '2025-09-05', // Fecha ejemplo
+            hora: userBloqueInfo.horarios[index % userBloqueInfo.horarios.length] || '8:00 AM - 9:30 AM',
+            profesor: userBloqueInfo.profesores[index % userBloqueInfo.profesores.length] || 'Profesor Asignado',
+            tema: nombreClase,
+            bloque: userBloqueInfo.bloque?.nivel + ' ' + userBloqueInfo.bloque?.turno,
+            tipo: 'bloque' // Identificar tipo de clase
+          }));
+          
+          clasesFinales = [...clasesDelBloque];
+          console.log('Clases del bloque agregadas:', clasesDelBloque);
         }
-      } catch (err) {
-        setClasesUsuario([]);
+        
+        // 2. Agregar clases programadas por profesores (clases adicionales/reprogramadas)
+        try {
+          const clasesDelBackend = await ClaseService.getClases();
+          const clasesProfesor = clasesDelBackend.map((clase: any) => ({
+            ...clase,
+            tipo: 'profesor' // Identificar tipo de clase
+          }));
+          
+          clasesFinales = [...clasesFinales, ...clasesProfesor];
+          console.log('Clases del profesor agregadas:', clasesProfesor);
+        } catch (error) {
+          console.error('Error cargando clases del profesor:', error);
+        }
+        
+        console.log('Clases finales combinadas:', clasesFinales);
+        setClases(clasesFinales);
+      } catch (error) {
+        console.error('Error loading user data:', error);
+      } finally {
+        setIsLoadingClases(false);
       }
-      setIsLoadingClases(false);
     };
-    fetchClasesUsuario();
+
+    loadUserData();
   }, []);
 
   useEffect(() => {
@@ -451,89 +491,129 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
       </div>
 
       <div className="missions-grid">
-        {/* Vocabulario de Viaje */}
-        <div className="mission-card vocabulary">
-          <div className="mission-header">
-            <div className="mission-icon">📚</div>
-            <div className="mission-info">
-              <h3>Vocabulario de Viaje</h3>
-              <span className="mission-type">Quiz Interactivo</span>
-            </div>
-          </div>
-          <div className="mission-content">
-            <p>
-              Aprende palabras esenciales que Lingo necesita conocer 
-              durante su viaje. ¡Juega y aprende con Gimkit!
-            </p>
-            <div className="mission-stats">
-              <div className="stat">
-                <span className="stat-icon">🍬</span>
-                <span>+10 Dulces</span>
+        {bloqueInfo && bloqueInfo.misiones.length > 0 ? (
+          bloqueInfo.misiones.map((mision: string, index: number) => {
+            const missionTypes = ['vocabulary', 'grammar', 'conversation'];
+            const missionIcons = ['📚', '✏️', '💬'];
+            const missionTypeNames = ['Quiz Interactivo', 'Ejercicios Prácticos', 'Juego en Tiempo Real'];
+            const currentType = missionTypes[index % missionTypes.length];
+            const currentIcon = missionIcons[index % missionIcons.length];
+            const currentTypeName = missionTypeNames[index % missionTypeNames.length];
+            
+            return (
+              <div key={index} className={`mission-card ${currentType}`}>
+                <div className="mission-header">
+                  <div className="mission-icon">{currentIcon}</div>
+                  <div className="mission-info">
+                    <h3>{mision}</h3>
+                    <span className="mission-type">{currentTypeName}</span>
+                  </div>
+                </div>
+                <div className="mission-content">
+                  <p>
+                    Completa esta misión de tu bloque {bloqueInfo.bloque?.nivel} {bloqueInfo.bloque?.turno}. 
+                    ¡Ayuda a Lingo en su migración!
+                  </p>
+                  <div className="mission-stats">
+                    <div className="stat">
+                      <span className="stat-icon">🍬</span>
+                      <span>+10 Dulces</span>
+                    </div>
+                    <div className="stat">
+                      <span className="stat-icon">⭐</span>
+                      <span>+25 XP</span>
+                    </div>
+                  </div>
+                </div>
+                <button className="mission-button">Jugar Ahora</button>
               </div>
-              <div className="stat">
-                <span className="stat-icon">⭐</span>
-                <span>+25 XP</span>
+            );
+          })
+        ) : (
+          // Misiones por defecto si no hay bloque asignado
+          <>
+            <div className="mission-card vocabulary">
+              <div className="mission-header">
+                <div className="mission-icon">📚</div>
+                <div className="mission-info">
+                  <h3>Vocabulario de Viaje</h3>
+                  <span className="mission-type">Quiz Interactivo</span>
+                </div>
               </div>
+              <div className="mission-content">
+                <p>
+                  Aprende palabras esenciales que Lingo necesita conocer 
+                  durante su viaje. ¡Juega y aprende con Gimkit!
+                </p>
+                <div className="mission-stats">
+                  <div className="stat">
+                    <span className="stat-icon">🍬</span>
+                    <span>+10 Dulces</span>
+                  </div>
+                  <div className="stat">
+                    <span className="stat-icon">⭐</span>
+                    <span>+25 XP</span>
+                  </div>
+                </div>
+              </div>
+              <button className="mission-button">Jugar Ahora</button>
             </div>
-          </div>
-          <button className="mission-button">Jugar Ahora</button>
-        </div>
 
-        {/* Gramática Básica */}
-        <div className="mission-card grammar">
-          <div className="mission-header">
-            <div className="mission-icon">✏️</div>
-            <div className="mission-info">
-              <h3>Gramática Básica</h3>
-              <span className="mission-type">Ejercicios Prácticos</span>
-            </div>
-          </div>
-          <div className="mission-content">
-            <p>
-              Domina las estructuras gramaticales para ayudar a Lingo en su 
-              ruta migratoria. ¡Practica con ejercicios interactivos!
-            </p>
-            <div className="mission-stats">
-              <div className="stat">
-                <span className="stat-icon">🍬</span>
-                <span>+10 Dulces</span>
+            <div className="mission-card grammar">
+              <div className="mission-header">
+                <div className="mission-icon">✏️</div>
+                <div className="mission-info">
+                  <h3>Gramática Básica</h3>
+                  <span className="mission-type">Ejercicios Prácticos</span>
+                </div>
               </div>
-              <div className="stat">
-                <span className="stat-icon">⭐</span>
-                <span>+25 XP</span>
+              <div className="mission-content">
+                <p>
+                  Domina las estructuras gramaticales para ayudar a Lingo en su 
+                  ruta migratoria. ¡Practica con ejercicios interactivos!
+                </p>
+                <div className="mission-stats">
+                  <div className="stat">
+                    <span className="stat-icon">🍬</span>
+                    <span>+10 Dulces</span>
+                  </div>
+                  <div className="stat">
+                    <span className="stat-icon">⭐</span>
+                    <span>+25 XP</span>
+                  </div>
+                </div>
               </div>
+              <button className="mission-button">Jugar Ahora</button>
             </div>
-          </div>
-          <button className="mission-button">Jugar Ahora</button>
-        </div>
 
-        {/* Conversación Práctica */}
-        <div className="mission-card conversation">
-          <div className="mission-header">
-            <div className="mission-icon">💬</div>
-            <div className="mission-info">
-              <h3>Conversación Práctica</h3>
-              <span className="mission-type">Juego en Tiempo Real</span>
-            </div>
-          </div>
-          <div className="mission-content">
-            <p>
-              Practica conversaciones reales que Lingo podría necesitar 
-              durante su viaje. ¡Interactúa en tiempo real!
-            </p>
-            <div className="mission-stats">
-              <div className="stat">
-                <span className="stat-icon">🍬</span>
-                <span>+10 Dulces</span>
+            <div className="mission-card conversation">
+              <div className="mission-header">
+                <div className="mission-icon">💬</div>
+                <div className="mission-info">
+                  <h3>Conversación Práctica</h3>
+                  <span className="mission-type">Juego en Tiempo Real</span>
+                </div>
               </div>
-              <div className="stat">
-                <span className="stat-icon">⭐</span>
-                <span>+25 XP</span>
+              <div className="mission-content">
+                <p>
+                  Practica conversaciones reales que Lingo podría necesitar 
+                  durante su viaje. ¡Interactúa en tiempo real!
+                </p>
+                <div className="mission-stats">
+                  <div className="stat">
+                    <span className="stat-icon">🍬</span>
+                    <span>+10 Dulces</span>
+                  </div>
+                  <div className="stat">
+                    <span className="stat-icon">⭐</span>
+                    <span>+25 XP</span>
+                  </div>
+                </div>
               </div>
+              <button className="mission-button">Jugar Ahora</button>
             </div>
-          </div>
-          <button className="mission-button">Jugar Ahora</button>
-        </div>
+          </>
+        )}
       </div>
 
       {/* Evaluaciones Section */}
@@ -609,23 +689,24 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
           </div>
 
           {isLoadingClases ? (
-            <div className="table-row"><td colSpan={5}>Cargando...</td></div>
+            <div className="loading-message">Cargando clases...</div>
+          ) : clases.length === 0 ? (
+            <div className="no-classes-message">No hay clases programadas</div>
           ) : (
-            clasesUsuario.length > 0 ? (
-              clasesUsuario.map((clase: any) => (
-                <div className="table-row" key={clase.id}>
-                  <div className="date-cell">{clase.fecha}</div>
-                  <div className="time-cell">{clase.hora || ''}</div>
-                  <div className="teacher-info">{clase.profesor}</div>
-                  <div className="topic-cell">{clase.nombre}</div>
-                  <div className="actions">
-                    <button className="action-btn access-btn">📹 Acceder</button>
-                  </div>
+            clases.map((clase, index) => (
+              <div key={clase.id || index} className="table-row">
+                <div className="table-cell">{clase.fecha || 'Por definir'}</div>
+                <div className="table-cell">{clase.hora || 'Por definir'}</div>
+                <div className="table-cell">
+                  {clase.profesor || 'Sin asignar'}
+                  {clase.tipo === 'profesor' && <span className="clase-extra"> (Reprogramada)</span>}
                 </div>
-              ))
-            ) : (
-              <div className="table-row"><td colSpan={5}>No tienes clases programadas</td></div>
-            )
+                <div className="table-cell">{clase.tema || clase.nombre}</div>
+                <div className="table-cell">
+                  <button className="btn-acceder">→ ACCEDER</button>
+                </div>
+              </div>
+            ))
           )}
         </div>
       </div>

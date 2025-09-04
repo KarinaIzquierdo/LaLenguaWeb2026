@@ -4,7 +4,7 @@ import axios from 'axios';
 const API_URL = 'http://localhost:8000/api';
 
 function getAuthHeaders() {
-  const token = localStorage.getItem('authToken'); // Cambiado para usar la clave correcta
+  const token = localStorage.getItem('token'); // Usar la clave correcta del sistema
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 

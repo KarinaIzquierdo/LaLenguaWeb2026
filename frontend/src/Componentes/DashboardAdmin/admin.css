@@ -1083,3 +1083,314 @@
     font-size: 0.75rem;
   }
 }
+
+/* ===== ESTILOS PARA BLOQUES (BloquesView) ===== */
+
+.bloques-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2.5rem 1rem;
+  animation: fadeIn 0.5s ease-out;
+}
+
+.bloques-container h2 {
+  font-size: 2.2rem;
+  font-weight: 800;
+  margin-bottom: 2.5rem;
+  color: var(--primary-blue, #2563eb);
+  letter-spacing: 1px;
+}
+
+.bloques-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 2.5rem;
+}
+
+.bloque-card {
+  background: var(--bg-card, #fff);
+  border-radius: 18px;
+  box-shadow: 0 6px 24px rgba(37, 99, 235, 0.08);
+  border: 1.5px solid var(--border-color, #e5e7eb);
+  padding: 2rem 1.5rem 1.5rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  transition: box-shadow 0.2s, border-color 0.2s;
+  position: relative;
+}
+
+.bloque-card:hover {
+  box-shadow: 0 12px 32px rgba(37, 99, 235, 0.15);
+  border-color: var(--primary-blue, #2563eb);
+}
+
+.bloque-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 1.2rem;
+  color: var(--text-primary, #1e293b);
+}
+
+.bloque-mini-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  width: 100%;
+}
+
+.mini-card {
+  background: var(--bg-secondary, #f3f4f6);
+  border-radius: 10px;
+  padding: 0.9rem 1rem 0.9rem 1.1rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text-secondary, #334155);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.04);
+  border: 1px solid var(--border-color, #e5e7eb);
+  transition: background 0.2s, box-shadow 0.2s;
+}
+
+.mini-card button {
+  background: var(--primary-blue, #2563eb);
+  color: #fff;
+  border: none;
+  border-radius: 7px;
+  padding: 0.35rem 0.9rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.08);
+}
+
+.mini-card button:hover {
+  background: #1d4ed8;
+  transform: translateY(-2px) scale(1.04);
+}
+
+/* Modal styles */
+.modal-backdrop {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(30, 41, 59, 0.25);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.2s;
+}
+
+.modal-content {
+  background: #fff;
+  border-radius: 16px;
+  padding: 2.5rem 2rem 2rem 2rem;
+  min-width: 320px;
+  max-width: 95vw;
+  box-shadow: 0 8px 32px rgba(37, 99, 235, 0.18);
+  position: relative;
+  animation: scaleIn 0.2s;
+}
+
+.modal-content h3 {
+  margin-top: 0;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--primary-blue, #2563eb);
+  margin-bottom: 1.2rem;
+}
+
+.modal-body {
+  margin-bottom: 2rem;
+}
+
+.close-btn {
+  background: var(--primary-blue, #2563eb);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.5rem 1.2rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.close-btn:hover {
+  background: #1d4ed8;
+  transform: translateY(-2px) scale(1.04);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* Sticky Notes Style for BloquesView */
+.nivel-titulo {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--primary-blue, #2563eb);
+  margin-bottom: 1.2rem;
+  margin-left: 0.5rem;
+}
+.sticky-notes-grid {
+  display: flex;
+  gap: 2.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 2.5rem;
+}
+.sticky-note {
+  position: relative;
+  width: 210px;
+  min-height: 180px;
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 8px 32px rgba(37, 99, 235, 0.10), 0 1.5px 8px rgba(0,0,0,0.04);
+  padding: 2.2rem 1.2rem 1.2rem 1.2rem;
+  cursor: pointer;
+  transition: box-shadow 0.18s, transform 0.18s;
+  margin-bottom: 1.5rem;
+  border: 1.5px solid #e5e7eb;
+  overflow: visible;
+}
+.sticky-note:hover {
+  box-shadow: 0 16px 40px rgba(37, 99, 235, 0.18);
+  transform: translateY(-4px) scale(1.03);
+  border-color: var(--primary-blue, #2563eb);
+}
+.sticky-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin-bottom: 0.7rem;
+  color: #22223b;
+}
+.sticky-desc {
+  font-size: 1.01rem;
+  color: #6b7280;
+  margin-bottom: 0.5rem;
+}
+.pin {
+  position: absolute;
+  top: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 32px;
+  height: 32px;
+  background: radial-gradient(circle at 60% 40%, #ffb347 60%, #ff7f50 100%);
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+  z-index: 2;
+  border: 2.5px solid #fff;
+}
+.sticky-manaña .pin, .sticky-note.sticky-manaña .pin {
+  background: radial-gradient(circle at 60% 40%, #ffe066 60%, #f59e42 100%);
+}
+.sticky-tarde .pin, .sticky-note.sticky-tarde .pin {
+  background: radial-gradient(circle at 60% 40%, #a5b4fc 60%, #6366f1 100%);
+}
+.sticky-noche .pin, .sticky-note.sticky-noche .pin {
+  background: radial-gradient(circle at 60% 40%, #e0bbff 60%, #a259e6 100%);
+}
+.sticky-manaña {
+  background: linear-gradient(135deg, #fffbe6 80%, #ffe066 100%);
+}
+.sticky-tarde {
+  background: linear-gradient(135deg, #f3f8ff 80%, #a5b4fc 100%);
+}
+.sticky-noche {
+  background: linear-gradient(135deg, #f8f3ff 80%, #e0bbff 100%);
+}
+
+@media (max-width: 900px) {
+  .sticky-notes-grid {
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+}
+
+/* ===== NUEVO ESTILO PARA BOTÓN '+ CREAR BLOQUE' ===== */
+.crear-bloque-btn {
+  background: var(--primary-blue, #2563eb);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 0.7rem 1.6rem;
+  font-size: 1.08rem;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.10);
+  cursor: pointer;
+  transition: background 0.18s, transform 0.18s;
+  margin-left: 1.5rem;
+}
+.crear-bloque-btn:hover {
+  background: #1d4ed8;
+  transform: translateY(-2px) scale(1.04);
+}
+
+/* ===== ESTILOS PARA EL FORMULARIO DE CREACIÓN DE BLOQUES EN EL MODAL ===== */
+.form-crear-bloque {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  margin-top: 1.2rem;
+}
+.form-crear-bloque label {
+  font-weight: 600;
+  color: #334155;
+  font-size: 1.05rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.form-crear-bloque input, .form-crear-bloque select {
+  padding: 0.7rem 1rem;
+  border-radius: 8px;
+  border: 1.5px solid #e5e7eb;
+  font-size: 1rem;
+  background: #f8fafc;
+  margin-top: 0.2rem;
+}
+.form-crear-bloque input:focus, .form-crear-bloque select:focus {
+  outline: none;
+  border-color: var(--primary-blue, #2563eb);
+  background: #fff;
+}
+.form-crear-bloque button[type="submit"] {
+  margin-right: 0.5rem;
+}
+
+/* ===== TABLA DE CLASES Y HORARIOS ===== */
+.tabla-clases-horarios {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0 1.5rem 0;
+  background: #f8fafc;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.06);
+}
+.tabla-clases-horarios th, .tabla-clases-horarios td {
+  padding: 0.7rem 1.1rem;
+  text-align: left;
+  font-size: 1.05rem;
+}
+.tabla-clases-horarios th {
+  background: var(--primary-blue, #2563eb);
+  color: #fff;
+  font-weight: 700;
+}
+.tabla-clases-horarios tr:nth-child(even) td {
+  background: #e8f0fe;
+}
+.tabla-clases-horarios tr:nth-child(odd) td {
+  background: #f8fafc;
+}

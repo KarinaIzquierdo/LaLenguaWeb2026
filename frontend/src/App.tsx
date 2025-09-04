@@ -1,20 +1,21 @@
 import { useState, useEffect } from 'react'
-import { Navigate, Routes, Route } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import Home from './Componentes/Home/Home'
 import Header from './Componentes/Layout/Encabezado'
 import Footer from './Componentes/Layout/PiePagina'
 import Dashboard from './Componentes/DashboardUsu/Dashboard_Usuario'
 import DashboardProfesor from './Componentes/DashboardProfesor/Dashboard_Profesor'
-import DashboardAdmin from './Componentes/DashboardAdmin/Dashboard_Admin'
 import LoginModal from './Componentes/Login/LoginModal'
 import UserInfoModal from './Componentes/UserInfo/UserInfoModal'
 import { authService } from './services/authService'
+import { ThemeProvider } from './context/ThemeContext'
 import { AdminLayout } from './Componentes/DashboardAdmin/layout/AdminLayout'
+import Dashboard_Admin from './Componentes/DashboardAdmin/Dashboard_Admin'
 import FormularioUsuarios from './Componentes/DashboardAdmin/FormularioUsuarios'
 import GestionEstudiantes from './Componentes/DashboardAdmin/GestionEstudiantes'
 import ProgramarClases from './Componentes/DashboardAdmin/ProgramarClases'
 import GestionCursos from './Componentes/DashboardAdmin/GestionCursos'
-import { ThemeProvider } from './context/ThemeContext'
+import BloquesView from './Componentes/DashboardAdmin/BloquesView'
 
 function App() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
@@ -96,54 +97,124 @@ function App() {
 
   return (
     <ThemeProvider>
-      {isLoading ? (
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'center', 
-          alignItems: 'center', 
-          height: '100vh',
-          fontSize: '1.2rem',
-          color: '#667eea'
-        }}>
-          Cargando...
-        </div>
-      ) : isAuthenticated ? (
-        userRole === 'student' ? (
-          <>
-            <Dashboard onLogout={handleLogout} />
-            <UserInfoModal 
-              isOpen={showUserInfoModal}
-              onClose={() => setShowUserInfoModal(false)}
-              onComplete={handleUserInfoComplete}
-            />
-          </>
-        ) : userRole === 'profesor' ? (
-          <DashboardProfesor onLogout={handleLogout} />
-        ) : userRole === 'admin' ? (
+      <Router>
+        {isLoading ? (
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            alignItems: 'center', 
+            height: '100vh',
+            fontSize: '1.2rem',
+            color: '#667eea'
+          }}>
+            Cargando...
+          </div>
+        ) : (
           <Routes>
-            <Route path="/admin/*" element={<AdminLayout onLogout={handleLogout} />}>
-              <Route index element={<Navigate to="dashboard" />} />
-              <Route path="dashboard" element={<DashboardAdmin />} />
+            {/* Ruta principal */}
+            <Route path="/" element={
+              isAuthenticated ? (
+                userRole === 'student' ? (
+                  <Navigate to="/dashboard" replace />
+                ) : userRole === 'profesor' ? (
+                  <Navigate to="/dashboard-profesor" replace />
+                ) : userRole === 'admin' ? (
+                  <Navigate to="/admin" replace />
+                ) : (
+                  <Navigate to="/" replace />
+                )
+              ) : (
+                <>
+                  <Header onLoginClick={handleLoginClick} />
+                  <Home />
+                  <Footer />
+                  <LoginModal 
+                    isOpen={isLoginModalOpen}
+                    onClose={handleCloseModal}
+                    onLogin={handleLogin}
+                  />
+                </>
+              )
+            } />
+            
+            {/* Dashboard de estudiante */}
+            <Route path="/dashboard" element={
+              isAuthenticated && userRole === 'student' ? (
+                <>
+                  <Dashboard onLogout={handleLogout} />
+                  <UserInfoModal 
+                    isOpen={showUserInfoModal}
+                    onClose={() => setShowUserInfoModal(false)}
+                    onComplete={handleUserInfoComplete}
+                  />
+                </>
+              ) : (
+                <Navigate to="/" replace />
+              )
+            } />
+            
+            {/* Dashboard de profesor */}
+            <Route path="/dashboard-profesor" element={
+              isAuthenticated && userRole === 'profesor' ? (
+                <DashboardProfesor onLogout={handleLogout} />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            } />
+            
+            
+            {/* Rutas del Panel de Administración */}
+            <Route path="/admin" element={
+              isAuthenticated && userRole === 'admin' ? (
+                <AdminLayout onLogout={handleLogout} />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            }>
+              {/* Redirección por defecto a /admin/dashboard */}
+              <Route index element={<Navigate to="dashboard" replace />} />
+              <Route path="dashboard" element={<Dashboard_Admin />} />
               <Route path="usuarios" element={<FormularioUsuarios />} />
               <Route path="gestion-estudiantes" element={<GestionEstudiantes />} />
               <Route path="programar-clases" element={<ProgramarClases />} />
               <Route path="gestion-cursos" element={<GestionCursos />} />
+              <Route path="bloques" element={<BloquesView />} />
             </Route>
-            <Route path="*" element={<h1>Error 404 - Página no encontrada</h1>} />
+            
+            {/* Ruta de login - redirige al home */}
+            <Route path="/login" element={<Navigate to="/" replace />} />
+            
+            {/* Ruta 404 */}
+            <Route path="*" element={
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: '100vh',
+                textAlign: 'center'
+              }}>
+                <h1 style={{ color: '#667eea', marginBottom: '1rem' }}>Error 404 - Página no encontrada</h1>
+                <p style={{ color: '#666', marginBottom: '2rem' }}>La página que buscas no existe.</p>
+                <button 
+                  onClick={() => window.location.href = '/'}
+                  style={{
+                    padding: '12px 24px',
+                    backgroundColor: '#667eea',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '1rem'
+                  }}
+                >
+                  Ir al inicio
+                </button>
+              </div>
+            } />
           </Routes>
-        ) : null
-      ) : (
-        <>
-          <Header onLoginClick={handleLoginClick} />
-          <Home />
-          <Footer />
-          <LoginModal 
-            isOpen={isLoginModalOpen}
-            onClose={handleCloseModal}
-            onLogin={handleLogin}
-          />
-        </>
-      )}
+        )}
+      </Router>
     </ThemeProvider>
   )
 }
