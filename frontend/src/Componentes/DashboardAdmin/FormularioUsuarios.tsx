@@ -176,6 +176,7 @@ export default function FormularioUsuarios() {
       correo: '',
       rol: 'Estudiante',
       contrasena: '',
+      bloque_asignado: '',
     });
     setFormErrors({});
   };
@@ -194,6 +195,7 @@ export default function FormularioUsuarios() {
       correo: user.correo,
       rol: user.rol,
       contrasena: '', // Contraseña no se edita directamente aquí por seguridad
+      bloque_asignado: user.bloque_asignado || '',
     });
     setFormErrors({});
   };
@@ -233,13 +235,11 @@ export default function FormularioUsuarios() {
         email: formData.correo,
         role: rolMapFrontendToBackend[formData.rol],
         password: formData.contrasena,
+        bloque_asignado: formData.bloque_asignado,
       };
       const result = await userService.register(registerData);
       if (result.success) {
-        // Si es estudiante y tiene bloque asignado, guardarlo
-        if (formData.rol === 'Estudiante' && formData.bloque_asignado) {
-          bloqueService.assignBloqueToUser(result.user?.id?.toString() || '', formData.bloque_asignado);
-        }
+        // El bloque ya se guarda en el backend, no necesitamos localStorage
         // Refrescar usuarios desde backend
         try {
           const data = await userService.getAll();
@@ -334,7 +334,6 @@ export default function FormularioUsuarios() {
               </thead>
               <tbody>
                 {users.map((user) => {
-                  const bloqueAsignado = bloqueService.getUserAssignedBloque(user.id.toString());
                   return (
                     <tr key={user.id}>
                       <td>{user.id}</td>
@@ -343,7 +342,7 @@ export default function FormularioUsuarios() {
                       <td>{user.rol}</td>
                       <td>
                         <span className="bloque-badge">
-                          {bloqueAsignado ? `${bloqueAsignado.nivel} ${bloqueAsignado.turno}` : 'Sin asignar'}
+                          {user.bloque_asignado || 'Sin asignar'}
                         </span>
                       </td>
                       <td>

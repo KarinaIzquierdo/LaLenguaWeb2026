@@ -28,13 +28,13 @@ export const Sidebar = ({ onLogout }: { onLogout: () => void }) => {
             </NavLink>
           </li>
           <li>
-            <NavLink to="/admin/gestion-cursos" className={({ isActive }) => isActive ? 'active' : ''}>
-              Gestión de Cursos
+            <NavLink to="/admin/bloques" className={({ isActive }) => isActive ? 'active' : ''}>
+              Bloques
             </NavLink>
           </li>
           <li>
-            <NavLink to="/admin/bloques" className={({ isActive }) => isActive ? 'active' : ''}>
-              Bloques
+            <NavLink to="/admin/galeria" className={({ isActive }) => isActive ? 'active' : ''}>
+              Gestión de Galería
             </NavLink>
           </li>
         </ul>

@@ -5,6 +5,8 @@ import EstudiantesView from './EstudiantesView.tsx';
 import ProgramarClase from './ProgramarClase.tsx';
 import CrearEvaluacion from './CrearEvaluacion.tsx';
 import MisClases from './MisClases.tsx';
+import GestionCLB from './GestionCLB';
+import MisClubs from './MisClubs';
 
 interface DashboardProfesorProps {
   onLogout?: () => void;
@@ -68,9 +70,11 @@ export default function DashboardProfesor({ onLogout }: DashboardProfesorProps =
 
           {/* Contenido principal según vista activa */}
           <div className="main-content">
-            {activeView === 'clases' && <MisClases />}
+            {activeView === 'clases' && <MisClases profesorId={1} />}            
             {activeView === 'programar-clase' && <ProgramarClase />}
             {activeView === 'crear-evaluacion' && <CrearEvaluacion />}
+            {activeView === 'gestion-clb' && <GestionCLB profesorId={1} />}
+            {activeView === 'mis-clubs' && <MisClubs />}
             {activeView === 'estudiantes' && <EstudiantesView />}
           </div>
         </div>

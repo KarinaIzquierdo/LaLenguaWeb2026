@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import Home from './Componentes/Home/Home'
+import Blog from './Componentes/Blog/Blog'
 import Header from './Componentes/Layout/Encabezado'
 import Footer from './Componentes/Layout/PiePagina'
 import Dashboard from './Componentes/DashboardUsu/Dashboard_Usuario'
@@ -14,8 +15,9 @@ import Dashboard_Admin from './Componentes/DashboardAdmin/Dashboard_Admin'
 import FormularioUsuarios from './Componentes/DashboardAdmin/FormularioUsuarios'
 import GestionEstudiantes from './Componentes/DashboardAdmin/GestionEstudiantes'
 import ProgramarClases from './Componentes/DashboardAdmin/ProgramarClases'
-import GestionCursos from './Componentes/DashboardAdmin/GestionCursos'
+// import GestionCursos from './Componentes/DashboardAdmin/GestionCursos'
 import BloquesView from './Componentes/DashboardAdmin/BloquesView'
+import GestionGaleria from './Componentes/DashboardAdmin/GestionGaleria'
 
 function App() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
@@ -27,26 +29,34 @@ function App() {
   useEffect(() => {
     // Verificar si el usuario ya está autenticado al cargar la app
     const checkAuth = async () => {
-      if (authService.isAuthenticated()) {
-        const isValid = await authService.verifyToken()
-        if (isValid) {
-          setIsAuthenticated(true)
-          // Obtener el rol del usuario desde el token o perfil
-          try {
-            const profile = await authService.getUserProfile()
-            setUserRole(profile.role || 'student')
-          } catch (error) {
-            console.error('Error getting user role:', error)
-            setUserRole('student') // Default to student
-          }
+      try {
+        const token = localStorage.getItem('authToken');
+        if (token) {
+          // Simplificado - solo verificar si existe el token
+          setIsAuthenticated(true);
+          const role = localStorage.getItem('userRole') as 'student' | 'profesor' | 'admin' | null;
+          setUserRole(role);
         }
+      } catch (error) {
+        console.error('Error validating token:', error);
+        localStorage.removeItem('authToken');
+      } finally {
+        setIsLoading(false);
       }
-      
-      setIsLoading(false)
-    }
-    
-    checkAuth()
-  }, [])
+    };
+
+    // Escuchar evento personalizado para abrir modal de login
+    const handleOpenLoginModal = () => {
+      setIsLoginModalOpen(true);
+    };
+
+    window.addEventListener('openLoginModal', handleOpenLoginModal);
+    checkAuth();
+
+    return () => {
+      window.removeEventListener('openLoginModal', handleOpenLoginModal);
+    };
+  }, []);
 
   const handleLoginClick = () => {
     setIsLoginModalOpen(true)
@@ -56,7 +66,7 @@ function App() {
     setIsLoginModalOpen(false)
   }
 
-  const handleLogin = async (credentials: { email: string; password: string }) => {
+  const handleLogin = async (credentials: any) => {
     const result = await authService.login(credentials)
     
     if (result.success) {
@@ -67,11 +77,29 @@ function App() {
       try {
         const profile = await authService.getUserProfile()
         console.log('Profile check:', profile)
+        console.log('Profile role:', profile.role)
+        console.log('Profile completed:', profile.profile_completed)
         setUserRole(profile.role || 'student')
         
-        // Solo mostrar modal si el perfil no está completado
-        if (!profile.profile_completed) {
+        // Guardar el rol en localStorage para persistencia
+        localStorage.setItem('userRole', profile.role || 'student')
+        
+        // Redirigir según el rol, independientemente del estado del perfil
+        const role = profile.role || 'student'
+        console.log('Redirecting user with role:', role)
+        
+        // Si el perfil no está completado, mostrar modal DESPUÉS de redirigir
+        if (!profile.profile_completed && role === 'student') {
           setShowUserInfoModal(true)
+        }
+        
+        // Forzar recarga completa de la página para evitar problemas de estado
+        if (role === 'student') {
+          window.location.replace('/dashboard')
+        } else if (role === 'profesor') {
+          window.location.replace('/dashboard-profesor')
+        } else if (role === 'admin') {
+          window.location.replace('/admin')
         }
       } catch (error) {
         console.error('Error getting profile:', error)
@@ -113,6 +141,20 @@ function App() {
           <Routes>
             {/* Ruta principal */}
             <Route path="/" element={
+              <>
+                <Header onLoginClick={handleLoginClick} />
+                <Home />
+                <Footer />
+                <LoginModal 
+                  isOpen={isLoginModalOpen}
+                  onClose={handleCloseModal}
+                  onLogin={handleLogin}
+                />
+              </>
+            } />
+            
+            {/* Ruta del Blog */}
+            <Route path="/blog" element={
               isAuthenticated ? (
                 userRole === 'student' ? (
                   <Navigate to="/dashboard" replace />
@@ -125,9 +167,7 @@ function App() {
                 )
               ) : (
                 <>
-                  <Header onLoginClick={handleLoginClick} />
-                  <Home />
-                  <Footer />
+                  <Blog />
                   <LoginModal 
                     isOpen={isLoginModalOpen}
                     onClose={handleCloseModal}
@@ -177,8 +217,9 @@ function App() {
               <Route path="usuarios" element={<FormularioUsuarios />} />
               <Route path="gestion-estudiantes" element={<GestionEstudiantes />} />
               <Route path="programar-clases" element={<ProgramarClases />} />
-              <Route path="gestion-cursos" element={<GestionCursos />} />
+              {/** Gestión de cursos movida al Dashboard del Profesor como "Gestión CLB" **/}
               <Route path="bloques" element={<BloquesView />} />
+              <Route path="galeria" element={<GestionGaleria />} />
             </Route>
             
             {/* Ruta de login - redirige al home */}

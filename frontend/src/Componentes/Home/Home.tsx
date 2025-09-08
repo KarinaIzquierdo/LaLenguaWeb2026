@@ -521,7 +521,7 @@ and live without limits."
       {/* WhatsApp Floating Button */}
       <div 
         className="whatsapp-float"
-        onClick={() => window.open('https://wa.me/573055550123?text=Hola,%20me%20interesa%20información%20sobre%20los%20cursos%20de%20inglés', '_blank')}
+        onClick={() => window.open('https://wa.me/573164844819?text=Hola,%20me%20interesa%20información%20sobre%20los%20cursos%20de%20inglés.%20Mi%20nombre%20es%20[escribe%20tu%20nombre],%20soy%20de%20[escribe%20tu%20ciudad%20y%20país]%20y%20quiero%20estudiar%20inglés%20porque%20[escribe%20tu%20razón].', '_blank')}
         title="Contáctanos por WhatsApp"
       >
         <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">

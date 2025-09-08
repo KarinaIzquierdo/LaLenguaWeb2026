@@ -18,6 +18,8 @@ export default function NavProfesor({ profesorData, activeView, setActiveView, o
     { id: 'clases', label: 'Mis Clases', icon: '📚' },
     { id: 'programar-clase', label: 'Programar Clase', icon: '➕' },
     { id: 'crear-evaluacion', label: 'Evaluaciones', icon: '📝' },
+    { id: 'mis-clubs', label: 'Mis Clubs', icon: '🏷️' },
+    { id: 'gestion-clb', label: 'Gestión CLB', icon: '📂' },
     { id: 'estudiantes', label: 'Estudiantes', icon: '👥' }
   ];
 

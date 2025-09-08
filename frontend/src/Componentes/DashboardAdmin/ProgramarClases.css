@@ -1,0 +1,142 @@
+/* Estilos para la lista de estudiantes mejorada */
+.estudiantes-container {
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f9fafb;
+  padding: 12px;
+}
+
+.loading-message, .empty-message {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 40px 20px;
+  color: #6b7280;
+  font-style: italic;
+  text-align: center;
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #e5e7eb;
+  border-top: 2px solid #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.estudiantes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.estudiante-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.estudiante-card:hover {
+  border-color: #667eea;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+  transform: translateY(-1px);
+}
+
+.estudiante-card.selected {
+  border-color: #667eea;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+}
+
+.estudiante-checkbox {
+  margin-top: 2px;
+}
+
+.estudiante-checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #667eea;
+  cursor: pointer;
+}
+
+.estudiante-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.estudiante-nombre {
+  font-weight: 600;
+  font-size: 14px;
+  color: #1f2937;
+  line-height: 1.2;
+}
+
+.estudiante-bloque {
+  font-size: 12px;
+  font-weight: 500;
+  color: #667eea;
+  background: rgba(102, 126, 234, 0.1);
+  padding: 2px 8px;
+  border-radius: 12px;
+  display: inline-block;
+  width: fit-content;
+}
+
+.estudiante-email {
+  font-size: 11px;
+  color: #6b7280;
+  font-family: 'Courier New', monospace;
+  margin-top: 2px;
+}
+
+/* Responsive para pantallas pequeñas */
+@media (max-width: 768px) {
+  .estudiantes-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .estudiante-card {
+    padding: 12px;
+  }
+  
+  .estudiante-nombre {
+    font-size: 13px;
+  }
+}
+
+/* Scrollbar personalizado */
+.estudiantes-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.estudiantes-container::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+
+.estudiantes-container::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.estudiantes-container::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}

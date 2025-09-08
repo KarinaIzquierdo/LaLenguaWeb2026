@@ -136,6 +136,44 @@
 .panel-header {
   padding: 16px;
   border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.btn-seleccionar-todos {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+
+.btn-seleccionar-todos:hover:not(:disabled) {
+  background: #0056b3;
+}
+
+.btn-seleccionar-todos:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.loading-estudiantes, .no-estudiantes {
+  text-align: center;
+  padding: 2rem;
+  color: #666;
+  font-style: italic;
+}
+
+.estudiante-email {
+  font-size: 0.8rem;
+  color: #666;
+  margin-top: 2px;
 }
 
 .nivel-filter {

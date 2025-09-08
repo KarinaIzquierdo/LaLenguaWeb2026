@@ -1,11 +1,16 @@
 from rest_framework import status, viewsets
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, parser_classes
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
-from .models import CustomUser, Profesor, Clase, Evaluation
-from .serializers import UserSerializer, LoginSerializer, ChangePasswordSerializer, ClaseSerializer, UserRegisterSerializer, EvaluationSerializer
+from .models import CustomUser, Profesor, Clase, Evaluation, MediaItem, Club, ClubMaterial
+from .serializers import (
+    UserSerializer, LoginSerializer, ChangePasswordSerializer, ClaseSerializer,
+    UserRegisterSerializer, EvaluationSerializer, MediaItemSerializer,
+    ClubSerializer, ClubMaterialSerializer,
+)
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -333,6 +338,12 @@ def register_view(request):
     serializer = UserRegisterSerializer(data=request.data)
     if serializer.is_valid():
         user = serializer.save()
+        
+        # Si se proporciona bloque_asignado, asignarlo al usuario
+        if 'bloque_asignado' in request.data and request.data['bloque_asignado']:
+            user.bloque_asignado = request.data['bloque_asignado']
+            user.save()
+        
         user_serializer = UserSerializer(user)
         return Response({
             'success': True,
@@ -385,3 +396,273 @@ def list_users_view(request):
     users = CustomUser.objects.all()
     serializer = UserSerializer(users, many=True)
     return Response(serializer.data)
+
+
+# ==================== ENDPOINTS PARA GALERÍA ====================
+
+class MediaItemViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet para CRUD completo de elementos multimedia
+    """
+    queryset = MediaItem.objects.filter(is_active=True)
+    serializer_class = MediaItemSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_permissions(self):
+        """
+        Solo lectura para todos, escritura solo para admin
+        """
+        if self.action in ['list', 'retrieve']:
+            permission_classes = [AllowAny]
+        else:
+            permission_classes = [IsAuthenticated]
+        return [permission() for permission in permission_classes]
+    
+    def perform_create(self, serializer):
+        """
+        Guardar el elemento multimedia
+        """
+        serializer.save()
+    
+    def perform_destroy(self, instance):
+        """
+        Soft delete - marcar como inactivo en lugar de eliminar
+        """
+        instance.is_active = False
+        instance.save()
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def gallery_list_view(request):
+    """
+    Endpoint público para obtener todos los elementos de la galería
+    """
+    media_items = MediaItem.objects.filter(is_active=True).order_by('-created_at')
+    serializer = MediaItemSerializer(media_items, many=True, context={'request': request})
+    return Response({
+        'success': True,
+        'data': serializer.data
+    }, status=status.HTTP_200_OK)
+
+
+# ==================== ENDPOINTS PARA CLUBS (CLB) ====================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def clubs_list_view(request):
+    """
+    Listar clubs visibles para el usuario actual.
+    - Si es profesor: clubs donde es profesor.
+    - Si es estudiante: clubs a los que pertenece.
+    - Si es admin: todos.
+    """
+    user = request.user
+    if getattr(user, 'role', None) == 'admin':
+        qs = Club.objects.all()
+    elif getattr(user, 'is_profesor', False) or getattr(user, 'role', None) == 'profesor':
+        qs = Club.objects.filter(profesor=user)
+    else:
+        qs = Club.objects.filter(students=user)
+
+    serializer = ClubSerializer(qs.order_by('-updated_at'), many=True, context={'request': request})
+    return Response({'success': True, 'data': serializer.data}, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def club_create_view(request):
+    """Crear club (solo admin o profesor)."""
+    user = request.user
+    data = request.data.copy()
+    # Si es profesor, fijar profesor = user
+    if getattr(user, 'role', None) != 'admin':
+        data['profesor'] = str(user.id)
+
+    serializer = ClubSerializer(data=data, context={'request': request})
+    if serializer.is_valid():
+        club = serializer.save()
+        return Response({'success': True, 'data': ClubSerializer(club, context={'request': request}).data}, status=status.HTTP_201_CREATED)
+    return Response({'success': False, 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def club_students_list_view(request, club_id):
+    """Listar estudiantes asignados a un club (profesor del club, admin o el propio estudiante podrá verse)."""
+    try:
+        club = Club.objects.get(pk=club_id)
+    except Club.DoesNotExist:
+        return Response({'success': False, 'message': 'Club no encontrado'}, status=status.HTTP_404_NOT_FOUND)
+
+    user = request.user
+    if not (user == club.profesor or getattr(user, 'role', None) == 'admin' or user in club.students.all()):
+        return Response({'success': False, 'message': 'No autorizado'}, status=status.HTTP_403_FORBIDDEN)
+
+    students = club.students.all()
+    # Limitar campos en respuesta
+    data = UserSerializer(students, many=True).data
+    return Response({'success': True, 'data': data}, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def club_add_student_view(request, club_id):
+    """Agregar estudiante por email al club (solo profesor del club o admin)."""
+    try:
+        club = Club.objects.get(pk=club_id)
+    except Club.DoesNotExist:
+        return Response({'success': False, 'message': 'Club no encontrado'}, status=status.HTTP_404_NOT_FOUND)
+
+    user = request.user
+    if not (user == club.profesor or getattr(user, 'role', None) == 'admin'):
+        return Response({'success': False, 'message': 'No autorizado'}, status=status.HTTP_403_FORBIDDEN)
+
+    email = request.data.get('email')
+    if not email:
+        return Response({'success': False, 'message': 'Email requerido'}, status=status.HTTP_400_BAD_REQUEST)
+    try:
+        student = CustomUser.objects.get(email__iexact=email)
+    except CustomUser.DoesNotExist:
+        return Response({'success': False, 'message': 'Usuario no encontrado'}, status=status.HTTP_404_NOT_FOUND)
+
+    club.students.add(student)
+    return Response({'success': True, 'message': 'Estudiante agregado'}, status=status.HTTP_200_OK)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def club_remove_student_view(request, club_id, user_id):
+    """Remover estudiante del club (solo profesor del club o admin)."""
+    try:
+        club = Club.objects.get(pk=club_id)
+    except Club.DoesNotExist:
+        return Response({'success': False, 'message': 'Club no encontrado'}, status=status.HTTP_404_NOT_FOUND)
+
+    user = request.user
+    if not (user == club.profesor or getattr(user, 'role', None) == 'admin'):
+        return Response({'success': False, 'message': 'No autorizado'}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        student = CustomUser.objects.get(pk=user_id)
+    except CustomUser.DoesNotExist:
+        return Response({'success': False, 'message': 'Usuario no encontrado'}, status=status.HTTP_404_NOT_FOUND)
+
+    club.students.remove(student)
+    return Response({'success': True, 'message': 'Estudiante removido'}, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def club_materials_list_view(request, club_id):
+    """Listar materiales activos de un club visible para el usuario."""
+    try:
+        club = Club.objects.get(pk=club_id)
+    except Club.DoesNotExist:
+        return Response({'success': False, 'message': 'Club no encontrado'}, status=status.HTTP_404_NOT_FOUND)
+
+    user = request.user
+    # Permisos básicos de lectura
+    if not (user == club.profesor or user in club.students.all() or getattr(user, 'role', None) == 'admin'):
+        return Response({'success': False, 'message': 'No autorizado'}, status=status.HTTP_403_FORBIDDEN)
+
+    mats = club.materials.filter(is_active=True)
+    serializer = ClubMaterialSerializer(mats, many=True, context={'request': request})
+    return Response({'success': True, 'data': serializer.data}, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+@parser_classes([MultiPartParser, FormParser, JSONParser])
+def club_material_create_view(request, club_id):
+    """Crear material en un club (profesor del club o admin)."""
+    try:
+        club = Club.objects.get(pk=club_id)
+    except Club.DoesNotExist:
+        return Response({'success': False, 'message': 'Club no encontrado'}, status=status.HTTP_404_NOT_FOUND)
+
+    user = request.user
+    if not (user == club.profesor or getattr(user, 'role', None) == 'admin'):
+        return Response({'success': False, 'message': 'No autorizado'}, status=status.HTTP_403_FORBIDDEN)
+
+    data = request.data.copy()
+    data['club'] = str(club.id)
+    serializer = ClubMaterialSerializer(data=data, context={'request': request})
+    if serializer.is_valid():
+        mat = serializer.save(created_by=user, is_active=True)
+        return Response({'success': True, 'data': ClubMaterialSerializer(mat, context={'request': request}).data}, status=status.HTTP_201_CREATED)
+    return Response({'success': False, 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+@parser_classes([MultiPartParser, FormParser, JSONParser])
+def gallery_create_view(request):
+    """
+    Endpoint para crear un nuevo elemento multimedia
+    """
+    serializer = MediaItemSerializer(data=request.data, context={'request': request})
+    if serializer.is_valid():
+        # Asegurar que los nuevos elementos queden activos por defecto
+        serializer.save(is_active=True)
+        return Response({
+            'success': True,
+            'data': serializer.data,
+            'message': 'Elemento creado exitosamente'
+        }, status=status.HTTP_201_CREATED)
+    
+    return Response({
+        'success': False,
+        'errors': serializer.errors
+    }, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+@parser_classes([MultiPartParser, FormParser, JSONParser])
+def gallery_update_view(request, pk):
+    """
+    Endpoint para actualizar un elemento multimedia
+    """
+    try:
+        media_item = MediaItem.objects.get(pk=pk, is_active=True)
+    except MediaItem.DoesNotExist:
+        return Response({
+            'success': False,
+            'message': 'Elemento no encontrado'
+        }, status=status.HTTP_404_NOT_FOUND)
+    
+    serializer = MediaItemSerializer(media_item, data=request.data, partial=True, context={'request': request})
+    if serializer.is_valid():
+        serializer.save()
+        return Response({
+            'success': True,
+            'data': serializer.data,
+            'message': 'Elemento actualizado exitosamente'
+        }, status=status.HTTP_200_OK)
+    
+    return Response({
+        'success': False,
+        'errors': serializer.errors
+    }, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def gallery_delete_view(request, pk):
+    """
+    Endpoint para eliminar (soft delete) un elemento multimedia
+    """
+    try:
+        media_item = MediaItem.objects.get(pk=pk, is_active=True)
+        media_item.is_active = False
+        media_item.save()
+        return Response({
+            'success': True,
+            'message': 'Elemento eliminado exitosamente'
+        }, status=status.HTTP_200_OK)
+    except MediaItem.DoesNotExist:
+        return Response({
+            'success': False,
+            'message': 'Elemento no encontrado'
+        }, status=status.HTTP_404_NOT_FOUND)

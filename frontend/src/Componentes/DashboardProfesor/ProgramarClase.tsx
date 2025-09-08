@@ -1,11 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import './ProgramarClase.css';
+import { userService } from '../../services/userService';
+import { bloqueService } from '../../services/bloqueService';
 
 interface EstudianteDisponible {
   id: string;
   nombre: string;
   nivel: string;
   email: string;
+  bloque?: string;
 }
 
 interface FormularioClase {
@@ -33,20 +36,13 @@ export default function ProgramarClase() {
     meetLink: ''
   });
 
-  const [estudiantesDisponibles] = useState<EstudianteDisponible[]>([
-    { id: '1', nombre: 'Ana García', nivel: 'Intermedio', email: 'ana@email.com' },
-    { id: '2', nombre: 'Carlos López', nivel: 'Básico', email: 'carlos@email.com' },
-    { id: '3', nombre: 'María Rodríguez', nivel: 'Avanzado', email: 'maria@email.com' },
-    { id: '4', nombre: 'Pedro Martín', nivel: 'Intermedio', email: 'pedro@email.com' },
-    { id: '5', nombre: 'Laura Silva', nivel: 'Básico', email: 'laura@email.com' },
-    { id: '6', nombre: 'José Hernández', nivel: 'Avanzado', email: 'jose@email.com' },
-    { id: '7', nombre: 'Carmen Díaz', nivel: 'Intermedio', email: 'carmen@email.com' },
-    { id: '8', nombre: 'Roberto Torres', nivel: 'Básico', email: 'roberto@email.com' }
-  ]);
+  const [estudiantesDisponibles, setEstudiantesDisponibles] = useState<EstudianteDisponible[]>([]);
+  const [cargandoEstudiantes, setCargandoEstudiantes] = useState(true);
 
   const [mostrarEstudiantes, setMostrarEstudiantes] = useState(false);
   const [filtroNivel, setFiltroNivel] = useState('todos');
   const [generandoMeet, setGenerandoMeet] = useState(false);
+  const [seleccionarTodos, setSeleccionarTodos] = useState(false);
 
   const temasComunes = [
     'Conversación Básica',
@@ -59,6 +55,41 @@ export default function ProgramarClase() {
     'Preparación TOEFL',
     'Inglés para Viajes'
   ];
+
+  // Cargar estudiantes reales de la base de datos
+  useEffect(() => {
+    const cargarEstudiantes = async () => {
+      setCargandoEstudiantes(true);
+      try {
+        const usuarios = await userService.getAll();
+        const estudiantes = usuarios
+          .filter(usuario => usuario.rol === 'student' && usuario.activo)
+          .map(usuario => {
+            // Obtener información del bloque asignado
+            const bloqueInfo = bloqueService.getUserBloqueInfo(usuario.id.toString());
+            const bloqueTexto = bloqueInfo.bloque 
+              ? `${bloqueInfo.bloque.nivel} ${bloqueInfo.bloque.turno}`
+              : 'Sin bloque';
+            
+            return {
+              id: usuario.id.toString(),
+              nombre: `${usuario.nombres} ${usuario.apellidos}`,
+              nivel: bloqueInfo.bloque?.nivel || 'Sin nivel',
+              email: usuario.correo,
+              bloque: bloqueTexto
+            };
+          });
+        
+        setEstudiantesDisponibles(estudiantes);
+      } catch (error) {
+        console.error('Error cargando estudiantes:', error);
+      } finally {
+        setCargandoEstudiantes(false);
+      }
+    };
+
+    cargarEstudiantes();
+  }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -74,9 +105,38 @@ export default function ProgramarClase() {
     }));
   };
 
-  const estudiantesFiltrados = estudiantesDisponibles.filter(estudiante =>
-    filtroNivel === 'todos' || estudiante.nivel.toLowerCase() === filtroNivel.toLowerCase()
-  );
+  // Función para seleccionar/deseleccionar todos los estudiantes filtrados
+  const toggleSeleccionarTodos = () => {
+    const estudiantesFiltradosIds = estudiantesFiltrados.map(e => e.id);
+    if (seleccionarTodos) {
+      // Deseleccionar todos los filtrados
+      setFormulario(prev => ({
+        ...prev,
+        estudiantesSeleccionados: prev.estudiantesSeleccionados.filter(id => 
+          !estudiantesFiltradosIds.includes(id)
+        )
+      }));
+    } else {
+      // Seleccionar todos los filtrados
+      setFormulario(prev => ({
+        ...prev,
+        estudiantesSeleccionados: [...new Set([...prev.estudiantesSeleccionados, ...estudiantesFiltradosIds])]
+      }));
+    }
+    setSeleccionarTodos(!seleccionarTodos);
+  };
+
+  const estudiantesFiltrados = estudiantesDisponibles.filter(estudiante => {
+    if (filtroNivel === 'todos') return true;
+    
+    // Filtrar por nivel específico (A1, A2, B1, B2, C1, C2)
+    if (['A1', 'A2', 'B1', 'B2', 'C1', 'C2'].includes(filtroNivel)) {
+      return estudiante.nivel === filtroNivel;
+    }
+    
+    // Filtros legacy para compatibilidad
+    return estudiante.nivel.toLowerCase() === filtroNivel.toLowerCase();
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -308,30 +368,50 @@ export default function ProgramarClase() {
                       className="nivel-filter"
                     >
                       <option value="todos">Todos los niveles</option>
-                      <option value="básico">Básico</option>
-                      <option value="intermedio">Intermedio</option>
-                      <option value="avanzado">Avanzado</option>
+                      <option value="A1">A1</option>
+                      <option value="A2">A2</option>
+                      <option value="B1">B1</option>
+                      <option value="B2">B2</option>
+                      <option value="C1">C1</option>
+                      <option value="C2">C2</option>
+                      <option value="Sin nivel">Sin nivel</option>
                     </select>
+                    
+                    <button
+                      type="button"
+                      className="btn-seleccionar-todos"
+                      onClick={toggleSeleccionarTodos}
+                      disabled={estudiantesFiltrados.length === 0}
+                    >
+                      {seleccionarTodos ? '✓ Deseleccionar todos' : 'Seleccionar todos'}
+                    </button>
                   </div>
 
                   <div className="estudiantes-list">
-                    {estudiantesFiltrados.map(estudiante => (
-                      <div
-                        key={estudiante.id}
-                        className={`estudiante-item ${
-                          formulario.estudiantesSeleccionados.includes(estudiante.id) ? 'selected' : ''
-                        }`}
-                        onClick={() => toggleEstudiante(estudiante.id)}
-                      >
-                        <div className="estudiante-info">
-                          <span className="estudiante-nombre">{estudiante.nombre}</span>
-                          <span className="estudiante-nivel">{estudiante.nivel}</span>
+                    {cargandoEstudiantes ? (
+                      <div className="loading-estudiantes">Cargando estudiantes...</div>
+                    ) : estudiantesFiltrados.length === 0 ? (
+                      <div className="no-estudiantes">No hay estudiantes disponibles para este filtro</div>
+                    ) : (
+                      estudiantesFiltrados.map(estudiante => (
+                        <div
+                          key={estudiante.id}
+                          className={`estudiante-item ${
+                            formulario.estudiantesSeleccionados.includes(estudiante.id) ? 'selected' : ''
+                          }`}
+                          onClick={() => toggleEstudiante(estudiante.id)}
+                        >
+                          <div className="estudiante-info">
+                            <span className="estudiante-nombre">{estudiante.nombre}</span>
+                            <span className="estudiante-nivel">{estudiante.bloque}</span>
+                            <span className="estudiante-email">{estudiante.email}</span>
+                          </div>
+                          <div className="checkbox">
+                            {formulario.estudiantesSeleccionados.includes(estudiante.id) ? '✓' : ''}
+                          </div>
                         </div>
-                        <div className="checkbox">
-                          {formulario.estudiantesSeleccionados.includes(estudiante.id) ? '✓' : ''}
-                        </div>
-                      </div>
-                    ))}
+                      ))
+                    )}
                   </div>
                 </div>
               )}

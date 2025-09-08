@@ -5,8 +5,9 @@ export interface RegisterData {
   first_name: string;
   last_name: string;
   email: string;
-  role: 'student' | 'profesor' | 'admin';
+  role: string;
   password: string;
+  bloque_asignado?: string;
 }
 
 export interface RegisterResponse {
@@ -57,6 +58,7 @@ export const userService = {
         correo: user.email,
         rol: user.role,
         activo: user.is_active,
+        bloque_asignado: user.bloque_asignado,
       }));
     } catch (error) {
       return [];

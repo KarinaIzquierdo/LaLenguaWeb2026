@@ -8,6 +8,9 @@
 import React, { useState, useEffect } from 'react';
 import { FaEdit, FaTrash, FaPlus, FaSpinner } from 'react-icons/fa';
 import { ClaseService } from '../../services/claseService';
+import { userService } from '../../services/userService';
+import { bloqueService } from '../../services/bloqueService';
+import './ProgramarClases.css';
 
 /**
  * @component ProgramarClases
@@ -41,13 +44,13 @@ interface FormErrors {
   estudiantes?: string;
 }
 
-const usuariosSimulados = [
-  { id: '1', nombre: 'Ana García', nivel: 'Intermedio' },
-  { id: '2', nombre: 'Carlos López', nivel: 'Básico' },
-  { id: '3', nombre: 'María Rodríguez', nivel: 'Avanzado' },
-  { id: '4', nombre: 'Pedro Martín', nivel: 'Intermedio' },
-  { id: '5', nombre: 'Laura Silva', nivel: 'Básico' }
-];
+interface EstudianteDisponible {
+  id: string;
+  nombre: string;
+  nivel: string;
+  email: string;
+  bloque?: string;
+}
 
 export default function ProgramarClases() {
   /**
@@ -79,6 +82,26 @@ export default function ProgramarClases() {
    * @state {Object} formErrors - Almacena los errores de validación del formulario.
    */
   const [formErrors, setFormErrors] = useState<FormErrors>({});
+
+  /**
+   * @state {Array<EstudianteDisponible>} estudiantesDisponibles - Lista de estudiantes disponibles.
+   */
+  const [estudiantesDisponibles, setEstudiantesDisponibles] = useState<EstudianteDisponible[]>([]);
+
+  /**
+   * @state {boolean} cargandoEstudiantes - Indica si se están cargando los estudiantes.
+   */
+  const [cargandoEstudiantes, setCargandoEstudiantes] = useState<boolean>(true);
+
+  /**
+   * @state {string} filtroNivel - Filtro por nivel/bloque.
+   */
+  const [filtroNivel, setFiltroNivel] = useState<string>('todos');
+
+  /**
+   * @state {boolean} seleccionarTodos - Estado para seleccionar/deseleccionar todos.
+   */
+  const [seleccionarTodos, setSeleccionarTodos] = useState<boolean>(false);
 
   /**
    * @function validateForm
@@ -123,6 +146,46 @@ export default function ProgramarClases() {
       setFormErrors((prev) => ({ ...prev, estudiantes: '' }));
     }
   };
+
+  /**
+   * @function toggleSeleccionarTodos
+   * @brief Selecciona o deselecciona todos los estudiantes filtrados.
+   */
+  const toggleSeleccionarTodos = () => {
+    const estudiantesFiltradosIds = estudiantesFiltrados.map(e => e.id);
+    if (seleccionarTodos) {
+      // Deseleccionar todos los filtrados
+      setFormData(prev => ({
+        ...prev,
+        estudiantes: prev.estudiantes.filter(id => 
+          !estudiantesFiltradosIds.includes(id)
+        )
+      }));
+    } else {
+      // Seleccionar todos los filtrados
+      setFormData(prev => ({
+        ...prev,
+        estudiantes: [...new Set([...prev.estudiantes, ...estudiantesFiltradosIds])]
+      }));
+    }
+    setSeleccionarTodos(!seleccionarTodos);
+  };
+
+  /**
+   * @function estudiantesFiltrados
+   * @brief Filtra los estudiantes según el nivel seleccionado.
+   */
+  const estudiantesFiltrados = estudiantesDisponibles.filter(estudiante => {
+    if (filtroNivel === 'todos') return true;
+    
+    // Filtrar por nivel específico (A1, A2, B1, B2, C1, C2)
+    if (['A1', 'A2', 'B1', 'B2', 'C1', 'C2'].includes(filtroNivel)) {
+      return estudiante.nivel === filtroNivel;
+    }
+    
+    // Filtros legacy para compatibilidad
+    return estudiante.nivel.toLowerCase() === filtroNivel.toLowerCase();
+  });
 
   /**
    * @function handleAddClassClick
@@ -209,6 +272,41 @@ export default function ProgramarClases() {
     setFormErrors({});
   };
 
+  // Cargar estudiantes reales de la base de datos
+  useEffect(() => {
+    const cargarEstudiantes = async () => {
+      setCargandoEstudiantes(true);
+      try {
+        const usuarios = await userService.getAll();
+        const estudiantes = usuarios
+          .filter(usuario => usuario.rol === 'student' && usuario.activo)
+          .map(usuario => {
+            // Obtener información del bloque asignado
+            const bloqueInfo = bloqueService.getUserBloqueInfo(usuario.id.toString());
+            const bloqueTexto = bloqueInfo.bloque 
+              ? `${bloqueInfo.bloque.nivel} ${bloqueInfo.bloque.turno}`
+              : 'Sin bloque';
+            
+            return {
+              id: usuario.id.toString(),
+              nombre: `${usuario.nombres} ${usuario.apellidos}`,
+              nivel: bloqueInfo.bloque?.nivel || 'Sin nivel',
+              email: usuario.correo,
+              bloque: bloqueTexto
+            };
+          });
+        
+        setEstudiantesDisponibles(estudiantes);
+      } catch (error) {
+        console.error('Error cargando estudiantes:', error);
+      } finally {
+        setCargandoEstudiantes(false);
+      }
+    };
+
+    cargarEstudiantes();
+  }, []);
+
   // Cargar clases desde el backend al montar el componente
   useEffect(() => {
     const fetchClases = async () => {
@@ -289,17 +387,78 @@ export default function ProgramarClases() {
 
             <div className={`form-group ${formErrors.estudiantes ? 'error' : ''}`}>
               <label>Selecciona Estudiantes *</label>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                {usuariosSimulados.map((usuario) => (
-                  <label key={usuario.id} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <input
-                      type="checkbox"
-                      checked={formData.estudiantes.includes(usuario.id)}
-                      onChange={() => handleEstudiantesChange(usuario.id)}
-                    />
-                    {usuario.nombre} <span style={{ fontSize: '12px', color: '#888' }}>({usuario.nivel})</span>
-                  </label>
-                ))}
+              
+              {/* Filtros y controles */}
+              <div style={{ display: 'flex', gap: '12px', marginBottom: '12px', alignItems: 'center' }}>
+                <select
+                  value={filtroNivel}
+                  onChange={(e) => setFiltroNivel(e.target.value)}
+                  style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
+                >
+                  <option value="todos">Todos los niveles</option>
+                  <option value="A1">A1</option>
+                  <option value="A2">A2</option>
+                  <option value="B1">B1</option>
+                  <option value="B2">B2</option>
+                  <option value="C1">C1</option>
+                  <option value="C2">C2</option>
+                  <option value="Sin nivel">Sin nivel</option>
+                </select>
+                
+                <button
+                  type="button"
+                  onClick={toggleSeleccionarTodos}
+                  disabled={estudiantesFiltrados.length === 0}
+                  style={{
+                    padding: '8px 16px',
+                    background: '#007bff',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: estudiantesFiltrados.length === 0 ? 'not-allowed' : 'pointer',
+                    opacity: estudiantesFiltrados.length === 0 ? 0.5 : 1
+                  }}
+                >
+                  {seleccionarTodos ? '✓ Deseleccionar todos' : 'Seleccionar todos'}
+                </button>
+              </div>
+
+              {/* Lista de estudiantes */}
+              <div className="estudiantes-container">
+                {cargandoEstudiantes ? (
+                  <div className="loading-message">
+                    <div className="spinner"></div>
+                    Cargando estudiantes...
+                  </div>
+                ) : estudiantesFiltrados.length === 0 ? (
+                  <div className="empty-message">
+                    No hay estudiantes disponibles para este filtro
+                  </div>
+                ) : (
+                  <div className="estudiantes-grid">
+                    {estudiantesFiltrados.map((estudiante) => (
+                      <div 
+                        key={estudiante.id} 
+                        className={`estudiante-card ${formData.estudiantes.includes(estudiante.id) ? 'selected' : ''}`}
+                        onClick={() => handleEstudiantesChange(estudiante.id)}
+                      >
+                        <div className="estudiante-checkbox">
+                          <input
+                            type="checkbox"
+                            checked={formData.estudiantes.includes(estudiante.id)}
+                            onChange={() => handleEstudiantesChange(estudiante.id)}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </div>
+                        <div className="estudiante-info">
+                          <div className="estudiante-nombre">{estudiante.nombre}</div>
+                          <div className="estudiante-bloque">{estudiante.bloque}</div>
+                          <div className="estudiante-email">{estudiante.email}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
               {formErrors.estudiantes && <span className="error-message">{formErrors.estudiantes}</span>}
             </div>

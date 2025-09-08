@@ -36,8 +36,10 @@
     flex-shrink: 0;
 }
 
-.nav a {
-    color: #2d3748 !important;
+.nav a,
+.nav a:link,
+.nav a:visited {
+    color: #333 !important;
     text-decoration: none;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     font-weight: 500;
@@ -71,7 +73,9 @@
     left: 100%;
 }
 
-.nav a:hover {
+.nav a:hover,
+.nav a:link:hover,
+.nav a:visited:hover {
     color: #ffffff !important;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     border-color: rgba(102, 126, 234, 0.3);
@@ -86,13 +90,17 @@
     100% { box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4), 0 2px 4px rgba(0, 0, 0, 0.1); }
 }
 
-.nav a.active {
-    color: #2d3748 !important;
+.nav a.active,
+.nav a.active:link,
+.nav a.active:visited {
+    color: #333 !important;
     background: transparent;
     font-weight: 600;
 }
 
-.nav a.active:hover {
+.nav a.active:hover,
+.nav a.active:link:hover,
+.nav a.active:visited:hover {
     color: #ffffff !important;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     border-color: rgba(102, 126, 234, 0.3);

@@ -34,6 +34,9 @@ class CustomUser(AbstractUser):
     ]
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='student')
     
+    # Bloque asignado para estudiantes
+    bloque_asignado = models.CharField(max_length=50, blank=True, null=True)
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True)
@@ -84,3 +87,78 @@ class Evaluation(models.Model):
 
     def __str__(self):
         return f"{self.usuario.username} - {self.tipo} ({self.score}%)"
+
+
+class MediaItem(models.Model):
+    """
+    Modelo para elementos multimedia de la galería
+    """
+    TYPE_CHOICES = [
+        ('video', 'Video'),
+        ('image', 'Imagen'),
+    ]
+    
+    CATEGORY_CHOICES = [
+        ('Videos', 'Videos'),
+        ('Infografías', 'Infografías'),
+        ('Fotos', 'Fotos'),
+    ]
+    
+    type = models.CharField(max_length=10, choices=TYPE_CHOICES)
+    title = models.CharField(max_length=200)
+    description = models.TextField()
+    url = models.URLField(blank=True, null=True)
+    # Archivo físico opcional; si se proporciona, podremos derivar la URL pública
+    file = models.FileField(upload_to='gallery/', blank=True, null=True)
+    thumbnail = models.URLField(blank=True, null=True)
+    author = models.CharField(max_length=100)
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_active = models.BooleanField(default=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Elemento Multimedia'
+        verbose_name_plural = 'Elementos Multimedia'
+    
+    def __str__(self):
+        return f"{self.title} ({self.type}) - {self.author}"
+
+
+class Club(models.Model):
+    """
+    Club dirigido por un profesor con lista de estudiantes asignados
+    """
+    name = models.CharField(max_length=120)
+    description = models.TextField(blank=True, null=True)
+    profesor = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='clubs_dirigidos')
+    students = models.ManyToManyField(CustomUser, related_name='clubs', blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.name} (Prof: {self.profesor.get_full_name() or self.profesor.username})"
+
+
+class ClubMaterial(models.Model):
+    """
+    Material semanal para un club. Puede ser URL o archivo subido
+    """
+    club = models.ForeignKey(Club, on_delete=models.CASCADE, related_name='materials')
+    week = models.CharField(max_length=16)  # p.ej. 2025-W37
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True, null=True)
+    resource_type = models.CharField(max_length=10, choices=[('url', 'URL'), ('file', 'Archivo')])
+    url = models.URLField(blank=True, null=True)
+    file = models.FileField(upload_to='clubs/', blank=True, null=True)
+    created_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, related_name='materials_created')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.title} - {self.week}"

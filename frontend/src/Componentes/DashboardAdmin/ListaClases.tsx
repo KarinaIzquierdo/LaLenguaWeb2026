@@ -1,7 +1,19 @@
 
 import React from 'react';
 
-const ListaClases = ({ clases, onDeleteClass }) => {
+interface Clase {
+  id: number;
+  nombre: string;
+  profesor: string;
+  fecha: string;
+}
+
+interface ListaClasesProps {
+  clases: Clase[];
+  onDeleteClass: (id: number) => void;
+}
+
+const ListaClases: React.FC<ListaClasesProps> = ({ clases, onDeleteClass }) => {
   return (
     <div className="list-container">
       <h3>Clases Programadas</h3>
@@ -16,7 +28,7 @@ const ListaClases = ({ clases, onDeleteClass }) => {
         </thead>
         <tbody>
           {clases.length > 0 ? (
-            clases.map((clase) => (
+            clases.map((clase: Clase) => (
               <tr key={clase.id}>
                 <td>{clase.nombre}</td>
                 <td>{clase.profesor}</td>
@@ -33,7 +45,7 @@ const ListaClases = ({ clases, onDeleteClass }) => {
             ))
           ) : (
             <tr>
-              <td colSpan="4">No hay clases programadas.</td>
+               <td colSpan={4}>No hay clases programadas.</td>
             </tr>
           )}
         </tbody>
