@@ -1,13 +1,13 @@
 from rest_framework import serializers
 from django.contrib.auth import authenticate
-from .models import CustomUser, Clase, Evaluation, MediaItem, Club, ClubMaterial
+from .models import CustomUser, Clase, Evaluation, MediaItem, Club, ClubMaterial, Especializacion
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
         fields = ('id', 'username', 'email', 'first_name', 'last_name', 'phone', 'country', 'city', 'level', 
                  'birth_date', 'cedula', 'address', 'emergency_contact', 'emergency_phone', 
-                 'english_level', 'learning_goals', 'profile_completed', 'role', 'is_profesor', 'is_active', 'bloque_asignado')
+                 'english_level', 'learning_goals', 'profile_completed', 'role', 'is_profesor', 'is_active', 'bloque_asignado', 'especializacion')
         read_only_fields = ('id',)
 
 class LoginSerializer(serializers.Serializer):
@@ -102,10 +102,11 @@ class UserRegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8)
     role = serializers.ChoiceField(choices=CustomUser.ROLE_CHOICES)
     bloque_asignado = serializers.CharField(required=False, allow_blank=True)
+    especializacion = serializers.PrimaryKeyRelatedField(queryset=Especializacion.objects.all(), required=False, allow_null=True)
 
     class Meta:
         model = CustomUser
-        fields = ('first_name', 'last_name', 'email', 'role', 'password', 'bloque_asignado')
+        fields = ('first_name', 'last_name', 'email', 'role', 'password', 'bloque_asignado', 'especializacion')
 
     def validate_email(self, value):
         if CustomUser.objects.filter(email__iexact=value).exists():
@@ -115,6 +116,7 @@ class UserRegisterSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         password = validated_data.pop('password')
         bloque_asignado = validated_data.pop('bloque_asignado', None)
+        especializacion = validated_data.pop('especializacion', None)
         user = CustomUser(**validated_data)
         user.username = validated_data['email']  # Usar email como username
         user.set_password(password)
@@ -122,6 +124,8 @@ class UserRegisterSerializer(serializers.ModelSerializer):
             user.is_profesor = True
         if bloque_asignado:
             user.bloque_asignado = bloque_asignado
+        if especializacion:
+            user.especializacion = especializacion
         user.save()
         return user
 

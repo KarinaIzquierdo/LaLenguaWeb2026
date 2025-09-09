@@ -5,12 +5,13 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
-from .models import CustomUser, Profesor, Clase, Evaluation, MediaItem, Club, ClubMaterial
+from .models import CustomUser, Profesor, Clase, Evaluation, MediaItem, Club, ClubMaterial, Especializacion
 from .serializers import (
     UserSerializer, LoginSerializer, ChangePasswordSerializer, ClaseSerializer,
     UserRegisterSerializer, EvaluationSerializer, MediaItemSerializer,
     ClubSerializer, ClubMaterialSerializer,
 )
+from .especializacion_serializer import EspecializacionSerializer
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -518,13 +519,21 @@ def club_add_student_view(request, club_id):
     if not (user == club.profesor or getattr(user, 'role', None) == 'admin'):
         return Response({'success': False, 'message': 'No autorizado'}, status=status.HTTP_403_FORBIDDEN)
 
+    user_id = request.data.get('user_id')
     email = request.data.get('email')
-    if not email:
-        return Response({'success': False, 'message': 'Email requerido'}, status=status.HTTP_400_BAD_REQUEST)
-    try:
-        student = CustomUser.objects.get(email__iexact=email)
-    except CustomUser.DoesNotExist:
-        return Response({'success': False, 'message': 'Usuario no encontrado'}, status=status.HTTP_404_NOT_FOUND)
+    student = None
+    if user_id:
+        try:
+            student = CustomUser.objects.get(pk=int(user_id))
+        except (ValueError, CustomUser.DoesNotExist):
+            return Response({'success': False, 'message': 'Usuario no encontrado'}, status=status.HTTP_404_NOT_FOUND)
+    elif email:
+        try:
+            student = CustomUser.objects.get(email__iexact=email)
+        except CustomUser.DoesNotExist:
+            return Response({'success': False, 'message': 'Usuario no encontrado'}, status=status.HTTP_404_NOT_FOUND)
+    else:
+        return Response({'success': False, 'message': 'Debe proporcionar user_id o email'}, status=status.HTTP_400_BAD_REQUEST)
 
     club.students.add(student)
     return Response({'success': True, 'message': 'Estudiante agregado'}, status=status.HTTP_200_OK)

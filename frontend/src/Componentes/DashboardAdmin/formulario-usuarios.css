@@ -258,8 +258,23 @@
   font-size: 0.75rem;
   font-weight: 500;
   background-color: #e3f2fd;
-  color: #1565c0;
+  color: #1976d2;
   border: 1px solid #bbdefb;
+  display: inline-block;
+  min-width: 80px;
+  text-align: center;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+/* Estilos para el badge de especialización */
+.especializacion-badge {
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  background-color: #f3e5f5;
+  color: #7b1fa2;
+  border: 1px solid #ce93d8;
   display: inline-block;
   min-width: 80px;
   text-align: center;

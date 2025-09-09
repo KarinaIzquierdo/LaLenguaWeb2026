@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import './Dashboard_Profesor.css';
 import { clbService, type Club } from '../../services/clbService';
 
@@ -11,7 +11,10 @@ export default function MisClubs(_props: MisClubsProps) {
   const [creating, setCreating] = useState(false);
   const [selectedClub, setSelectedClub] = useState<Club | null>(null);
   const [students, setStudents] = useState<any[]>([]);
-  const [studentEmail, setStudentEmail] = useState('');
+  const [allUsers, setAllUsers] = useState<any[]>([]);
+  const [levelFilter, setLevelFilter] = useState<string>('');
+  const [search, setSearch] = useState('');
+  const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
 
   const [form, setForm] = useState({ name: '', description: '' });
 
@@ -39,8 +42,18 @@ export default function MisClubs(_props: MisClubsProps) {
     }
   };
 
+  const loadAllUsers = async () => {
+    try {
+      const list = await clbService.listAllUsers();
+      setAllUsers(list);
+    } catch (e) {
+      console.error('Error loading users:', e);
+    }
+  };
+
   useEffect(() => {
     loadClubs();
+    loadAllUsers();
   }, []);
 
   useEffect(() => {
@@ -68,19 +81,67 @@ export default function MisClubs(_props: MisClubsProps) {
     }
   };
 
-  const addStudent = async () => {
+  const filteredUsers = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    // Helper para normalizar niveles a etiquetas A1–C2
+    const normalizeToCEFR = (u: any): string => {
+      const raw = String(u.level || u.english_level || '').trim().toLowerCase();
+      const bloque = String(u.bloque_asignado || '').trim().toUpperCase();
+
+      // 1) Si bloque_asignado empieza por A1..C2, úsalo
+      const m = bloque.match(/^(A1|A2|B1|B2|C1|C2)/);
+      if (m) return m[1];
+
+      // 2) Si level ya es A1..C2
+      const rawUp = (u.level || '').toUpperCase();
+      if (['A1','A2','B1','B2','C1','C2'].includes(rawUp)) return rawUp;
+
+      // 3) Mapear comunes en english_level
+      // Nota: esto es una aproximación
+      if (raw.includes('beginner') || raw.includes('basic')) return 'A1';
+      if (raw.includes('elementary')) return 'A2';
+      if (raw.includes('pre-intermediate')) return 'B1';
+      if (raw.includes('intermediate')) return 'B1';
+      if (raw.includes('upper') || raw.includes('upper-intermediate')) return 'B2';
+      if (raw.includes('advanced')) return 'C1';
+      if (raw.includes('proficient') || raw.includes('c2')) return 'C2';
+
+      return '';
+    };
+
+    return allUsers
+      .filter(u => (u.role ? String(u.role).toLowerCase() === 'student' : true))
+      .filter(u => {
+        if (!levelFilter) return true;
+        return normalizeToCEFR(u) === levelFilter.toUpperCase();
+      })
+      .filter(u => {
+        if (!q) return true;
+        const name = `${u.first_name || ''} ${u.last_name || ''}`.toLowerCase();
+        return name.includes(q) || String(u.email || '').toLowerCase().includes(q);
+      })
+      .slice(0, 100); // limitar para rendimiento
+  }, [allUsers, levelFilter, search]);
+
+  const toggleSelectUser = (id: number) => {
+    setSelectedUserIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const addSelectedUsers = async () => {
     if (!selectedClub) return;
-    if (!studentEmail.trim()) {
-      alert('Ingresa el email del estudiante');
+    if (selectedUserIds.length === 0) {
+      alert('Selecciona al menos un estudiante.');
       return;
     }
     try {
-      await clbService.addStudentByEmail(selectedClub.id, studentEmail.trim());
-      setStudentEmail('');
+      for (const id of selectedUserIds) {
+        await clbService.addStudentById(selectedClub.id, id);
+      }
+      setSelectedUserIds([]);
       await loadStudents(selectedClub.id);
     } catch (e) {
-      console.error('Error adding student:', e);
-      alert('No se pudo agregar el estudiante. Verifica el email.');
+      console.error('Error adding selected students:', e);
+      alert('No se pudieron agregar algunos estudiantes.');
     }
   };
 
@@ -141,7 +202,7 @@ export default function MisClubs(_props: MisClubsProps) {
           <p>Usa el botón "Crear club" para comenzar</p>
         </div>
       ) : (
-        <div className="galeria-content" style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 24 }}>
+        <div className="galeria-content clubs-grid">
           <aside style={{ background: 'white', borderRadius: 12, padding: 16 }}>
             <h3 style={{ marginTop: 0 }}>Clubs</h3>
             <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
@@ -164,15 +225,57 @@ export default function MisClubs(_props: MisClubsProps) {
             {selectedClub && (
               <div className="users-table-container">
                 <h3>Estudiantes del club: {selectedClub.name}</h3>
-                <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-                  <input
-                    type="email"
-                    placeholder="email@estudiante.com"
-                    value={studentEmail}
-                    onChange={(e) => setStudentEmail(e.target.value)}
-                    style={{ flex: 1 }}
-                  />
-                  <button className="btn-primary" onClick={addStudent}>Agregar por email</button>
+                <div className="user-picker">
+                  <div className="user-picker-filters">
+                    <select value={levelFilter} onChange={(e) => setLevelFilter(e.target.value)}>
+                      <option value="">Todos los niveles</option>
+                      <option value="A1">A1</option>
+                      <option value="A2">A2</option>
+                      <option value="B1">B1</option>
+                      <option value="B2">B2</option>
+                      <option value="C1">C1</option>
+                      <option value="C2">C2</option>
+                    </select>
+                    <input
+                      type="text"
+                      placeholder="Buscar por nombre o email"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                    />
+                  </div>
+                  <div className="user-picker-list">
+                    {filteredUsers.map(u => (
+                      <label key={u.id} className={`user-option ${selectedUserIds.includes(u.id) ? 'selected' : ''}`}>
+                        <input
+                          type="checkbox"
+                          checked={selectedUserIds.includes(u.id)}
+                          onChange={() => toggleSelectUser(Number(u.id))}
+                        />
+                        <span className="user-name">{`${u.first_name || ''} ${u.last_name || ''}`.trim() || u.username || 'Sin nombre'}</span>
+                        <span className="user-meta">{u.email} · Nivel {(() => {
+                          const rawUp = String(u.level || '').toUpperCase();
+                          const bloque = String(u.bloque_asignado || '').toUpperCase();
+                          const m = bloque.match(/^(A1|A2|B1|B2|C1|C2)/);
+                          if (m) return m[1];
+                          if (['A1','A2','B1','B2','C1','C2'].includes(rawUp)) return rawUp;
+                          const raw = String(u.english_level || '').toLowerCase();
+                          if (raw.includes('beginner') || raw.includes('basic')) return 'A1';
+                          if (raw.includes('elementary')) return 'A2';
+                          if (raw.includes('pre-intermediate') || raw.includes('intermediate')) return 'B1';
+                          if (raw.includes('upper')) return 'B2';
+                          if (raw.includes('advanced')) return 'C1';
+                          if (raw.includes('proficient') || raw.includes('c2')) return 'C2';
+                          return '—';
+                        })()}</span>
+                      </label>
+                    ))}
+                    {filteredUsers.length === 0 && (
+                      <div className="empty-list">No hay estudiantes para mostrar</div>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
+                    <button className="btn-primary" onClick={addSelectedUsers}>Agregar seleccionados</button>
+                  </div>
                 </div>
 
                 <div className="users-table-wrapper">

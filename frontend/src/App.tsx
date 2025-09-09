@@ -18,6 +18,7 @@ import ProgramarClases from './Componentes/DashboardAdmin/ProgramarClases'
 // import GestionCursos from './Componentes/DashboardAdmin/GestionCursos'
 import BloquesView from './Componentes/DashboardAdmin/BloquesView'
 import GestionGaleria from './Componentes/DashboardAdmin/GestionGaleria'
+import Especializaciones from './Componentes/DashboardAdmin/Especializaciones'
 
 function App() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
@@ -220,6 +221,7 @@ function App() {
               {/** Gestión de cursos movida al Dashboard del Profesor como "Gestión CLB" **/}
               <Route path="bloques" element={<BloquesView />} />
               <Route path="galeria" element={<GestionGaleria />} />
+              <Route path="especializaciones" element={<Especializaciones />} />
             </Route>
             
             {/* Ruta de login - redirige al home */}

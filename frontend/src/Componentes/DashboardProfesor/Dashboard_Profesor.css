@@ -95,6 +95,75 @@
   overflow: hidden;
 }
 
+/* MisClubs grid layout */
+.clubs-grid {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 24px;
+}
+
+/* User picker */
+.user-picker {
+  background: #ffffff;
+  border: 1px solid #eef2f7;
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+.user-picker-filters {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.user-picker-filters select,
+.user-picker-filters input {
+  height: 40px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 0 10px;
+  outline: none;
+}
+
+.user-picker-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  max-height: 240px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.user-option {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #e5e7eb;
+  background: #fafafa;
+  border-radius: 10px;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.user-option .user-name {
+  font-weight: 600;
+  color: #111827;
+}
+
+.user-option .user-meta {
+  grid-column: 2 / span 1;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.user-option.selected {
+  border-color: #7c3aed;
+  background: #f5f3ff;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .dashboard-content {
@@ -126,5 +195,18 @@
   
   .stat-number {
     font-size: 20px;
+  }
+
+  .clubs-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .user-picker-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .user-picker-list {
+    grid-template-columns: 1fr;
+    max-height: 300px;
   }
 }

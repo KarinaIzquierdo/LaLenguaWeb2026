@@ -107,4 +107,23 @@ export const clbService = {
     const text = await res.text();
     if (!res.ok) throw new Error(`HTTP ${res.status}: ${text}`);
   },
+
+  async listAllUsers(): Promise<any[]> {
+    // Lista todos los usuarios (el backend ya expone /api/users/). Si soporta filtro ?role=student lo usamos, si no filtramos en front.
+    const res = await fetch(`${API_BASE_URL}/users/`, { headers: jsonHeaders() });
+    const text = await res.text();
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${text}`);
+    const data = JSON.parse(text);
+    return (data.data || data) as any[];
+  },
+
+  async addStudentById(clubId: number, userId: number): Promise<void> {
+    const res = await fetch(`${API_BASE_URL}/clubs/${clubId}/students/add/`, {
+      method: 'POST',
+      headers: jsonHeaders(),
+      body: JSON.stringify({ user_id: userId }),
+    });
+    const text = await res.text();
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${text}`);
+  },
 };

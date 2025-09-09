@@ -2,6 +2,7 @@ from django.urls import path
 from rest_framework import routers
 from . import views
 from .views import ClaseViewSet, MediaItemViewSet
+from . import especializacion_views
 
 router = routers.DefaultRouter()
 router.register(r'clases', ClaseViewSet)
@@ -40,6 +41,14 @@ urlpatterns = [
     path('clubs/<int:club_id>/students/', views.club_students_list_view, name='club_students_list'),
     path('clubs/<int:club_id>/students/add/', views.club_add_student_view, name='club_student_add'),
     path('clubs/<int:club_id>/students/<int:user_id>/remove/', views.club_remove_student_view, name='club_student_remove'),
+    
+    # Endpoints para especializaciones
+    path('especializaciones/', especializacion_views.especializaciones_list_view, name='especializaciones_list'),
+    path('especializaciones/activas/', especializacion_views.especializaciones_activas_view, name='especializaciones_activas'),
+    path('especializaciones/create/', especializacion_views.especializaciones_create_view, name='especializaciones_create'),
+    path('especializaciones/<int:pk>/update/', especializacion_views.especializaciones_update_view, name='especializaciones_update'),
+    path('especializaciones/<int:pk>/delete/', especializacion_views.especializaciones_delete_view, name='especializaciones_delete'),
+    path('especializaciones/<int:pk>/toggle/', especializacion_views.especializaciones_toggle_view, name='especializaciones_toggle'),
 ]
 
 urlpatterns += router.urls

@@ -37,6 +37,11 @@ export const Sidebar = ({ onLogout }: { onLogout: () => void }) => {
               Gestión de Galería
             </NavLink>
           </li>
+          <li>
+            <NavLink to="/admin/especializaciones" className={({ isActive }) => isActive ? 'active' : ''}>
+              Especializaciones
+            </NavLink>
+          </li>
         </ul>
         <button className="logout-button" onClick={onLogout} style={{ marginTop: '2rem', width: '100%' }}>
           Cerrar sesión

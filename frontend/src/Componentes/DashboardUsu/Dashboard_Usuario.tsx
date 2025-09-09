@@ -3,7 +3,6 @@ import './Dashboard.css';
 import PiePagina from '../Layout/PiePagina';
 import EvaluationModal from './EvaluationModal';
 import ResultsModal from './ResultsModal';
-import NotesModal from './NotesModal';
 import OnboardingTour from "../Onboarding/OnboardingTour";
 import ChallengeModal from "./ChallengeModal";
 import Toast from "./Toast";
@@ -13,6 +12,7 @@ import { EvaluationService } from '../../services/evaluationService';
 import { bloqueService } from '../../services/bloqueService';
 import { authService } from '../../services/authService';
 import { ClaseService } from '../../services/claseService';
+import { clbService, type Club, type ClubMaterial } from '../../services/clbService';
 
 interface DashboardProps {
   onLogout?: () => void;
@@ -65,7 +65,6 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
   const [currentEvaluation, setCurrentEvaluation] = useState<string | null>(null);
   const [showResultsModal, setShowResultsModal] = useState(false);
   const [evaluationResults, setEvaluationResults] = useState<any>(null);
-  const [showNotesModal, setShowNotesModal] = useState(false);
 
   // Clases states
   const [clases, setClases] = useState<any[]>([]);
@@ -78,6 +77,12 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
     horarios: string[];
   } | null>(null);
   const [userId, setUserId] = useState<string>('');
+
+  // CLB (Club) states
+  const [clubs, setClubs] = useState<Club[]>([]);
+  const [selectedClubId, setSelectedClubId] = useState<number | null>(null);
+  const [clubMaterials, setClubMaterials] = useState<ClubMaterial[]>([]);
+  const [isLoadingClubMaterials, setIsLoadingClubMaterials] = useState(false);
 
   // Evaluaciones states
   const [evaluaciones, setEvaluaciones] = useState<any[]>([]);
@@ -311,6 +316,43 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
     loadUserData();
   }, []);
 
+  // Cargar clubs del estudiante/profesor y materiales del club seleccionado
+  useEffect(() => {
+    const loadClubs = async () => {
+      try {
+        const userClubs = await clbService.getClubs();
+        setClubs(userClubs);
+        if (userClubs.length > 0) {
+          setSelectedClubId(userClubs[0].id);
+        }
+      } catch (e) {
+        console.error('Error loading clubs:', e);
+        setClubs([]);
+      }
+    };
+    loadClubs();
+  }, []);
+
+  useEffect(() => {
+    const loadMaterials = async () => {
+      if (!selectedClubId) {
+        setClubMaterials([]);
+        return;
+      }
+      try {
+        setIsLoadingClubMaterials(true);
+        const mats = await clbService.getClubMaterials(selectedClubId);
+        setClubMaterials(mats);
+      } catch (e) {
+        console.error('Error loading club materials:', e);
+        setClubMaterials([]);
+      } finally {
+        setIsLoadingClubMaterials(false);
+      }
+    };
+    loadMaterials();
+  }, [selectedClubId]);
+
   useEffect(() => {
     const fetchEvaluaciones = async () => {
       setIsLoadingEvaluaciones(true);
@@ -348,15 +390,16 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
           <p>Acompaña a nuestro flamenco en su viaje migratorio mientras aprendes inglés</p>
           <button className="btn-adventure">¡Comenzar aventura!</button>
         </div>
-        <div className="hero-image">
-          <div className="flamingo">
-            <img
-              src="/Image/flamingo.png"
-              alt="Flamingo"
-              className="flamingo-img"
-            />
-          </div>
+
+      <div className="hero-image">
+        <div className="flamingo">
+          <img
+            src="/Image/flamingo.png"
+            alt="Flamingo"
+            className="flamingo-img"
+          />
         </div>
+      </div>
       </section>
 
       {/* Cards */}
@@ -616,13 +659,59 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
         )}
       </div>
 
+      {/* Material del Club (datos reales) - Ubicado encima de Evaluaciones y Quizzes */}
+      <div className="evaluations-section" style={{ marginTop: 24 }}>
+        <div className="section-header">
+          <h2 className="section-title">Material del Club</h2>
+          {clubs.length > 0 && (
+            <select
+              value={selectedClubId ?? ''}
+              onChange={(e) => setSelectedClubId(Number(e.target.value))}
+              style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }}
+            >
+              {clubs.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          )}
+        </div>
+
+        {clubs.length === 0 ? (
+          <div className="no-classes-message">Aún no perteneces a ningún club.</div>
+        ) : isLoadingClubMaterials ? (
+          <div className="loading-message">Cargando material...</div>
+        ) : clubMaterials.length === 0 ? (
+          <div className="no-classes-message">No hay material publicado aún.</div>
+        ) : (
+          <div className="evaluations-grid">
+            {clubMaterials.map((item) => (
+              <div key={item.id} className="evaluation-card vocabulary-quiz">
+                <div className="evaluation-header">
+                  <div className="evaluation-icon">📎</div>
+                  <div className="evaluation-info">
+                    <h3>{item.title}</h3>
+                    <span className="evaluation-type">Semana {item.week}</span>
+                  </div>
+                  <div className="evaluation-status available">{new Date(item.created_at).toLocaleDateString('es-ES')}</div>
+                </div>
+                <div className="evaluation-content">
+                  <p>{item.description || 'Recurso del club'}</p>
+                </div>
+                {item.url && (
+                  <a className="evaluation-button" href={item.url} target="_blank" rel="noreferrer">
+                    Abrir recurso
+                  </a>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Evaluaciones Section */}
       <div className="evaluations-section">
         <div className="section-header">
           <h2 className="section-title">Evaluaciones y Quizzes</h2>
-          <button className="view-notes-btn" onClick={() => setShowNotesModal(true)}>
-            📝 Ver Notas
-          </button>
         </div>
 
         <div className="evaluations-grid">
@@ -776,11 +865,7 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
         onClose={() => setShowResultsModal(false)}
       />
 
-      {/* Notes Modal */}
-      <NotesModal
-        isVisible={showNotesModal}
-        onClose={() => setShowNotesModal(false)}
-      />
+      {/* NotesModal eliminado */}
 
       {/* Modal de Reto Diario */}
       {showChallengeModal && currentChallenge && (

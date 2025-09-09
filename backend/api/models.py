@@ -37,6 +37,9 @@ class CustomUser(AbstractUser):
     # Bloque asignado para estudiantes
     bloque_asignado = models.CharField(max_length=50, blank=True, null=True)
     
+    # Especialización asignada (relación con modelo Especializacion)
+    especializacion = models.ForeignKey('Especializacion', on_delete=models.SET_NULL, null=True, blank=True, related_name='estudiantes')
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True)
@@ -162,3 +165,24 @@ class ClubMaterial(models.Model):
 
     def __str__(self):
         return f"{self.title} - {self.week}"
+
+
+class Especializacion(models.Model):
+    """
+    Modelo para las especializaciones de inglés disponibles
+    """
+    nombre = models.CharField(max_length=100, unique=True)
+    descripcion = models.TextField()
+    duracion = models.CharField(max_length=50)  # ej: "8 semanas", "3 meses"
+    precio = models.DecimalField(max_digits=10, decimal_places=2)
+    activa = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['nombre']
+        verbose_name = 'Especialización'
+        verbose_name_plural = 'Especializaciones'
+    
+    def __str__(self):
+        return f"{self.nombre} - {self.duracion}"

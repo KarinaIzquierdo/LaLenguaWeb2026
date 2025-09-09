@@ -240,28 +240,7 @@ export default function Blog() {
           </div>
         </section>
 
-        {/* Stats Section */}
-        <section className="stats-section">
-          <div className="stats-container">
-            <div className="stats-content">
-              <h2 className="stats-title">Nuestra Galería</h2>
-              <div className="stats-grid">
-                <div className="stat-item">
-                  <div className="stat-number">{mediaItems.filter(item => item.type === 'video').length}</div>
-                  <div className="stat-label">Videos Educativos</div>
-                </div>
-                <div className="stat-item">
-                  <div className="stat-number">{mediaItems.filter(item => item.type === 'image').length}</div>
-                  <div className="stat-label">Infografías y Fotos</div>
-                </div>
-                <div className="stat-item">
-                  <div className="stat-number">{mediaItems.length}</div>
-                  <div className="stat-label">Total de Contenidos</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
+        {/* Stats Section removida por solicitud */}
       </main>
       <Footer />
       

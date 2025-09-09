@@ -10,6 +10,7 @@ import { userService } from '../../services/userService';
 import type { RegisterData } from '../../services/userService';
 import { rolMapFrontendToBackend } from '../../services/rolMap';
 import { bloqueService, type Bloque } from '../../services/bloqueService';
+import { especializacionService, type Especializacion } from '../../services/especializacionService';
 
 /**
  * @component FormularioUsuarios
@@ -29,6 +30,7 @@ interface Usuario {
   rol: string;
   activo: boolean;
   bloque_asignado?: string;
+  especializacion_id?: number;
 }
 
 interface FormErrors {
@@ -66,6 +68,7 @@ export default function FormularioUsuarios() {
     rol: 'Estudiante',
     contrasena: '',
     bloque_asignado: '',
+    especializacion_id: undefined,
   });
 
   /**
@@ -73,10 +76,27 @@ export default function FormularioUsuarios() {
    */
   const [bloques, setBloques] = useState<Bloque[]>([]);
 
-  // Cargar bloques al montar el componente
+  /**
+   * @state {Array<Especializacion>} especializaciones - Lista de especializaciones disponibles.
+   */
+  const [especializaciones, setEspecializaciones] = useState<Especializacion[]>([]);
+
+  // Cargar bloques y especializaciones al montar el componente
   useEffect(() => {
     const bloquesDisponibles = bloqueService.getBloques();
     setBloques(bloquesDisponibles);
+    
+    const cargarEspecializaciones = async () => {
+      try {
+        const especializacionesDisponibles = await especializacionService.getEspecializacionesActivas();
+        setEspecializaciones(especializacionesDisponibles);
+      } catch (error) {
+        console.error('Error al cargar especializaciones:', error);
+        setEspecializaciones([]);
+      }
+    };
+    
+    cargarEspecializaciones();
   }, []);
 
   /**
@@ -177,6 +197,7 @@ export default function FormularioUsuarios() {
       rol: 'Estudiante',
       contrasena: '',
       bloque_asignado: '',
+      especializacion_id: undefined,
     });
     setFormErrors({});
   };
@@ -196,6 +217,7 @@ export default function FormularioUsuarios() {
       rol: user.rol,
       contrasena: '', // Contraseña no se edita directamente aquí por seguridad
       bloque_asignado: user.bloque_asignado || '',
+      especializacion_id: user.especializacion_id,
     });
     setFormErrors({});
   };
@@ -236,6 +258,7 @@ export default function FormularioUsuarios() {
         role: rolMapFrontendToBackend[formData.rol],
         password: formData.contrasena,
         bloque_asignado: formData.bloque_asignado,
+        especializacion: formData.especializacion_id || null,
       };
       const result = await userService.register(registerData);
       if (result.success) {
@@ -259,6 +282,7 @@ export default function FormularioUsuarios() {
           rol: 'Estudiante',
           contrasena: '',
           bloque_asignado: '',
+          especializacion_id: undefined,
         });
       } else {
         setFormErrors(result.errors || { correo: result.message || 'Error al registrar usuario' });
@@ -328,6 +352,7 @@ export default function FormularioUsuarios() {
                   <th>Correo</th>
                   <th>Rol</th>
                   <th>Bloque</th>
+                  <th>Especialización</th>
                   <th>Estado</th>
                   <th>Acciones</th>
                 </tr>
@@ -343,6 +368,14 @@ export default function FormularioUsuarios() {
                       <td>
                         <span className="bloque-badge">
                           {user.bloque_asignado || 'Sin asignar'}
+                        </span>
+                      </td>
+                      <td>
+                        <span className="especializacion-badge">
+                          {user.especializacion_id 
+                            ? especializaciones.find(esp => esp.id === user.especializacion_id)?.nombre || 'Sin asignar'
+                            : 'Sin asignar'
+                          }
                         </span>
                       </td>
                       <td>
@@ -386,7 +419,7 @@ export default function FormularioUsuarios() {
                 })}
                 {users.length === 0 && (
                   <tr>
-                    <td colSpan={7} style={{ textAlign: 'center', padding: '2rem' }}>
+                    <td colSpan={8} style={{ textAlign: 'center', padding: '2rem' }}>
                       No hay usuarios registrados
                     </td>
                   </tr>
@@ -478,22 +511,41 @@ export default function FormularioUsuarios() {
           </div>
 
           {formData.rol === 'Estudiante' && (
-            <div className="form-field">
-              <label htmlFor="bloque_asignado">Bloque Asignado</label>
-              <select
-                id="bloque_asignado"
-                name="bloque_asignado"
-                value={formData.bloque_asignado}
-                onChange={handleChange}
-              >
-                <option value="">Sin asignar</option>
-                {bloques.map((bloque) => (
-                  <option key={bloque.id} value={bloque.id}>
-                    {bloque.nivel} {bloque.turno}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <>
+              <div className="form-field">
+                <label htmlFor="bloque_asignado">Bloque Asignado</label>
+                <select
+                  id="bloque_asignado"
+                  name="bloque_asignado"
+                  value={formData.bloque_asignado}
+                  onChange={handleChange}
+                >
+                  <option value="">Sin asignar</option>
+                  {bloques.map((bloque) => (
+                    <option key={bloque.id} value={bloque.id}>
+                      {bloque.nivel} {bloque.turno}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div className="form-field">
+                <label htmlFor="especializacion_id">Especialización</label>
+                <select
+                  id="especializacion_id"
+                  name="especializacion_id"
+                  value={formData.especializacion_id || ''}
+                  onChange={handleChange}
+                >
+                  <option value="">Sin especialización</option>
+                  {especializaciones.map((especializacion) => (
+                    <option key={especializacion.id} value={especializacion.id}>
+                      {especializacion.nombre} - {especializacion.duracion}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </>
           )}
 
           {!editingUser && (

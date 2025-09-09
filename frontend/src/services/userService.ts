@@ -8,6 +8,7 @@ export interface RegisterData {
   role: string;
   password: string;
   bloque_asignado?: string;
+  especializacion?: number | null;
 }
 
 export interface RegisterResponse {
