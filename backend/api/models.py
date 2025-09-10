@@ -48,6 +48,55 @@ class CustomUser(AbstractUser):
         return f"{self.username} - {self.first_name} {self.last_name}"
 
 
+class Evaluacion(models.Model):
+    """
+    Modelo para las evaluaciones subidas por los profesores
+    """
+    TIPO_CHOICES = [
+        ('quiz', 'Quiz'),
+        ('examen', 'Examen'),
+        ('tarea', 'Tarea'),
+    ]
+    
+    ESTADO_CHOICES = [
+        ('borrador', 'Borrador'),
+        ('publicada', 'Publicada'),
+        ('archivada', 'Archivada'),
+    ]
+    
+    titulo = models.CharField(max_length=200)
+    descripcion = models.TextField(blank=True, null=True)
+    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES, default='quiz')
+    estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='borrador')
+    archivo = models.FileField(upload_to='evaluaciones/', null=True, blank=True)
+    fecha_limite = models.DateTimeField(null=True, blank=True)
+    
+    # Relaciones
+    profesor = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='evaluaciones_creadas')
+    estudiantes_asignados = models.ManyToManyField(CustomUser, related_name='evaluaciones_asignadas', blank=True)
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Evaluación'
+        verbose_name_plural = 'Evaluaciones'
+    
+    def __str__(self):
+        return f"{self.titulo} - {self.profesor.username}"
+    
+    @property
+    def estudiantes_count(self):
+        return self.estudiantes_asignados.count()
+    
+    @property
+    def completadas_count(self):
+        # Aquí se podría agregar lógica para contar evaluaciones completadas
+        return 0
+
+
 class Profesor(models.Model):
     """
     Modelo para información específica de profesores

@@ -5,11 +5,11 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
-from .models import CustomUser, Profesor, Clase, Evaluation, MediaItem, Club, ClubMaterial, Especializacion
+from .models import CustomUser, Profesor, Clase, Evaluation, MediaItem, Club, ClubMaterial, Especializacion, Evaluacion
 from .serializers import (
     UserSerializer, LoginSerializer, ChangePasswordSerializer, ClaseSerializer,
     UserRegisterSerializer, EvaluationSerializer, MediaItemSerializer,
-    ClubSerializer, ClubMaterialSerializer,
+    ClubSerializer, ClubMaterialSerializer, EvaluacionSerializer,
 )
 from .especializacion_serializer import EspecializacionSerializer
 

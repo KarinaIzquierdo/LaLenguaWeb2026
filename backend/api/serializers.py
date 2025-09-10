@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import authenticate
-from .models import CustomUser, Clase, Evaluation, MediaItem, Club, ClubMaterial, Especializacion
+from .models import CustomUser, Clase, Evaluation, MediaItem, Club, ClubMaterial, Especializacion, Evaluacion
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -166,3 +166,43 @@ class MediaItemSerializer(serializers.ModelSerializer):
             else:
                 data['url'] = getattr(instance.file, 'url', '')
         return data
+
+
+class EvaluacionSerializer(serializers.ModelSerializer):
+    estudiantes_asignados = serializers.PrimaryKeyRelatedField(many=True, queryset=CustomUser.objects.all(), required=False)
+    profesor_nombre = serializers.CharField(source='profesor.get_full_name', read_only=True)
+    estudiantes_count = serializers.SerializerMethodField()
+    completadas_count = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Evaluacion
+        fields = ['id', 'titulo', 'descripcion', 'tipo', 'estado', 'archivo', 'fecha_limite', 
+                 'profesor', 'profesor_nombre', 'estudiantes_asignados', 'estudiantes_count', 
+                 'completadas_count', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
+    
+    def get_estudiantes_count(self, obj):
+        return obj.estudiantes_asignados.count()
+    
+    def get_completadas_count(self, obj):
+        # This would need to be implemented based on your completion tracking logic
+        # For now, returning 0 as placeholder
+        return 0
+    
+    def create(self, validated_data):
+        estudiantes_data = validated_data.pop('estudiantes_asignados', [])
+        evaluacion = Evaluacion.objects.create(**validated_data)
+        evaluacion.estudiantes_asignados.set(estudiantes_data)
+        return evaluacion
+    
+    def update(self, instance, validated_data):
+        estudiantes_data = validated_data.pop('estudiantes_asignados', None)
+        
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        
+        if estudiantes_data is not None:
+            instance.estudiantes_asignados.set(estudiantes_data)
+        
+        return instance

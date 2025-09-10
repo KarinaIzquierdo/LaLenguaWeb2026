@@ -13,6 +13,7 @@ import { bloqueService } from '../../services/bloqueService';
 import { authService } from '../../services/authService';
 import { ClaseService } from '../../services/claseService';
 import { clbService, type Club, type ClubMaterial } from '../../services/clbService';
+import EvaluacionesEstudiante from '../DashboardUsuario/EvaluacionesEstudiante';
 
 interface DashboardProps {
   onLogout?: () => void;
@@ -709,58 +710,7 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
       </div>
 
       {/* Evaluaciones Section */}
-      <div className="evaluations-section">
-        <div className="section-header">
-          <h2 className="section-title">Evaluaciones y Quizzes</h2>
-        </div>
-
-        <div className="evaluations-grid">
-          {isLoadingEvaluaciones ? (
-            <div>Cargando evaluaciones...</div>
-          ) : evaluaciones.length > 0 ? (
-            evaluaciones.map((evalItem: any) => (
-              <div className={`evaluation-card ${evalItem.tipo}-quiz`} key={evalItem.id}>
-                <div className="evaluation-header">
-                  <div className="evaluation-icon">
-                    {evalItem.tipo === 'vocabulary' && '📚'}
-                    {evalItem.tipo === 'grammar' && '✏️'}
-                    {evalItem.tipo === 'comprehension' && '🎧'}
-                  </div>
-                  <div className="evaluation-info">
-                    <h3>{evalItem.tipo === 'vocabulary' ? 'Quiz de Vocabulario' : evalItem.tipo === 'grammar' ? 'Evaluación de Gramática' : 'Comprensión Auditiva'}</h3>
-                    <span className="evaluation-type">{evalItem.detalles || ''}</span>
-                  </div>
-                  <div className={`evaluation-status ${evalItem.score > 0 ? 'completed' : 'available'}`}>{evalItem.score > 0 ? 'Completado' : 'Disponible'}</div>
-                </div>
-                <div className="evaluation-content">
-                  <p>{evalItem.tipo === 'vocabulary' ? 'Evalúa tu conocimiento de vocabulario básico en inglés.' : evalItem.tipo === 'grammar' ? 'Pon a prueba tus conocimientos gramaticales.' : 'Evalúa tu capacidad de comprensión auditiva.'}</p>
-                  <div className="evaluation-stats">
-                    <div className="stat">
-                      <span className="stat-icon">🏆</span>
-                      <span>{evalItem.score > 0 ? `Mejor: ${evalItem.score}%` : 'Sin intentos'}</span>
-                    </div>
-                    <div className="stat">
-                      <span className="stat-icon">🎯</span>
-                      <span>Intentos: {evalItem.intentos}</span>
-                    </div>
-                  </div>
-                </div>
-                {evalItem.score > 0 ? (
-                  <button className="evaluation-button completed" onClick={() => viewResults(evalItem.tipo)}>
-                    Ver Resultados
-                  </button>
-                ) : (
-                  <button className="evaluation-button" onClick={() => startEvaluation(evalItem.tipo)}>
-                    Comenzar
-                  </button>
-                )}
-              </div>
-            ))
-          ) : (
-            <div>No tienes evaluaciones registradas.</div>
-          )}
-        </div>
-      </div>
+      <EvaluacionesEstudiante />
 
       {/* Classes Section */}
       <div className="classes-section">

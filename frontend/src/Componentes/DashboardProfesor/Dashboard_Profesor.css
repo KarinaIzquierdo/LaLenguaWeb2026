@@ -1,7 +1,17 @@
-.dashboard-profesor-container {
+/* Layout del Profesor - Similar al Admin */
+.profesor-layout {
+  display: flex;
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding-top: 80px; /* Espacio para navbar fijo */
+}
+
+.profesor-content {
+  flex-grow: 1;
+  padding: 2rem;
+  background: #f8fafc;
+}
+
+.dashboard-home {
+  margin-bottom: 2rem;
 }
 
 .dashboard-content {

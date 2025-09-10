@@ -1,232 +1,165 @@
-.nav-profesor {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 80px;
-  background: white;
-  border-bottom: 1px solid #e5e7eb;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  z-index: 1000;
-}
-
-.nav-content {
-  max-width: 1400px;
-  margin: 0 auto;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 24px;
-}
-
-/* Logo */
-.nav-logo {
+/* Sidebar del Profesor - Basado en el estilo del Admin */
+.sidebar-profesor {
+  flex-shrink: 0;
+  width: 250px;
+  background-color: var(--bg-card, #ffffff);
+  color: var(--text-primary, #1e293b);
+  padding: 2rem 1rem;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-}
-
-.logo-text {
-  font-size: 20px;
-  font-weight: 700;
-  color: #667eea;
-  line-height: 1;
-}
-
-.logo-subtitle {
-  font-size: 12px;
-  color: #6b7280;
-  font-weight: 500;
-}
-
-/* Menu de navegación */
-.nav-menu {
-  display: flex;
-  gap: 8px;
-}
-
-.nav-item {
-  display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 8px;
-  padding: 12px 16px;
-  border: none;
-  background: transparent;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-size: 14px;
-  font-weight: 500;
-  color: #6b7280;
+  min-height: 100vh;
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
 }
 
-.nav-item:hover {
-  background: #f3f4f6;
-  color: #374151;
+.sidebar-header {
+  text-align: center;
+  margin-bottom: 2rem;
+  width: 100%;
 }
 
-.nav-item.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+.sidebar-header h3 {
+  margin: 0 0 1.5rem 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--text-primary, #1e293b);
 }
 
-.nav-icon {
-  font-size: 16px;
-}
-
-.nav-label {
-  white-space: nowrap;
-}
-
-/* Perfil del profesor */
-.nav-profile {
-  position: relative;
-}
-
-.profile-button {
+.profesor-info {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 12px;
-  padding: 8px 12px;
-  border: none;
-  background: transparent;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: var(--bg-secondary, #f1f5f9);
+  border-radius: 12px;
+  width: 100%;
 }
 
-.profile-button:hover {
-  background: #f3f4f6;
-}
-
-.profile-avatar {
-  width: 40px;
-  height: 40px;
+.profesor-avatar {
+  width: 50px;
+  height: 50px;
   border-radius: 50%;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
+  font-weight: 700;
+  font-size: 1.1rem;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.profesor-details {
+  text-align: center;
+}
+
+.profesor-name {
+  display: block;
+  font-size: 0.9rem;
   font-weight: 600;
-  font-size: 14px;
+  color: var(--text-primary, #1e293b);
+  margin-bottom: 0.25rem;
 }
 
-.profile-info {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+.profesor-role {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-secondary, #64748b);
 }
 
-.profile-name {
-  font-size: 14px;
-  font-weight: 600;
-  color: #1f2937;
-  line-height: 1;
+.sidebar-nav {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+  flex-grow: 1;
 }
 
-.profile-role {
-  font-size: 12px;
-  color: #6b7280;
-  margin-top: 2px;
+.sidebar-nav li {
+  margin-bottom: 0.5rem;
 }
 
-.profile-arrow {
-  font-size: 12px;
-  color: #6b7280;
-  transition: transform 0.2s ease;
-}
-
-.profile-button:hover .profile-arrow {
-  transform: rotate(180deg);
-}
-
-/* Menu desplegable */
-.profile-menu {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  margin-top: 8px;
-  background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-  min-width: 200px;
-  overflow: hidden;
-  z-index: 1001;
-}
-
-.menu-item {
+.sidebar-nav li button {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 0.75rem;
   width: 100%;
-  padding: 12px 16px;
+  padding: 0.75rem 1rem;
+  color: var(--text-secondary, #64748b);
+  text-decoration: none;
   border: none;
   background: transparent;
-  text-align: left;
+  border-radius: 6px;
   cursor: pointer;
-  transition: background 0.2s ease;
-  font-size: 14px;
-  color: #374151;
+  transition: background-color 0.2s, color 0.2s;
+  font-size: 0.9rem;
+  text-align: left;
 }
 
-.menu-item:hover {
-  background: #f3f4f6;
+.sidebar-nav li button:hover {
+  background-color: var(--bg-secondary, #f1f5f9);
+  color: var(--text-primary, #1e293b);
 }
 
-.menu-item.logout {
-  color: #ef4444;
+.sidebar-nav li button.active {
+  background-color: var(--primary-blue, #2563eb);
+  color: var(--white, #ffffff);
+  font-weight: 600;
 }
 
-.menu-item.logout:hover {
-  background: #fef2f2;
+.nav-icon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
 }
 
-.menu-icon {
-  font-size: 16px;
+.nav-label {
+  flex-grow: 1;
 }
 
-.menu-divider {
+.logout-button {
+  background-color: var(--danger, #ef4444);
+  color: white;
   border: none;
-  border-top: 1px solid #e5e7eb;
-  margin: 4px 0;
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.logout-button:hover {
+  background-color: var(--danger-light, #f87171);
+}
+
+/* Variables CSS para compatibilidad */
+:root {
+  --bg-card: #ffffff;
+  --bg-primary: #f8fafc;
+  --bg-secondary: #f1f5f9;
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  --primary-blue: #2563eb;
+  --white: #ffffff;
+  --danger: #ef4444;
+  --danger-light: #f87171;
 }
 
 /* Responsive */
-@media (max-width: 1024px) {
-  .nav-menu {
-    gap: 4px;
-  }
-  
-  .nav-item {
-    padding: 10px 12px;
-  }
-  
-  .nav-label {
-    display: none;
-  }
-}
-
 @media (max-width: 768px) {
-  .nav-content {
-    padding: 0 16px;
+  .sidebar-profesor {
+    width: 100%;
+    min-height: auto;
+    position: fixed;
+    top: 0;
+    left: -100%;
+    z-index: 1000;
+    transition: left 0.3s ease;
   }
   
-  .logo-text {
-    font-size: 18px;
-  }
-  
-  .profile-info {
-    display: none;
-  }
-  
-  .nav-menu {
-    gap: 2px;
-  }
-  
-  .nav-item {
-    padding: 8px;
+  .sidebar-profesor.mobile-open {
+    left: 0;
   }
 }

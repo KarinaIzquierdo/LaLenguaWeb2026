@@ -3,6 +3,7 @@ from rest_framework import routers
 from . import views
 from .views import ClaseViewSet, MediaItemViewSet
 from . import especializacion_views
+from . import evaluacion_views
 
 router = routers.DefaultRouter()
 router.register(r'clases', ClaseViewSet)
@@ -49,6 +50,15 @@ urlpatterns = [
     path('especializaciones/<int:pk>/update/', especializacion_views.especializaciones_update_view, name='especializaciones_update'),
     path('especializaciones/<int:pk>/delete/', especializacion_views.especializaciones_delete_view, name='especializaciones_delete'),
     path('especializaciones/<int:pk>/toggle/', especializacion_views.especializaciones_toggle_view, name='especializaciones_toggle'),
+    
+    # Endpoints para evaluaciones
+    path('evaluaciones/', evaluacion_views.evaluaciones_list_view, name='evaluaciones_list'),
+    path('evaluaciones/create/', evaluacion_views.evaluacion_create_view, name='evaluacion_create'),
+    path('evaluaciones/<int:pk>/update/', evaluacion_views.evaluacion_update_view, name='evaluacion_update'),
+    path('evaluaciones/<int:pk>/delete/', evaluacion_views.evaluacion_delete_view, name='evaluacion_delete'),
+    path('evaluaciones/<int:pk>/publish/', evaluacion_views.evaluacion_publish_view, name='evaluacion_publish'),
+    path('evaluaciones/students/', evaluacion_views.students_list_view, name='students_list'),
+    path('student/evaluaciones/', evaluacion_views.student_evaluaciones_view, name='student_evaluaciones'),
 ]
 
 urlpatterns += router.urls
