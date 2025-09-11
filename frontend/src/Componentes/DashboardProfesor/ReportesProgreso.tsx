@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import './ReportesProgreso.css';
 import DetalleEstudianteModal from './DetalleEstudianteModal';
+import { evaluacionService } from '../../services/evaluacionService';
 
 interface EstudianteProgreso {
   id: number;
@@ -15,66 +16,45 @@ interface EstudianteProgreso {
   calificacionPromedio: number;
 }
 
+interface EstadisticasGenerales {
+  total_estudiantes: number;
+  progreso_promedio: number;
+  calificacion_promedio: number;
+}
+
 export default function ReportesProgreso() {
   const [estudiantes, setEstudiantes] = useState<EstudianteProgreso[]>([]);
+  const [estadisticas, setEstadisticas] = useState<EstadisticasGenerales | null>(null);
   const [filtroNivel, setFiltroNivel] = useState<string>('todos');
   const [ordenPor, setOrdenPor] = useState<'nombre' | 'progreso' | 'calificacion'>('progreso');
   const [modalAbierto, setModalAbierto] = useState<boolean>(false);
   const [estudianteModal, setEstudianteModal] = useState<EstudianteProgreso | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const estudiantesEjemplo: EstudianteProgreso[] = [
-      {
-        id: 1,
-        nombre: "Ana García",
-        nivel: "Intermedio",
-        progreso: 75,
-        clasesCompletadas: 18,
-        clasesTotales: 24,
-        ultimaClase: "2024-12-10",
-        fortalezas: ["Pronunciación", "Vocabulario"],
-        areasAMejorar: ["Gramática", "Escritura"],
-        calificacionPromedio: 8.5
-      },
-      {
-        id: 2,
-        nombre: "Carlos López",
-        nivel: "Básico",
-        progreso: 45,
-        clasesCompletadas: 9,
-        clasesTotales: 20,
-        ultimaClase: "2024-12-08",
-        fortalezas: ["Comprensión auditiva"],
-        areasAMejorar: ["Conversación", "Confianza"],
-        calificacionPromedio: 7.2
-      },
-      {
-        id: 3,
-        nombre: "María Rodríguez",
-        nivel: "Avanzado",
-        progreso: 90,
-        clasesCompletadas: 27,
-        clasesTotales: 30,
-        ultimaClase: "2024-12-12",
-        fortalezas: ["Fluidez", "Gramática", "Escritura"],
-        areasAMejorar: ["Expresiones idiomáticas"],
-        calificacionPromedio: 9.1
-      },
-      {
-        id: 4,
-        nombre: "Pedro Martín",
-        nivel: "Intermedio",
-        progreso: 60,
-        clasesCompletadas: 12,
-        clasesTotales: 20,
-        ultimaClase: "2024-12-09",
-        fortalezas: ["Vocabulario técnico"],
-        areasAMejorar: ["Pronunciación", "Conversación"],
-        calificacionPromedio: 7.8
-      }
-    ];
-    setEstudiantes(estudiantesEjemplo);
+    loadReportesProgreso();
   }, []);
+
+  const loadReportesProgreso = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await evaluacionService.getReportesProgreso();
+      
+      if (response.success) {
+        setEstudiantes(response.data.estudiantes);
+        setEstadisticas(response.data.estadisticas);
+      } else {
+        setError('Error al cargar reportes de progreso');
+      }
+    } catch (err) {
+      setError('Error al cargar reportes de progreso');
+      console.error('Error loading reportes:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const estudiantesFiltrados = estudiantes
     .filter(estudiante => filtroNivel === 'todos' || estudiante.nivel === filtroNivel)
@@ -91,11 +71,10 @@ export default function ReportesProgreso() {
       }
     });
 
-  const progresoPromedio = estudiantes.reduce((acc, est) => acc + est.progreso, 0) / estudiantes.length;
-  const calificacionPromedio = estudiantes.reduce((acc, est) => acc + est.calificacionPromedio, 0) / estudiantes.length;
-  const promedioClases = estudiantes.reduce((acc, curr) => acc + curr.clasesCompletadas, 0) / estudiantes.length;
-  const promedioEstudiantes = estudiantes.length;
-  const promedioSatisfaccion = estudiantes.reduce((acc, curr) => acc + curr.calificacionPromedio, 0) / estudiantes.length;
+  // Usar estadísticas del backend si están disponibles
+  const progresoPromedio = estadisticas?.progreso_promedio || 0;
+  const calificacionPromedio = estadisticas?.calificacion_promedio || 0;
+  const totalEstudiantes = estadisticas?.total_estudiantes || estudiantes.length;
 
   const mostrarDetalles = (estudiante: EstudianteProgreso) => {
     setEstudianteModal(estudiante);
@@ -178,7 +157,7 @@ Generado el: ${new Date().toLocaleDateString('es-ES')}
           <div className="resumen-icon">👥</div>
           <div className="resumen-info">
             <h3>Total Estudiantes</h3>
-            <span className="resumen-valor">{estudiantes.length}</span>
+            <span className="resumen-valor">{totalEstudiantes}</span>
           </div>
         </div>
         
@@ -199,10 +178,28 @@ Generado el: ${new Date().toLocaleDateString('es-ES')}
         </div>
       </div>
 
+      {/* Loading state */}
+      {loading && (
+        <div className="loading-container">
+          <p>Cargando reportes de progreso...</p>
+        </div>
+      )}
+
+      {/* Error state */}
+      {error && (
+        <div className="error-container">
+          <p>Error: {error}</p>
+          <button onClick={loadReportesProgreso} className="btn-retry">
+            Reintentar
+          </button>
+        </div>
+      )}
+
       {/* Lista de estudiantes */}
-      <div className="estudiantes-lista-container">
-        <div className="estudiantes-lista">
-        {estudiantesFiltrados.map(estudiante => (
+      {!loading && !error && (
+        <div className="estudiantes-lista-container">
+          <div className="estudiantes-lista">
+          {estudiantesFiltrados.map(estudiante => (
           <div key={estudiante.id} className="estudiante-card">
             <div className="estudiante-header">
               <div className="estudiante-info">
@@ -251,7 +248,8 @@ Generado el: ${new Date().toLocaleDateString('es-ES')}
           </div>
         ))}
         </div>
-      </div>
+        </div>
+      )}
 
       {/* Modal de detalles */}
       {estudianteModal && (

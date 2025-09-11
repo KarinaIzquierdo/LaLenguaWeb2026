@@ -28,19 +28,9 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [isNewUser, setIsNewUser] = useState(false);
   const [showChallengeModal, setShowChallengeModal] = useState(false);
-  const [challengeProgress, setChallengeProgress] = useState(() => {
-    const saved = localStorage.getItem('challengeProgress');
-    return saved ? parseInt(saved) : 0;
-  });
-  const [hasCompletedToday, setHasCompletedToday] = useState(() => {
-    const today = new Date().toDateString();
-    const lastCompleted = localStorage.getItem('lastCompletedDate');
-    return lastCompleted === today;
-  });
-  const [streakLevel, setStreakLevel] = useState(() => {
-    const saved = localStorage.getItem('streakLevel');
-    return saved ? parseInt(saved) : 0;
-  });
+  const [challengeProgress, setChallengeProgress] = useState(0);
+  const [hasCompletedToday, setHasCompletedToday] = useState(false);
+  const [streakLevel, setStreakLevel] = useState(0);
   const [currentChallenge, setCurrentChallenge] = useState<{
     question: string;
     options: string[];
@@ -217,28 +207,47 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
   // Usar hook de eventos DOM con función de notificación
   useDashboardEvents(showNotification);
 
+  // Función para acceder a una clase
+  const accederClase = (clase: any) => {
+    console.log('Datos de la clase:', clase);
+    console.log('meetLink:', clase.meetLink);
+    console.log('meet_link:', clase.meet_link);
+    
+    // Usar el campo correcto del backend
+    const meetLink = clase.meet_link || clase.meetLink;
+    
+    // Si la clase tiene meetLink, abrir Meet
+    if (meetLink && meetLink.trim() !== '') {
+      window.open(meetLink, '_blank');
+      showNotification('success', '¡Accediendo a la clase! 📹', `Uniéndote a "${clase.tema || clase.nombre}"`);
+    } else {
+      // Si no tiene meetLink, mostrar mensaje informativo
+      showNotification('info', 'Clase programada 📅', `La clase "${clase.tema || clase.nombre}" aún no tiene enlace de Meet disponible. El profesor lo activará cuando inicie la clase.`);
+    }
+  };
+
 
   // Función para verificar respuesta del reto
   const checkChallengeAnswer = (selectedAnswer: number) => {
     const today = new Date().toDateString();
     setHasCompletedToday(true);
-    localStorage.setItem('lastCompletedDate', today);
+    localStorage.setItem(`lastCompletedDate_${userId}`, today);
     
     if (currentChallenge && selectedAnswer === currentChallenge.correctAnswer) {
       // Respuesta correcta - continúa la racha
       const newProgress = challengeProgress + 1;
       setChallengeProgress(newProgress);
-      localStorage.setItem('challengeProgress', newProgress.toString());
+      localStorage.setItem(`challengeProgress_${userId}`, newProgress.toString());
       
       // Si completa los 7 días, dar recompensa especial y reiniciar
       if (newProgress >= 7) {
         const newStreakLevel = streakLevel + 1;
         setStreakLevel(newStreakLevel);
-        localStorage.setItem('streakLevel', newStreakLevel.toString());
+        localStorage.setItem(`streakLevel_${userId}`, newStreakLevel.toString());
         setCandies(prev => prev + 15); // 15 dulces por completar semana
         setExperience(prev => prev + 50); // 50 XP por completar semana
         setChallengeProgress(0); // Reiniciar racha
-        localStorage.setItem('challengeProgress', '0');
+        localStorage.setItem(`challengeProgress_${userId}`, '0');
         showNotification('success', '¡Felicidades! 🎉', `¡Increíble! Completaste 7 días de racha!\n🌟 ¡Nivel de racha: ${newStreakLevel}!\n¡La tarjeta evoluciona!`, { candies: 15, xp: 50 });
       } else {
         setCandies(prev => prev + 3); // 3 dulces por día
@@ -250,7 +259,7 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
     } else {
       // Respuesta incorrecta - reiniciar racha a cero y mostrar respuesta correcta
       setChallengeProgress(0);
-      localStorage.setItem('challengeProgress', '0');
+      localStorage.setItem(`challengeProgress_${userId}`, '0');
       const correctOption = currentChallenge?.options[currentChallenge.correctAnswer];
       showNotification('error', 'Respuesta incorrecta ❌', `Tu racha se reinicia a 0.\n\nRespuesta correcta: ${correctOption}\n\n${currentChallenge?.explanation}`);
       closeChallengeModal();
@@ -263,6 +272,30 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
         const profile = await authService.getUserProfile();
         const userIdStr = profile.id?.toString() || '';
         setUserId(userIdStr);
+        
+        // Cargar datos específicos del usuario desde localStorage
+        const today = new Date().toDateString();
+        const lastCompleted = localStorage.getItem(`lastCompletedDate_${userIdStr}`);
+        const savedProgress = localStorage.getItem(`challengeProgress_${userIdStr}`);
+        const savedStreakLevel = localStorage.getItem(`streakLevel_${userIdStr}`);
+        
+        // SIMULACIÓN ESPECIAL PARA CAMILA - Ver animaciones de racha alta
+        if (profile.email === 'camila@thelanguage.co') {
+          console.log('🎯 Simulando racha completa para Camila');
+          setHasCompletedToday(false); // Permitir que haga el reto
+          setChallengeProgress(6); // Día 6 de 7 (casi completa la semana)
+          setStreakLevel(3); // Nivel 3 de racha para ver todas las animaciones
+          setCandies(500); // Muchos dulces para ver efectos
+          setExperience(2500); // Mucha experiencia
+          
+          // Guardar en localStorage para persistencia
+          localStorage.setItem(`challengeProgress_${userIdStr}`, '6');
+          localStorage.setItem(`streakLevel_${userIdStr}`, '3');
+        } else {
+          setHasCompletedToday(lastCompleted === today);
+          setChallengeProgress(savedProgress ? parseInt(savedProgress) : 0);
+          setStreakLevel(savedStreakLevel ? parseInt(savedStreakLevel) : 0);
+        }
         
         // Obtener información del bloque del usuario
         const userBloqueInfo = bloqueService.getUserBloqueInfo(userIdStr);
@@ -742,7 +775,12 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
                 </div>
                 <div className="table-cell">{clase.tema || clase.nombre}</div>
                 <div className="table-cell">
-                  <button className="btn-acceder">→ ACCEDER</button>
+                  <button 
+                    className="btn-acceder"
+                    onClick={() => accederClase(clase)}
+                  >
+                    → ACCEDER
+                  </button>
                 </div>
               </div>
             ))

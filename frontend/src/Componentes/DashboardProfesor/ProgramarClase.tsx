@@ -138,24 +138,52 @@ export default function ProgramarClase() {
     return estudiante.nivel.toLowerCase() === filtroNivel.toLowerCase();
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Clase programada:', formulario);
-    // Aquí iría la lógica para enviar al backend
-    alert('¡Clase programada exitosamente!');
     
-    // Resetear formulario
-    setFormulario({
-      fecha: '',
-      hora: '',
-      duracion: 60,
-      tema: '',
-      descripcion: '',
-      estudiantesSeleccionados: [],
-      tipoClase: 'individual',
-      modalidad: 'virtual',
-      meetLink: ''
-    });
+    try {
+      // Preparar datos para enviar al backend
+      const claseData = {
+        nombre: formulario.tema,
+        profesor: 'Profesor Actual', // TODO: Obtener del contexto de usuario autenticado
+        fecha: formulario.fecha,
+        hora: formulario.hora,
+        duracion: formulario.duracion,
+        tema: formulario.tema,
+        descripcion: formulario.descripcion,
+        tipo_clase: formulario.tipoClase,
+        modalidad: formulario.modalidad,
+        meet_link: formulario.meetLink,
+        estudiantesSeleccionados: formulario.estudiantesSeleccionados
+      };
+
+      console.log('Enviando clase al backend:', claseData);
+      console.log('Meet Link específico:', formulario.meetLink);
+      
+      // Enviar al backend usando ClaseService
+      const { ClaseService } = await import('../../services/claseService');
+      const claseCreada = await ClaseService.createClase(claseData);
+      
+      console.log('Clase creada exitosamente:', claseCreada);
+      alert('¡Clase programada exitosamente!');
+      
+      // Resetear formulario
+      setFormulario({
+        fecha: '',
+        hora: '',
+        duracion: 60,
+        tema: '',
+        descripcion: '',
+        estudiantesSeleccionados: [],
+        tipoClase: 'individual',
+        modalidad: 'virtual',
+        meetLink: ''
+      });
+      
+    } catch (error) {
+      console.error('Error al programar clase:', error);
+      alert('Error al programar la clase. Intenta nuevamente.');
+    }
   };
 
   const getEstudianteNombre = (id: string) => {
@@ -165,10 +193,19 @@ export default function ProgramarClase() {
   const generarEnlaceMeet = async () => {
     setGenerandoMeet(true);
     try {
-      // Simular generación de enlace de Meet (en producción sería una API call)
+      // Opciones de enlaces de Meet válidos para pruebas
+      const enlacesPrueba = [
+        'https://meet.google.com/new',
+        'https://meet.google.com/landing',
+        'https://zoom.us/j/123456789',
+        'https://teams.microsoft.com/l/meetup-join/19%3ameeting_example'
+      ];
+      
+      // Simular tiempo de generación
       await new Promise(resolve => setTimeout(resolve, 1500));
-      const meetId = Math.random().toString(36).substring(2, 15);
-      const meetLink = `https://meet.google.com/${meetId}`;
+      
+      // Usar enlace de Meet nuevo (siempre funcional)
+      const meetLink = 'https://meet.google.com/new';
       
       setFormulario(prev => ({ ...prev, meetLink }));
     } catch (error) {
@@ -280,26 +317,37 @@ export default function ProgramarClase() {
             {/* Google Meet Section */}
             {formulario.modalidad === 'virtual' && (
               <div className="form-group meet-section">
-                <label>Enlace de Google Meet</label>
+                <label>Enlace de Videoconferencia</label>
                 <div className="meet-container">
                   {!formulario.meetLink ? (
-                    <button
-                      type="button"
-                      className="btn-generar-meet"
-                      onClick={generarEnlaceMeet}
-                      disabled={generandoMeet}
-                    >
-                      {generandoMeet ? (
-                        <>
-                          <span className="spinner"></span>
-                          Generando enlace...
-                        </>
-                      ) : (
-                        <>
-                          📹 Generar enlace de Meet
-                        </>
-                      )}
-                    </button>
+                    <div className="meet-options">
+                      <button
+                        type="button"
+                        className="btn-generar-meet"
+                        onClick={generarEnlaceMeet}
+                        disabled={generandoMeet}
+                      >
+                        {generandoMeet ? (
+                          <>
+                            <span className="spinner"></span>
+                            Generando enlace...
+                          </>
+                        ) : (
+                          <>
+                            📹 Crear Meet Instantáneo
+                          </>
+                        )}
+                      </button>
+                      <div className="meet-manual">
+                        <label>O ingresa tu propio enlace:</label>
+                        <input
+                          type="url"
+                          placeholder="https://meet.google.com/abc-defg-hij"
+                          onChange={(e) => setFormulario(prev => ({ ...prev, meetLink: e.target.value }))}
+                          className="meet-input"
+                        />
+                      </div>
+                    </div>
                   ) : (
                     <div className="meet-link-container">
                       <div className="meet-link">
@@ -311,16 +359,15 @@ export default function ProgramarClase() {
                       <button
                         type="button"
                         className="btn-regenerar-meet"
-                        onClick={generarEnlaceMeet}
-                        disabled={generandoMeet}
+                        onClick={() => setFormulario(prev => ({ ...prev, meetLink: '' }))}
                       >
-                        🔄 Regenerar
+                        🔄 Cambiar
                       </button>
                     </div>
                   )}
                 </div>
                 <small className="meet-help">
-                  El enlace se compartirá automáticamente con los estudiantes seleccionados
+                  💡 Tip: "Crear Meet Instantáneo" abre Google Meet para crear una reunión nueva al momento de la clase
                 </small>
               </div>
             )}

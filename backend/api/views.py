@@ -1,4 +1,5 @@
 from rest_framework import status, viewsets
+from rest_framework.decorators import action
 from rest_framework.decorators import api_view, permission_classes, parser_classes
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -328,6 +329,23 @@ class ClaseViewSet(viewsets.ModelViewSet):
         if usuario_id:
             return Clase.objects.filter(estudiantes__id=usuario_id)
         return super().get_queryset().order_by('-created_at')
+    
+    @action(detail=True, methods=['patch'])
+    def cambiar_estado(self, request, pk=None):
+        """
+        Endpoint para cambiar el estado de una clase (programada -> activa -> completada)
+        """
+        clase = self.get_object()
+        nuevo_estado = request.data.get('estado')
+        
+        if nuevo_estado not in ['programada', 'activa', 'completada']:
+            return Response({'error': 'Estado inválido'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        clase.estado = nuevo_estado
+        clase.save()
+        
+        serializer = self.get_serializer(clase)
+        return Response(serializer.data)
 
 
 @api_view(['POST'])

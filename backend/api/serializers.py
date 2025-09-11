@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import authenticate
-from .models import CustomUser, Clase, Evaluation, MediaItem, Club, ClubMaterial, Especializacion, Evaluacion
+from .models import CustomUser, Clase, Evaluation, MediaItem, Club, ClubMaterial, Especializacion, Evaluacion, RespuestaEvaluacion
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -93,10 +93,25 @@ class ChangePasswordSerializer(serializers.Serializer):
         return value
 
 class ClaseSerializer(serializers.ModelSerializer):
-    estudiantes = serializers.PrimaryKeyRelatedField(many=True, queryset=CustomUser.objects.all())
+    estudiantes = serializers.PrimaryKeyRelatedField(many=True, queryset=CustomUser.objects.all(), required=False)
+    estudiantesSeleccionados = serializers.ListField(child=serializers.CharField(), write_only=True, required=False)
+    
     class Meta:
         model = Clase
-        fields = ['id', 'nombre', 'profesor', 'fecha', 'estudiantes', 'created_at', 'updated_at']
+        fields = ['id', 'nombre', 'profesor', 'fecha', 'hora', 'duracion', 'tema', 'descripcion', 
+                 'tipo_clase', 'modalidad', 'meet_link', 'estado', 'estudiantes', 'estudiantesSeleccionados', 
+                 'created_at', 'updated_at']
+    
+    def create(self, validated_data):
+        estudiantes_ids = validated_data.pop('estudiantesSeleccionados', [])
+        clase = super().create(validated_data)
+        
+        # Asignar estudiantes por ID
+        if estudiantes_ids:
+            estudiantes = CustomUser.objects.filter(id__in=estudiantes_ids)
+            clase.estudiantes.set(estudiantes)
+        
+        return clase
 
 class UserRegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8)
@@ -206,3 +221,27 @@ class EvaluacionSerializer(serializers.ModelSerializer):
             instance.estudiantes_asignados.set(estudiantes_data)
         
         return instance
+
+
+class RespuestaEvaluacionSerializer(serializers.ModelSerializer):
+    evaluacion_titulo = serializers.CharField(source='evaluacion.titulo', read_only=True)
+    estudiante_nombre = serializers.CharField(source='estudiante.get_full_name', read_only=True)
+    
+    class Meta:
+        model = RespuestaEvaluacion
+        fields = ['id', 'evaluacion', 'evaluacion_titulo', 'estudiante', 'estudiante_nombre', 
+                 'archivo_respuesta', 'respuestas_json', 'tiempo_gastado', 'advertencias',
+                 'completado', 'fecha_envio']
+        read_only_fields = ['id', 'estudiante', 'fecha_envio']
+    
+    def create(self, validated_data):
+        # Establecer automáticamente el estudiante desde el request
+        validated_data['estudiante'] = self.context['request'].user
+        return super().create(validated_data)
+    
+    def update(self, instance, validated_data):
+        # Si se está subiendo un archivo, marcar como completado
+        if 'archivo_respuesta' in validated_data and validated_data['archivo_respuesta']:
+            validated_data['completado'] = True
+        
+        return super().update(instance, validated_data)

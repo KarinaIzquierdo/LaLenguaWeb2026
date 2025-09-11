@@ -18,8 +18,7 @@ export default function EvaluacionesEstudiante() {
   const [evaluaciones, setEvaluaciones] = useState<EvaluacionEstudiante[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [mostrarQuiz, setMostrarQuiz] = useState(false);
-  const [evaluacionQuiz, setEvaluacionQuiz] = useState<any>(null);
+  const [subiendoRespuesta, setSubiendoRespuesta] = useState<string | null>(null);
 
   useEffect(() => {
     loadEvaluaciones();
@@ -57,22 +56,61 @@ export default function EvaluacionesEstudiante() {
     });
   };
 
-  const iniciarQuiz = (evaluacion: EvaluacionEstudiante) => {
-    setEvaluacionQuiz(evaluacion);
-    setMostrarQuiz(true);
+  const descargarEvaluacion = async (evaluacion: EvaluacionEstudiante) => {
+    try {
+      const response = await evaluacionService.downloadEvaluacion(evaluacion.id);
+      if (response.success) {
+        // Crear enlace de descarga
+        const url = window.URL.createObjectURL(response.data);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', response.filename || `${evaluacion.titulo}.pdf`);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+      } else {
+        alert('Error al descargar: ' + response.message);
+      }
+    } catch (error) {
+      console.error('Error al descargar evaluación:', error);
+      alert('Error al descargar evaluación');
+    }
+  };
+
+  const subirRespuesta = async (evaluacion: EvaluacionEstudiante) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.pdf,.doc,.docx,.txt';
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) {
+        try {
+          setSubiendoRespuesta(evaluacion.id);
+          const response = await evaluacionService.uploadRespuesta(evaluacion.id, {
+            archivo: file,
+            comentarios: ''
+          });
+          if (response.success) {
+            alert('Respuesta subida exitosamente');
+            loadEvaluaciones(); // Recargar evaluaciones
+          } else {
+            alert('Error al subir respuesta: ' + response.message);
+          }
+        } catch (error) {
+          console.error('Error al subir respuesta:', error);
+          alert('Error al subir respuesta');
+        } finally {
+          setSubiendoRespuesta(null);
+        }
+      }
+    };
+    input.click();
   };
 
   const isOverdue = (fechaLimite?: string) => {
     if (!fechaLimite) return false;
     return new Date(fechaLimite) < new Date();
-  };
-
-  const downloadEvaluacion = (evaluacion: EvaluacionEstudiante) => {
-    if (evaluacion.archivo_url) {
-      window.open(evaluacion.archivo_url, '_blank');
-    } else {
-      alert('Archivo no disponible');
-    }
   };
 
   if (loading) {
@@ -166,24 +204,19 @@ export default function EvaluacionesEstudiante() {
                   </div>
 
                   <div className="evaluacion-actions">
-                    {evaluacion.tipo === 'quiz' ? (
-                      <button 
-                        className="btn-iniciar-quiz"
-                        onClick={() => iniciarQuiz(evaluacion)}
-                      >
-                        🎯 Iniciar Quiz
-                      </button>
-                    ) : (
-                      <a 
-                        href={evaluacion.archivo_url} 
-                        download 
-                        className="btn-descargar"
-                      >
-                        📄 Descargar
-                      </a>
-                    )}
-                    <button className="btn-ver-detalles">
-                      👁️ Ver detalles
+                    <button 
+                      className="btn-descargar"
+                      onClick={() => descargarEvaluacion(evaluacion)}
+                      disabled={overdue}
+                    >
+                      📄 Descargar
+                    </button>
+                    <button 
+                      className="btn-subir-respuesta"
+                      onClick={() => subirRespuesta(evaluacion)}
+                      disabled={overdue || subiendoRespuesta === evaluacion.id}
+                    >
+                      {subiendoRespuesta === evaluacion.id ? '⏳ Subiendo...' : '📤 Subir Respuesta'}
                     </button>
                   </div>
                 </div>
@@ -246,75 +279,51 @@ export default function EvaluacionesEstudiante() {
                 const overdue = isOverdue(evaluacion.fecha_limite);
                 
                 return (
-                  <tr key={evaluacion.id} className={overdue ? 'fila-vencida' : ''}>
-                    <td>
-                      <div className="evaluacion-info">
-                        <h4>{evaluacion.titulo}</h4>
-                        {evaluacion.descripcion && (
-                          <p className="descripcion-corta">{evaluacion.descripcion}</p>
+                  <React.Fragment key={evaluacion.id}>
+                    <tr className={overdue ? 'evaluacion-vencida' : ''}>
+                      <td>{evaluacion.titulo}</td>
+                      <td>
+                        <span className={`tipo-badge tipo-${evaluacion.tipo}`}>
+                          {evaluacion.tipo === 'quiz' && '🎯 Quiz'}
+                          {evaluacion.tipo === 'examen' && '📋 Examen'}
+                          {evaluacion.tipo === 'tarea' && '📚 Tarea'}
+                        </span>
+                      </td>
+                      <td>{evaluacion.descripcion || 'Sin descripción'}</td>
+                      <td>
+                        {evaluacion.fecha_limite ? (
+                          <span className={overdue ? 'fecha-vencida' : 'fecha-limite'}>
+                            {new Date(evaluacion.fecha_limite).toLocaleDateString()}
+                          </span>
+                        ) : (
+                          'Sin fecha límite'
                         )}
-                      </div>
-                    </td>
-                    <td>
-                      <span className={`tipo-badge ${evaluacion.tipo}`}>
-                        {evaluacion.tipo === 'quiz' && '🎯 Quiz'}
-                        {evaluacion.tipo === 'examen' && '📋 Examen'}
-                        {evaluacion.tipo === 'tarea' && '📚 Tarea'}
-                      </span>
-                    </td>
-                    <td>{evaluacion.profesor_nombre || 'No especificado'}</td>
-                    <td>
-                      <span className={overdue ? 'fecha-vencida' : ''}>
-                        {evaluacion.fecha_limite ? formatDate(evaluacion.fecha_limite) : 'Sin límite'}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={`estado-badge ${overdue ? 'vencida' : 'disponible'}`}>
-                        {overdue ? '⚠️ Vencida' : '✅ Disponible'}
-                      </span>
-                    </td>
-                    <td>
-                      {evaluacion.tipo === 'quiz' ? (
-                        <button 
-                          className="btn-accion btn-quiz"
-                          onClick={() => iniciarQuiz(evaluacion)}
-                          disabled={overdue}
-                        >
-                          🎯 Iniciar Quiz
-                        </button>
-                      ) : (
-                        <a 
-                          href={evaluacion.archivo_url} 
-                          download 
-                          className="btn-accion btn-descargar"
-                        >
-                          📄 Descargar
-                        </a>
-                      )}
-                    </td>
-                  </tr>
+                      </td>
+                      <td>
+                        <div className="acciones-evaluacion">
+                          <button 
+                            className="btn-accion btn-descargar"
+                            onClick={() => descargarEvaluacion(evaluacion)}
+                            disabled={overdue}
+                          >
+                            📄 Descargar
+                          </button>
+                          <button 
+                            className="btn-accion btn-subir"
+                            onClick={() => subirRespuesta(evaluacion)}
+                            disabled={overdue || subiendoRespuesta === evaluacion.id}
+                          >
+                            {subiendoRespuesta === evaluacion.id ? '⏳ Subiendo...' : '📤 Subir Respuesta'}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  </React.Fragment>
                 );
               })}
             </tbody>
           </table>
         </div>
-      )}
-
-      {/* Quiz Taker Modal */}
-      {mostrarQuiz && evaluacionQuiz && (
-        <QuizTaker
-          evaluacion={evaluacionQuiz}
-          onClose={() => {
-            setMostrarQuiz(false);
-            setEvaluacionQuiz(null);
-          }}
-          onComplete={(score) => {
-            alert(`Quiz completado! Tu puntuación: ${score}%`);
-            setMostrarQuiz(false);
-            setEvaluacionQuiz(null);
-            // Aquí se podría enviar el resultado al backend
-          }}
-        />
       )}
     </div>
   );

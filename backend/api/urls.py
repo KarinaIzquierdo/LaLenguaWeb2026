@@ -59,6 +59,16 @@ urlpatterns = [
     path('evaluaciones/<int:pk>/publish/', evaluacion_views.evaluacion_publish_view, name='evaluacion_publish'),
     path('evaluaciones/students/', evaluacion_views.students_list_view, name='students_list'),
     path('student/evaluaciones/', evaluacion_views.student_evaluaciones_view, name='student_evaluaciones'),
+    
+    # Endpoints para descarga y subida de respuestas
+    path('evaluaciones/<int:pk>/download/', evaluacion_views.download_evaluacion_view, name='download_evaluacion'),
+    path('evaluaciones/<int:pk>/upload-respuesta/', evaluacion_views.upload_respuesta_view, name='upload_respuesta'),
+    # Evaluaciones - Exámenes seguros
+    path('evaluaciones/<int:pk>/examen-data/', evaluacion_views.examen_data_view, name='examen_data'),
+    path('evaluaciones/<int:pk>/enviar-respuestas/', evaluacion_views.enviar_respuestas_view, name='enviar_respuestas'),
+    path('student/respuestas/', evaluacion_views.student_respuestas_view, name='student_respuestas'),
+    path('evaluaciones/<int:pk>/respuestas/', evaluacion_views.profesor_respuestas_view, name='profesor_respuestas'),
+    path('reportes/progreso/', evaluacion_views.reportes_progreso_view, name='reportes_progreso'),
 ]
 
 urlpatterns += router.urls

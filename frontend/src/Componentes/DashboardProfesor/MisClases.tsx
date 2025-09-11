@@ -13,6 +13,7 @@ interface Clase {
   descripcion: string;
   estudiantes: string[];
   meetLink: string;
+  meet_link: string; // Campo del backend
   estado: 'programada' | 'activa' | 'completada';
   tipoClase: 'individual' | 'grupal';
 }
@@ -26,36 +27,77 @@ export default function MisClases({ profesorId }: { profesorId: number }) {
       setIsLoading(true);
       try {
         const data = await ClaseService.getClasesPorProfesor(profesorId);
+        console.log('Clases recibidas del backend:', data);
+        data.forEach((clase: any) => {
+          console.log(`Clase ID ${clase.id}: meet_link = ${clase.meet_link}`);
+        });
         setClases(data);
       } catch (err) {
-        // Puedes mostrar un error aquí si lo deseas
+        console.error('Error al cargar clases:', err);
       }
       setIsLoading(false);
     };
     fetchClases();
   }, [profesorId]);
 
-  const iniciarClase = (claseId: number) => {
+  const iniciarClase = async (claseId: number) => {
     const clase = clases.find(c => c.id === claseId);
     if (!clase) return;
 
-    // Actualizar estado de la clase a 'activa'
-    setClases(prev => prev.map(c => 
-      c.id === claseId ? { ...c, estado: 'activa' } : c
-    ));
+    try {
+      // Cambiar estado en el backend
+      const { ClaseService } = await import('../../services/claseService');
+      await ClaseService.cambiarEstadoClase(claseId, 'activa');
 
-    // Abrir Google Meet
-    window.open(clase.meetLink, '_blank');
-    
-    // Mostrar notificación
-    alert(`¡Clase "${clase.tema}" iniciada! Los estudiantes pueden acceder ahora.`);
+      // Actualizar estado local
+      setClases(prev => prev.map(c => 
+        c.id === claseId ? { ...c, estado: 'activa' } : c
+      ));
+
+      // Abrir Google Meet - usar el campo correcto del backend
+      const meetLink = clase.meet_link || clase.meetLink;
+      console.log('Enlace Meet a abrir:', meetLink);
+      console.log('Campo meet_link del backend:', clase.meet_link);
+      console.log('Campo meetLink local:', clase.meetLink);
+      
+      if (!meetLink || meetLink.trim() === '' || meetLink === 'undefined') {
+        alert('No hay enlace de Meet configurado para esta clase. Por favor, edita la clase y agrega un enlace.');
+        return;
+      }
+      
+      // Asegurar que el enlace tenga protocolo
+      let enlaceCompleto = meetLink;
+      if (!enlaceCompleto.startsWith('http://') && !enlaceCompleto.startsWith('https://')) {
+        enlaceCompleto = 'https://' + enlaceCompleto;
+      }
+      
+      console.log('Enlace completo a abrir:', enlaceCompleto);
+      window.open(enlaceCompleto, '_blank');
+      
+      // Mostrar notificación
+      alert(`¡Clase "${clase.tema}" iniciada! Los estudiantes pueden acceder ahora.`);
+    } catch (error) {
+      console.error('Error al iniciar clase:', error);
+      alert('Error al iniciar la clase. Intenta nuevamente.');
+    }
   };
 
-  const finalizarClase = (claseId: number) => {
-    setClases(prev => prev.map(c => 
-      c.id === claseId ? { ...c, estado: 'completada' } : c
-    ));
-    alert('Clase finalizada exitosamente.');
+  const finalizarClase = async (claseId: number) => {
+    try {
+      // Cambiar estado en el backend
+      const { ClaseService } = await import('../../services/claseService');
+      await ClaseService.cambiarEstadoClase(claseId, 'completada');
+
+      // Actualizar estado local
+      setClases(prev => prev.map(c => 
+        c.id === claseId ? { ...c, estado: 'completada' } : c
+      ));
+      
+      alert('Clase finalizada exitosamente.');
+    } catch (error) {
+      console.error('Error al finalizar clase:', error);
+      alert('Error al finalizar la clase. Intenta nuevamente.');
+    }
   };
 
   const formatearFecha = (fecha: string) => {
@@ -143,7 +185,15 @@ export default function MisClases({ profesorId }: { profesorId: number }) {
                     <>
                       <button 
                         className="btn-unirse-clase"
-                        onClick={() => window.open(clase.meetLink, '_blank')}
+                        onClick={() => {
+                          const meetLink = clase.meet_link || clase.meetLink;
+                          console.log('Unirse a Meet - Enlace:', meetLink);
+                          if (meetLink && meetLink.trim() !== '') {
+                            window.open(meetLink, '_blank');
+                          } else {
+                            alert('No hay enlace de Meet disponible para esta clase.');
+                          }
+                        }}
                       >
                         🔗 Unirse a Meet
                       </button>

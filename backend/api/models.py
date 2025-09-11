@@ -118,9 +118,23 @@ class Profesor(models.Model):
 
 
 class Clase(models.Model):
+    ESTADO_CHOICES = [
+        ('programada', 'Programada'),
+        ('activa', 'Activa'),
+        ('completada', 'Completada'),
+    ]
+    
     nombre = models.CharField(max_length=100)
     profesor = models.CharField(max_length=100)
     fecha = models.DateField()
+    hora = models.CharField(max_length=20, default='08:00')
+    duracion = models.IntegerField(default=60, help_text="Duración en minutos")
+    tema = models.CharField(max_length=200, blank=True)
+    descripcion = models.TextField(blank=True)
+    tipo_clase = models.CharField(max_length=20, choices=[('individual', 'Individual'), ('grupal', 'Grupal')], default='individual')
+    modalidad = models.CharField(max_length=20, choices=[('virtual', 'Virtual'), ('presencial', 'Presencial')], default='virtual')
+    meet_link = models.URLField(blank=True, null=True)
+    estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='programada')
     estudiantes = models.ManyToManyField(CustomUser, related_name='clases', blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -235,3 +249,24 @@ class Especializacion(models.Model):
     
     def __str__(self):
         return f"{self.nombre} - {self.duracion}"
+
+
+class RespuestaEvaluacion(models.Model):
+    """
+    Modelo para almacenar las respuestas de los estudiantes a las evaluaciones
+    """
+    estudiante = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='respuestas_evaluacion')
+    evaluacion = models.ForeignKey(Evaluacion, on_delete=models.CASCADE, related_name='respuestas')
+    archivo_respuesta = models.FileField(upload_to='respuestas/', null=True, blank=True)
+    respuestas_json = models.JSONField(default=dict)
+    tiempo_gastado = models.IntegerField(default=0, help_text="Tiempo en segundos")
+    advertencias = models.IntegerField(default=0)
+    completado = models.BooleanField(default=False)
+    fecha_envio = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+
+    class Meta:
+        unique_together = ('estudiante', 'evaluacion')
+        verbose_name = 'Respuesta de Evaluación'
+
+    def __str__(self):
+        return f"Respuesta de {self.estudiante.username} para {self.evaluacion.titulo}"

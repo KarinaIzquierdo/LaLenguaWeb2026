@@ -130,6 +130,127 @@ export const evaluacionService = {
   async getStudentEvaluaciones() {
     return makeAuthenticatedRequest(`${API_BASE_URL}/student/evaluaciones/`);
   },
+
+  // Descargar archivo de evaluación
+  async downloadEvaluacion(id) {
+    try {
+      const token = getAuthToken();
+      const response = await fetch(`${API_BASE_URL}/evaluaciones/${id}/download/`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        return {
+          success: false,
+          message: errorData.message || `Error al descargar: ${response.status}`
+        };
+      }
+
+      // Obtener el nombre del archivo desde el header Content-Disposition
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = 'evaluacion.pdf';
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+
+      const blob = await response.blob();
+      return {
+        success: true,
+        data: blob,
+        filename: filename
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.message
+      };
+    }
+  },
+
+  // Subir respuesta de evaluación
+  async uploadRespuesta(evaluacionId, respuestaData) {
+    const formData = new FormData();
+    
+    if (respuestaData.archivo_respuesta) {
+      formData.append('archivo_respuesta', respuestaData.archivo_respuesta);
+    }
+    
+    if (respuestaData.comentarios) {
+      formData.append('comentarios', respuestaData.comentarios);
+    }
+
+    return makeAuthenticatedRequest(`${API_BASE_URL}/evaluaciones/${evaluacionId}/upload-respuesta/`, {
+      method: 'POST',
+      body: formData,
+    });
+  },
+
+  // Obtener reportes de progreso de estudiantes (para profesores)
+  async getReportesProgreso() {
+    return makeAuthenticatedRequest(`${API_BASE_URL}/reportes/progreso/`);
+  },
+
+  // Obtener datos del examen para modo seguro
+  getExamenData: async (evaluacionId) => {
+    const response = await fetch(`${API_BASE_URL}/evaluaciones/${evaluacionId}/examen-data/`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${getAuthToken()}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Error al cargar el examen');
+    }
+
+    return await response.json();
+  },
+
+  // Enviar respuestas del examen seguro
+  enviarRespuestasExamen: async (evaluacionId, datosRespuesta) => {
+    const response = await fetch(`${API_BASE_URL}/evaluaciones/${evaluacionId}/enviar-respuestas/`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${getAuthToken()}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(datosRespuesta),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Error al enviar las respuestas');
+    }
+
+    return await response.json();
+  },
+
+  // Obtener respuestas del estudiante
+  getStudentRespuestas: async () => {
+    const response = await fetch(`${API_BASE_URL}/student/respuestas/`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${getAuthToken()}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Error al obtener las respuestas');
+    }
+
+    return await response.json();
+  },
 };
 
 export default evaluacionService;

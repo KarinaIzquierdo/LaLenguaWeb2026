@@ -44,4 +44,13 @@ export const ClaseService = {
     const res = await axios.get(`${API_URL}/clases/?usuario=${usuarioId}`, { headers: getAuthHeaders() });
     return res.data;
   },
+
+  // Cambiar estado de una clase
+  cambiarEstadoClase: async (claseId: number, estado: string) => {
+    const res = await axios.patch(`${API_URL}/clases/${claseId}/cambiar_estado/`, 
+      { estado }, 
+      { headers: getAuthHeaders() }
+    );
+    return res.data;
+  },
 };

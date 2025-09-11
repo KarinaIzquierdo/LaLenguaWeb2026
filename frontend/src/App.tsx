@@ -203,7 +203,6 @@ function App() {
               )
             } />
             
-            
             {/* Rutas del Panel de Administración */}
             <Route path="/admin" element={
               isAuthenticated && userRole === 'admin' ? (
