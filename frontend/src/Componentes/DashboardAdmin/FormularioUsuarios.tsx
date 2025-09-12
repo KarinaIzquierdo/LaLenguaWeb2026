@@ -172,7 +172,7 @@ export default function FormularioUsuarios() {
     } else {
       setFormData(prev => ({
         ...prev,
-        [name]: value,
+        [name]: name === 'especializacion_id' ? (value === '' ? undefined : parseInt(value)) : value,
       }));
     }
     if (formErrors[name]) {

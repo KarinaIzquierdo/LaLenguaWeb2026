@@ -1,4 +1,4 @@
-/* Sidebar del Profesor - Basado en el estilo del Admin */
+/* Sidebar del Profesor - Fijo */
 .sidebar-profesor {
   flex-shrink: 0;
   width: 250px;
@@ -9,8 +9,12 @@
   flex-direction: column;
   justify-content: space-between;
   align-items: center;
-  min-height: 100vh;
+  height: 100vh;
   box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+  position: fixed;
+  left: 0;
+  top: 0;
+  overflow-y: auto;
 }
 
 .sidebar-header {
@@ -162,4 +166,32 @@
   .sidebar-profesor.mobile-open {
     left: 0;
   }
+}
+
+/* Badge para notificaciones */
+.nav-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: #ef4444;
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.2rem 0.4rem;
+  border-radius: 10px;
+  min-width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: pulse-badge 2s infinite;
+}
+
+@keyframes pulse-badge {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.sidebar-nav li {
+  position: relative;
 }

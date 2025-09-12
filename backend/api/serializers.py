@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import authenticate
-from .models import CustomUser, Clase, Evaluation, MediaItem, Club, ClubMaterial, Especializacion, Evaluacion, RespuestaEvaluacion
+from .models import CustomUser, Clase, Evaluation, MediaItem, Club, ClubMaterial, Especializacion, Evaluacion, RespuestaEvaluacion, Notificacion
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -226,13 +226,15 @@ class EvaluacionSerializer(serializers.ModelSerializer):
 class RespuestaEvaluacionSerializer(serializers.ModelSerializer):
     evaluacion_titulo = serializers.CharField(source='evaluacion.titulo', read_only=True)
     estudiante_nombre = serializers.CharField(source='estudiante.get_full_name', read_only=True)
+    calificado_por_nombre = serializers.CharField(source='calificado_por.get_full_name', read_only=True)
     
     class Meta:
         model = RespuestaEvaluacion
         fields = ['id', 'evaluacion', 'evaluacion_titulo', 'estudiante', 'estudiante_nombre', 
                  'archivo_respuesta', 'respuestas_json', 'tiempo_gastado', 'advertencias',
-                 'completado', 'fecha_envio']
-        read_only_fields = ['id', 'estudiante', 'fecha_envio']
+                 'completado', 'fecha_envio', 'calificacion', 'comentarios_profesor', 
+                 'fecha_calificacion', 'calificado_por', 'calificado_por_nombre']
+        read_only_fields = ['id', 'estudiante', 'fecha_envio', 'fecha_calificacion', 'calificado_por_nombre']
     
     def create(self, validated_data):
         # Establecer automáticamente el estudiante desde el request
@@ -245,3 +247,36 @@ class RespuestaEvaluacionSerializer(serializers.ModelSerializer):
             validated_data['completado'] = True
         
         return super().update(instance, validated_data)
+
+
+class NotificacionSerializer(serializers.ModelSerializer):
+    profesor_nombre = serializers.CharField(source='profesor.get_full_name', read_only=True)
+    clase_nombre = serializers.CharField(source='clase_relacionada.tema', read_only=True)
+    evaluacion_titulo = serializers.CharField(source='evaluacion_relacionada.titulo', read_only=True)
+    estudiante_nombre = serializers.CharField(source='estudiante_relacionado.get_full_name', read_only=True)
+    tiempo_transcurrido = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Notificacion
+        fields = ['id', 'tipo', 'titulo', 'mensaje', 'prioridad', 'leida', 
+                 'profesor_nombre', 'clase_nombre', 'evaluacion_titulo', 'estudiante_nombre',
+                 'tiempo_transcurrido', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
+    
+    def get_tiempo_transcurrido(self, obj):
+        from django.utils import timezone
+        from datetime import timedelta
+        
+        now = timezone.now()
+        diff = now - obj.created_at
+        
+        if diff.days > 0:
+            return f"hace {diff.days} día{'s' if diff.days > 1 else ''}"
+        elif diff.seconds > 3600:
+            hours = diff.seconds // 3600
+            return f"hace {hours} hora{'s' if hours > 1 else ''}"
+        elif diff.seconds > 60:
+            minutes = diff.seconds // 60
+            return f"hace {minutes} minuto{'s' if minutes > 1 else ''}"
+        else:
+            return "hace unos segundos"

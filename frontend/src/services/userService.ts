@@ -81,4 +81,46 @@ export const userService = {
       return { success: false, message: 'Error de conexión' };
     }
   },
+
+  async getCurrentUser(): Promise<{
+    success: boolean;
+    user?: any;
+    error?: string;
+  }> {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        return { success: false, error: 'No token found' };
+      }
+
+      const response = await fetch(`${API_BASE_URL}/auth/profile/`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        return { success: false, error: 'Failed to fetch user profile' };
+      }
+
+      const userData = await response.json();
+      return {
+        success: true,
+        user: {
+          id: userData.id,
+          first_name: userData.first_name,
+          last_name: userData.last_name,
+          email: userData.email,
+          role: userData.role,
+          full_name: `${userData.first_name} ${userData.last_name}`.trim(),
+          initials: `${userData.first_name?.charAt(0) || ''}${userData.last_name?.charAt(0) || ''}`.toUpperCase()
+        }
+      };
+    } catch (error) {
+      console.error('Error fetching current user:', error);
+      return { success: false, error: 'Error de conexión' };
+    }
+  },
 };

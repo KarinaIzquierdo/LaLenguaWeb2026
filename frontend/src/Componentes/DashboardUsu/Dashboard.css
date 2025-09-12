@@ -1284,6 +1284,73 @@ body {
   transform: translateY(0);
 }
 
+/* Overlay para perfil incompleto */
+.profile-incomplete-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.profile-incomplete-message {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  text-align: center;
+  max-width: 400px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.profile-incomplete-message h3 {
+  color: #667eea;
+  margin-bottom: 1rem;
+}
+
+.profile-incomplete-message p {
+  color: #666;
+  margin-bottom: 0;
+}
+
+.dashboard-grid.disabled {
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+/* Estilos para estados de clase */
+.estado-clase {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.estado-clase.programada {
+  background-color: #e3f2fd;
+  color: #1976d2;
+  border: 1px solid #bbdefb;
+}
+
+.estado-clase.completada {
+  background-color: #e8f5e8;
+  color: #2e7d32;
+  border: 1px solid #c8e6c9;
+}
+
+.estado-clase.pendiente {
+  background-color: #fff3e0;
+  color: #f57c00;
+  border: 1px solid #ffcc02;
+}
+
 /* Botón flotante de ayuda */
 .help-floating-btn {
   position: fixed;

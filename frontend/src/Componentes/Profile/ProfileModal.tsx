@@ -80,12 +80,24 @@ export default function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
     try {
       setLoading(true);
       setError('');
-      // Aquí implementarías la actualización del perfil
-      // await authService.updateProfile(formData);
-      setProfile(formData);
-      setIsEditing(false);
-      setSuccess('Perfil actualizado correctamente');
-      setTimeout(() => setSuccess(''), 3000);
+      
+      // Actualizar perfil usando el servicio
+      const result = await authService.updateUserProfile({
+        ...formData,
+        profile_completed: true
+      });
+      
+      if (result.success) {
+        setProfile({...formData, profile_completed: true});
+        setIsEditing(false);
+        setSuccess('Perfil actualizado correctamente');
+        setTimeout(() => {
+          setSuccess('');
+          onClose(); // Cerrar modal después de guardar exitosamente
+        }, 1500);
+      } else {
+        setError(result.message || 'Error al actualizar el perfil');
+      }
     } catch (err) {
       setError('Error al actualizar el perfil');
     } finally {

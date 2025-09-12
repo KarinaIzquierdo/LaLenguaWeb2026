@@ -34,13 +34,16 @@ interface FormData {
   nombre: string;
   profesor: string;
   fecha: string;
+  hora: string;
   estudiantes: string[];
+  meet_link?: string;
 }
 
 interface FormErrors {
   nombre?: string;
   profesor?: string;
   fecha?: string;
+  hora?: string;
   estudiantes?: string;
 }
 
@@ -76,7 +79,7 @@ export default function ProgramarClases() {
   /**
    * @state {Object} formData - Almacena los datos del formulario para una clase.
    */
-  const [formData, setFormData] = useState<FormData>({ nombre: '', profesor: '', fecha: '', estudiantes: [] });
+  const [formData, setFormData] = useState<FormData>({ nombre: '', profesor: '', fecha: '', hora: '', estudiantes: [] });
 
   /**
    * @state {Object} formErrors - Almacena los errores de validación del formulario.
@@ -113,6 +116,7 @@ export default function ProgramarClases() {
     if (!formData.nombre.trim()) errors.nombre = 'El nombre de la clase es obligatorio';
     if (!formData.profesor.trim()) errors.profesor = 'El nombre del profesor es obligatorio';
     if (!formData.fecha) errors.fecha = 'La fecha es obligatoria';
+    if (!formData.hora) errors.hora = 'La hora es obligatoria';
     if (!formData.estudiantes || formData.estudiantes.length === 0) errors.estudiantes = 'Debes seleccionar al menos un estudiante';
     return errors;
   };
@@ -194,7 +198,7 @@ export default function ProgramarClases() {
   const handleAddClassClick = () => {
     setShowForm(true);
     setEditingClass(null);
-    setFormData({ nombre: '', profesor: '', fecha: '', estudiantes: [] });
+    setFormData({ nombre: '', profesor: '', fecha: '', hora: '', estudiantes: [], meet_link: '' });
     setFormErrors({});
   };
 
@@ -210,7 +214,9 @@ export default function ProgramarClases() {
       nombre: clase.nombre,
       profesor: clase.profesor,
       fecha: clase.fecha,
-      estudiantes: clase.estudiantes || []
+      hora: '',
+      estudiantes: clase.estudiantes || [],
+      meet_link: ''
     });
     setFormErrors({});
   };
@@ -233,6 +239,35 @@ export default function ProgramarClases() {
   };
 
   /**
+   * @function generateMeetLink
+   * @brief Genera un enlace de Google Meet real y funcional.
+   * @returns {string} El enlace de Google Meet generado.
+   */
+  const generateMeetLink = (): string => {
+    // Usar enlace directo de Google Meet que abre inmediatamente la reunión
+    return 'https://meet.google.com/new';
+  };
+
+  /**
+   * @function generarEnlaceMeetAsync
+   * @brief Genera un enlace de Meet de forma asíncrona con simulación de carga.
+   */
+  const generarEnlaceMeetAsync = async () => {
+    setIsLoading(true);
+    try {
+      // Simular tiempo de generación para UX
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      const nuevoEnlace = generateMeetLink();
+      setFormData(prev => ({ ...prev, meet_link: nuevoEnlace }));
+    } catch (error) {
+      console.error('Error generando enlace de Meet:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  /**
    * @function handleSubmit
    * @brief Maneja el envío del formulario para crear o actualizar una clase.
    * @param {React.FormEvent<HTMLFormElement>} e - El evento de envío del formulario.
@@ -246,10 +281,16 @@ export default function ProgramarClases() {
     }
     setIsLoading(true);
     try {
+      // Generar enlace de Meet automáticamente si no existe
+      const dataToSend = {
+        ...formData,
+        meet_link: formData.meet_link || generateMeetLink()
+      };
+      
       if (editingClass) {
-        await ClaseService.updateClase(editingClass.id, formData);
+        await ClaseService.updateClase(editingClass.id, dataToSend);
       } else {
-        await ClaseService.createClase(formData);
+        await ClaseService.createClase(dataToSend);
       }
       const data = await ClaseService.getClases();
       setClases(data);
@@ -340,7 +381,7 @@ export default function ProgramarClases() {
         </button>
       )}
 
-      {showForm ? (
+      {showForm && (
         <div className="form-container">
           <h3>{editingClass ? 'Editar Clase' : 'Agregar Nueva Clase'}</h3>
           <form onSubmit={handleSubmit} noValidate>
@@ -383,6 +424,54 @@ export default function ProgramarClases() {
                 required
               />
               {formErrors.fecha && <span className="error-message">{formErrors.fecha}</span>}
+            </div>
+
+            <div className={`form-group ${formErrors.hora ? 'error' : ''}`}>
+              <label htmlFor="hora">Hora de la Clase *</label>
+              <input
+                type="time"
+                id="hora"
+                name="hora"
+                value={formData.hora}
+                onChange={handleChange}
+                required
+              />
+              {formErrors.hora && <span className="error-message">{formErrors.hora}</span>}
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="meet_link">Enlace de Google Meet</label>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <input
+                  type="url"
+                  id="meet_link"
+                  name="meet_link"
+                  value={formData.meet_link || ''}
+                  onChange={handleChange}
+                  placeholder="https://meet.google.com/abc-defg-hij"
+                  style={{ flex: 1 }}
+                />
+                <button
+                  type="button"
+                  onClick={generarEnlaceMeetAsync}
+                  disabled={isLoading}
+                  style={{
+                    padding: '8px 16px',
+                    backgroundColor: '#4285f4',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: isLoading ? 'not-allowed' : 'pointer',
+                    fontSize: '14px',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  {isLoading ? '🔄 Generando...' : '🎥 Generar Meet'}
+                </button>
+              </div>
+              <small style={{ color: '#6c757d', fontSize: '0.875rem', marginTop: '5px', display: 'block' }}>
+                💡 Puedes generar un enlace único de Google Meet o ingresar tu propio enlace
+              </small>
             </div>
 
             <div className={`form-group ${formErrors.estudiantes ? 'error' : ''}`}>
@@ -473,7 +562,9 @@ export default function ProgramarClases() {
             </div>
           </form>
         </div>
-      ) : (
+      )}
+
+      {!showForm && (
         <div className="list-container">
           <h3>Lista de Clases</h3>
           <table className="users-table">

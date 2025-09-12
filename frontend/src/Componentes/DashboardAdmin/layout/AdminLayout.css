@@ -1,13 +1,20 @@
 
 .admin-layout {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .admin-content {
   flex-grow: 1;
-  padding: 2rem;
+  padding: 0.5rem;
   background-color: var(--bg-primary);
+  overflow-y: auto;
+  overflow-x: hidden;
+  height: 100vh;
+  margin-left: 250px;
+  width: calc(100vw - 250px);
+  box-sizing: border-box;
 }
 
 .sidebar {
@@ -20,6 +27,12 @@
   flex-direction: column;
   justify-content: space-between;
   align-items: center;
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  z-index: 1000;
 }
 
 .sidebar-nav {

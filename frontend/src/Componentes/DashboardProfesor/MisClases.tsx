@@ -21,6 +21,7 @@ interface Clase {
 export default function MisClases({ profesorId }: { profesorId: number }) {
   const [clases, setClases] = useState<Clase[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState<'activas' | 'historial'>('activas');
 
   useEffect(() => {
     const fetchClases = async () => {
@@ -127,12 +128,31 @@ export default function MisClases({ profesorId }: { profesorId: number }) {
         <p>Gestiona y controla tus clases programadas</p>
       </div>
 
+      {/* Pestañas de navegación */}
+      <div className="tabs-container">
+        <button 
+          className={`tab-button ${activeTab === 'activas' ? 'active' : ''}`}
+          onClick={() => setActiveTab('activas')}
+        >
+          📅 Clases Activas ({clasesHoy.length + clasesProximas.length})
+        </button>
+        <button 
+          className={`tab-button ${activeTab === 'historial' ? 'active' : ''}`}
+          onClick={() => setActiveTab('historial')}
+        >
+          📚 Historial ({clasesCompletadas.length})
+        </button>
+      </div>
+
       {isLoading && <div className="loading-spinner">Cargando clases...</div>}
 
-      {/* Clases de Hoy */}
-      {clasesHoy.length > 0 && (
-        <div className="clases-section">
-          <h3 className="section-title">📅 Clases de Hoy</h3>
+      {/* Contenido de pestaña activa */}
+      {activeTab === 'activas' && (
+        <div className="tab-content">
+          {/* Clases de Hoy */}
+          {clasesHoy.length > 0 && (
+            <div className="clases-section">
+              <h3 className="section-title">📅 Clases de Hoy</h3>
           <div className="clases-grid">
             {clasesHoy.map(clase => (
               <div key={clase.id} className={`clase-card hoy ${clase.estado}`}>
@@ -212,10 +232,10 @@ export default function MisClases({ profesorId }: { profesorId: number }) {
         </div>
       )}
 
-      {/* Próximas Clases */}
-      {clasesProximas.length > 0 && (
-        <div className="clases-section">
-          <h3 className="section-title">📋 Próximas Clases</h3>
+          {/* Próximas Clases */}
+          {clasesProximas.length > 0 && (
+            <div className="clases-section">
+              <h3 className="section-title">📋 Próximas Clases</h3>
           <div className="clases-lista">
             {clasesProximas.map(clase => (
               <div key={clase.id} className="clase-row">
@@ -247,37 +267,51 @@ export default function MisClases({ profesorId }: { profesorId: number }) {
               </div>
             ))}
           </div>
+            </div>
+          )}
+
+          {/* Estado vacío para clases activas */}
+          {clasesHoy.length === 0 && clasesProximas.length === 0 && (
+            <div className="estado-vacio">
+              <div className="vacio-icon">📅</div>
+              <h3>No tienes clases activas</h3>
+              <p>Programa tu primera clase para comenzar</p>
+              <button className="btn-programar-primera">➕ Programar Clase</button>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Historial de Clases */}
-      {clasesCompletadas.length > 0 && (
-        <div className="clases-section">
-          <h3 className="section-title">📚 Historial de Clases</h3>
-          <div className="clases-historial">
-            {clasesCompletadas.map(clase => (
-              <div key={clase.id} className="clase-historial-item">
-                <div className="historial-fecha">{formatearFecha(clase.fecha)}</div>
-                <div className="historial-info">
-                  <span className="historial-tema">{clase.tema}</span>
-                  <span className="historial-estudiantes">{(clase.estudiantes ? clase.estudiantes.length : 0)} estudiante(s)</span>
-                </div>
-                <div className="historial-estado">✅ Completada</div>
+      {/* Contenido de historial */}
+      {activeTab === 'historial' && (
+        <div className="tab-content">
+          {clasesCompletadas.length > 0 ? (
+            <div className="clases-section">
+              <h3 className="section-title">📚 Historial de Clases Completadas</h3>
+              <div className="clases-historial">
+                {clasesCompletadas.slice().reverse().map(clase => (
+                  <div key={clase.id} className="clase-historial-item">
+                    <div className="historial-fecha">{formatearFecha(clase.fecha)}</div>
+                    <div className="historial-info">
+                      <span className="historial-tema">{clase.tema}</span>
+                      <span className="historial-estudiantes">{(clase.estudiantes ? clase.estudiantes.length : 0)} estudiante(s)</span>
+                      <span className="historial-duracion">⏱️ {clase.duracion} min</span>
+                    </div>
+                    <div className="historial-estado">✅ Completada</div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </div>
+          ) : (
+            <div className="estado-vacio">
+              <div className="vacio-icon">📚</div>
+              <h3>No hay clases en el historial</h3>
+              <p>Las clases completadas aparecerán aquí</p>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Estado vacío */}
-      {clases.length === 0 && (
-        <div className="estado-vacio">
-          <div className="vacio-icon">📅</div>
-          <h3>No tienes clases programadas</h3>
-          <p>Programa tu primera clase para comenzar</p>
-          <button className="btn-programar-primera">➕ Programar Clase</button>
-        </div>
-      )}
     </div>
   );
 }

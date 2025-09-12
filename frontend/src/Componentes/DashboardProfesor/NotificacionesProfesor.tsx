@@ -1,89 +1,70 @@
 import { useState, useEffect } from 'react';
 import './NotificacionesProfesor.css';
-
-interface Notificacion {
-  id: number;
-  tipo: 'clase' | 'evaluacion' | 'mensaje' | 'sistema';
-  titulo: string;
-  mensaje: string;
-  fecha: Date;
-  leida: boolean;
-  prioridad: 'alta' | 'media' | 'baja';
-  estudiante?: string;
-}
+import { notificacionService, type Notificacion } from '../../services/notificacionService';
 
 export default function NotificacionesProfesor() {
   const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
   const [filtroTipo, setFiltroTipo] = useState<string>('todas');
   const [mostrarSoloNoLeidas, setMostrarSoloNoLeidas] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [noLeidasCount, setNoLeidasCount] = useState(0);
 
   useEffect(() => {
-    const notificacionesEjemplo: Notificacion[] = [
-      {
-        id: 1,
-        tipo: 'clase',
-        titulo: 'Clase próxima en 30 minutos',
-        mensaje: 'Clase con Ana García programada para las 10:00 AM',
-        fecha: new Date(Date.now() + 30 * 60 * 1000),
-        leida: false,
-        prioridad: 'alta',
-        estudiante: 'Ana García'
-      },
-      {
-        id: 2,
-        tipo: 'evaluacion',
-        titulo: 'Evaluación pendiente de calificar',
-        mensaje: 'Carlos López ha completado su evaluación oral',
-        fecha: new Date(Date.now() - 2 * 60 * 60 * 1000),
-        leida: false,
-        prioridad: 'media',
-        estudiante: 'Carlos López'
-      },
-      {
-        id: 3,
-        tipo: 'mensaje',
-        titulo: 'Nuevo mensaje de estudiante',
-        mensaje: 'María Rodríguez ha enviado una consulta sobre la tarea',
-        fecha: new Date(Date.now() - 4 * 60 * 60 * 1000),
-        leida: true,
-        prioridad: 'baja',
-        estudiante: 'María Rodríguez'
-      },
-      {
-        id: 4,
-        tipo: 'sistema',
-        titulo: 'Recordatorio de planificación',
-        mensaje: 'No olvides planificar las clases de la próxima semana',
-        fecha: new Date(Date.now() - 24 * 60 * 60 * 1000),
-        leida: false,
-        prioridad: 'media'
-      },
-      {
-        id: 5,
-        tipo: 'clase',
-        titulo: 'Clase cancelada',
-        mensaje: 'Pedro Martín ha cancelado la clase del viernes',
-        fecha: new Date(Date.now() - 6 * 60 * 60 * 1000),
-        leida: true,
-        prioridad: 'media',
-        estudiante: 'Pedro Martín'
-      }
-    ];
-    setNotificaciones(notificacionesEjemplo);
+    cargarNotificaciones();
+    // Actualizar notificaciones cada 30 segundos
+    const interval = setInterval(cargarNotificaciones, 30000);
+    return () => clearInterval(interval);
   }, []);
 
-  const marcarComoLeida = (id: number) => {
-    setNotificaciones(prev => 
-      prev.map(notif => 
-        notif.id === id ? { ...notif, leida: true } : notif
-      )
-    );
+  const cargarNotificaciones = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await notificacionService.obtenerNotificaciones();
+      
+      if (response.success) {
+        setNotificaciones(response.notificaciones);
+        setNoLeidasCount(response.no_leidas);
+      } else {
+        setError(response.message || 'Error al cargar notificaciones');
+      }
+    } catch (err) {
+      console.error('Error al cargar notificaciones:', err);
+      setError('Error de conexión al servidor');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const marcarTodasComoLeidas = () => {
-    setNotificaciones(prev => 
-      prev.map(notif => ({ ...notif, leida: true }))
-    );
+  const marcarComoLeida = async (id: number) => {
+    try {
+      const response = await notificacionService.marcarComoLeida(id);
+      if (response.success) {
+        setNotificaciones(prev => 
+          prev.map(notif => 
+            notif.id === id ? { ...notif, leida: true } : notif
+          )
+        );
+        setNoLeidasCount(prev => Math.max(0, prev - 1));
+      }
+    } catch (err) {
+      console.error('Error al marcar notificación como leída:', err);
+    }
+  };
+
+  const marcarTodasComoLeidas = async () => {
+    try {
+      const response = await notificacionService.marcarTodasComoLeidas();
+      if (response.success) {
+        setNotificaciones(prev => 
+          prev.map(notif => ({ ...notif, leida: true }))
+        );
+        setNoLeidasCount(0);
+      }
+    } catch (err) {
+      console.error('Error al marcar todas las notificaciones como leídas:', err);
+    }
   };
 
   const eliminarNotificacion = (id: number) => {
@@ -93,38 +74,12 @@ export default function NotificacionesProfesor() {
   const notificacionesFiltradas = notificaciones
     .filter(notif => filtroTipo === 'todas' || notif.tipo === filtroTipo)
     .filter(notif => !mostrarSoloNoLeidas || !notif.leida)
-    .sort((a, b) => b.fecha.getTime() - a.fecha.getTime());
-
-  const noLeidasCount = notificaciones.filter(n => !n.leida).length;
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
   const obtenerIconoTipo = (tipo: string) => {
-    switch (tipo) {
-      case 'clase': return '📚';
-      case 'evaluacion': return '📝';
-      case 'mensaje': return '💬';
-      case 'sistema': return '⚙️';
-      default: return '🔔';
-    }
+    return notificacionService.getIconoTipo(tipo);
   };
 
-  const formatearTiempo = (fecha: Date) => {
-    const ahora = new Date();
-    const diferencia = ahora.getTime() - fecha.getTime();
-    const minutos = Math.floor(diferencia / (1000 * 60));
-    const horas = Math.floor(diferencia / (1000 * 60 * 60));
-    const dias = Math.floor(diferencia / (1000 * 60 * 60 * 24));
-
-    if (diferencia < 0) {
-      const minutosRestantes = Math.abs(minutos);
-      return `En ${minutosRestantes} minutos`;
-    } else if (minutos < 60) {
-      return `Hace ${minutos} minutos`;
-    } else if (horas < 24) {
-      return `Hace ${horas} horas`;
-    } else {
-      return `Hace ${dias} días`;
-    }
-  };
 
   return (
     <div className="notificaciones-profesor">
@@ -137,10 +92,11 @@ export default function NotificacionesProfesor() {
             className="filtro-select"
           >
             <option value="todas">Todas</option>
-            <option value="clase">Clases</option>
-            <option value="evaluacion">Evaluaciones</option>
-            <option value="mensaje">Mensajes</option>
-            <option value="sistema">Sistema</option>
+            <option value="clase_hoy">Clases Hoy</option>
+            <option value="clase_proxima">Clases Próximas</option>
+            <option value="evaluacion_subida">Evaluaciones Subidas</option>
+            <option value="evaluacion_pendiente">Pendientes Calificar</option>
+            <option value="evaluacion_vencida">Evaluaciones Vencidas</option>
           </select>
           
           <label className="checkbox-container">
@@ -162,19 +118,40 @@ export default function NotificacionesProfesor() {
         </div>
       </div>
 
-      <div className="notificaciones-lista">
-        {notificacionesFiltradas.length === 0 ? (
-          <div className="sin-notificaciones">
-            <div className="sin-notificaciones-icon">🔕</div>
-            <h3>No hay notificaciones</h3>
-            <p>Todas las notificaciones están al día</p>
-          </div>
-        ) : (
-          notificacionesFiltradas.map(notificacion => (
+      {loading && (
+        <div className="loading-notificaciones">
+          <div className="spinner"></div>
+          <p>Cargando notificaciones...</p>
+        </div>
+      )}
+
+      {error && (
+        <div className="error-notificaciones">
+          <div className="error-icon">⚠️</div>
+          <p>{error}</p>
+          <button onClick={cargarNotificaciones} className="btn-reintentar">
+            Reintentar
+          </button>
+        </div>
+      )}
+
+      {!loading && !error && (
+        <div className="notificaciones-lista">
+          {notificacionesFiltradas.length === 0 ? (
+            <div className="sin-notificaciones">
+              <div className="sin-notificaciones-icon">🔕</div>
+              <h3>No hay notificaciones</h3>
+              <p>Todas las notificaciones están al día</p>
+            </div>
+          ) : (
+            notificacionesFiltradas.map(notificacion => (
             <div 
               key={notificacion.id} 
               className={`notificacion-item ${notificacion.leida ? 'leida' : 'no-leida'} prioridad-${notificacion.prioridad}`}
               onClick={() => !notificacion.leida && marcarComoLeida(notificacion.id)}
+              style={{
+                borderLeftColor: notificacionService.getColorPrioridad(notificacion.prioridad)
+              }}
             >
               <div className="notificacion-icono">
                 {obtenerIconoTipo(notificacion.tipo)}
@@ -184,15 +161,29 @@ export default function NotificacionesProfesor() {
                 <div className="notificacion-header-item">
                   <h4>{notificacion.titulo}</h4>
                   <span className="notificacion-tiempo">
-                    {formatearTiempo(notificacion.fecha)}
+                    {notificacion.tiempo_transcurrido}
                   </span>
                 </div>
                 
-                <p className="notificacion-mensaje">{notificacion.mensaje}</p>
+                <p className="notificacion-mensaje">
+                  {notificacionService.formatearMensaje(notificacion)}
+                </p>
                 
-                {notificacion.estudiante && (
+                {notificacion.estudiante_nombre && (
                   <span className="notificacion-estudiante">
-                    👤 {notificacion.estudiante}
+                    👤 {notificacion.estudiante_nombre}
+                  </span>
+                )}
+                
+                {notificacion.clase_nombre && (
+                  <span className="notificacion-clase">
+                    📚 {notificacion.clase_nombre}
+                  </span>
+                )}
+                
+                {notificacion.evaluacion_titulo && (
+                  <span className="notificacion-evaluacion">
+                    📝 {notificacion.evaluacion_titulo}
                   </span>
                 )}
               </div>
@@ -223,9 +214,10 @@ export default function NotificacionesProfesor() {
                 </button>
               </div>
             </div>
-          ))
-        )}
-      </div>
+            ))
+          )}
+        </div>
+      )}
     </div>
   );
 }

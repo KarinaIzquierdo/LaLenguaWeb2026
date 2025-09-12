@@ -1,9 +1,12 @@
+import { useState, useEffect } from 'react';
 import './Nav_Profesor.css';
+import { notificacionService } from '../../services/notificacionService';
 
 interface NavProfesorProps {
   profesorData: {
     nombre: string;
     especialidad: string;
+    initials?: string;
   };
   activeView: string;
   setActiveView: (view: string) => void;
@@ -11,15 +14,35 @@ interface NavProfesorProps {
 }
 
 export default function NavProfesor({ profesorData, activeView, setActiveView, onLogout }: NavProfesorProps) {
+  const [noLeidasCount, setNoLeidasCount] = useState(0);
+
+  useEffect(() => {
+    const cargarNotificaciones = async () => {
+      try {
+        const response = await notificacionService.obtenerNotificaciones();
+        if (response.success) {
+          setNoLeidasCount(response.no_leidas);
+        }
+      } catch (error) {
+        console.error('Error al cargar notificaciones:', error);
+      }
+    };
+
+    cargarNotificaciones();
+    // Actualizar cada minuto
+    const interval = setInterval(cargarNotificaciones, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: '🏠' },
     { id: 'clases', label: 'Mis Clases', icon: '📚' },
     { id: 'calendario', label: 'Calendario', icon: '📅' },
     { id: 'programar-clase', label: 'Programar Clase', icon: '➕' },
     { id: 'crear-evaluacion', label: 'Evaluaciones', icon: '📝' },
-    { id: 'estadisticas', label: 'Estadísticas Avanzadas', icon: '📊' },
-    { id: 'reportes', label: 'Reportes de Progreso', icon: '📈' },
-    { id: 'notificaciones', label: 'Notificaciones', icon: '🔔' },
+    { id: 'calificar-evaluaciones', label: 'Calificar Evaluaciones', icon: '📊' },
+    { id: 'reportes', label: 'Reportes de Progreso', icon: '📋' },
+    { id: 'notificaciones', label: 'Notificaciones', icon: '🔔', badge: noLeidasCount },
     { id: 'estudiantes', label: 'Estudiantes', icon: '👥' },
     { id: 'mis-clubs', label: 'Mis Clubs', icon: '🏷️' },
     { id: 'gestion-clb', label: 'Gestión CLB', icon: '📂' }
@@ -32,7 +55,7 @@ export default function NavProfesor({ profesorData, activeView, setActiveView, o
           <h3>Panel Profesor</h3>
           <div className="profesor-info">
             <div className="profesor-avatar">
-              {profesorData.nombre.split(' ').map(n => n[0]).join('')}
+              {profesorData.initials || profesorData.nombre.split(' ').map(n => n[0]).join('')}
             </div>
             <div className="profesor-details">
               <span className="profesor-name">{profesorData.nombre}</span>
@@ -50,6 +73,9 @@ export default function NavProfesor({ profesorData, activeView, setActiveView, o
               >
                 <span className="nav-icon">{item.icon}</span>
                 <span className="nav-label">{item.label}</span>
+                {item.badge && item.badge > 0 && (
+                  <span className="nav-badge">{item.badge}</span>
+                )}
               </button>
             </li>
           ))}

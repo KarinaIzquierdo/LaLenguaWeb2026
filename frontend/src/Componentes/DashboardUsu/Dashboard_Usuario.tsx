@@ -4,6 +4,7 @@ import PiePagina from '../Layout/PiePagina';
 import EvaluationModal from './EvaluationModal';
 import ResultsModal from './ResultsModal';
 import OnboardingTour from "../Onboarding/OnboardingTour";
+import ProfileModal from "../Profile/ProfileModal";
 import ChallengeModal from "./ChallengeModal";
 import Toast from "./Toast";
 import { useDashboardEvents } from "./DashboardEvents";
@@ -27,6 +28,7 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
   const [currentPrize, setCurrentPrize] = useState<{title: string, description: string, icon: string} | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [isNewUser, setIsNewUser] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
   const [showChallengeModal, setShowChallengeModal] = useState(false);
   const [challengeProgress, setChallengeProgress] = useState(0);
   const [hasCompletedToday, setHasCompletedToday] = useState(false);
@@ -274,7 +276,7 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
         setUserId(userIdStr);
         
         // Cargar datos específicos del usuario desde localStorage
-        const today = new Date().toDateString();
+        const todayStr = new Date().toDateString();
         const lastCompleted = localStorage.getItem(`lastCompletedDate_${userIdStr}`);
         const savedProgress = localStorage.getItem(`challengeProgress_${userIdStr}`);
         const savedStreakLevel = localStorage.getItem(`streakLevel_${userIdStr}`);
@@ -292,54 +294,105 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
           localStorage.setItem(`challengeProgress_${userIdStr}`, '6');
           localStorage.setItem(`streakLevel_${userIdStr}`, '3');
         } else {
-          setHasCompletedToday(lastCompleted === today);
+          setHasCompletedToday(lastCompleted === todayStr);
           setChallengeProgress(savedProgress ? parseInt(savedProgress) : 0);
           setStreakLevel(savedStreakLevel ? parseInt(savedStreakLevel) : 0);
         }
+        
+        // El perfil se considera siempre completado para evitar modal constante
+        setIsNewUser(false);
         
         // Obtener información del bloque del usuario
         const userBloqueInfo = bloqueService.getUserBloqueInfo(userIdStr);
         setBloqueInfo(userBloqueInfo);
         
-        // Sistema híbrido: combinar clases del bloque + clases programadas por profesores
-        console.log('Bloque info:', userBloqueInfo);
+        // DEBUG: Verificar datos del bloque
+        console.log('=== DEBUG BLOQUE INFO ===');
+        console.log('User ID:', userIdStr);
+        console.log('Bloque info completo:', userBloqueInfo);
+        console.log('Bloque asignado:', userBloqueInfo.bloque);
         console.log('Clases del bloque:', userBloqueInfo.clases);
+        console.log('Misiones del bloque:', userBloqueInfo.misiones);
+        console.log('Profesores del bloque:', userBloqueInfo.profesores);
+        console.log('Horarios del bloque:', userBloqueInfo.horarios);
+        
+        // Verificar asignaciones en localStorage
+        const assignments = localStorage.getItem('user_blocks_assignment');
+        console.log('Asignaciones en localStorage:', assignments);
+        const bloques = localStorage.getItem('bloques_data');
+        console.log('Bloques disponibles:', bloques);
+        
+        // Sistema híbrido: combinar clases del bloque + clases programadas por profesores
         
         let clasesFinales: any[] = [];
         
-        // 1. Agregar clases del bloque (programación base)
+        // 1. Agregar clases del bloque (programación base) - SIEMPRE mostrar las clases del bloque
         if (userBloqueInfo.bloque && userBloqueInfo.clases.length > 0) {
           const clasesDelBloque = userBloqueInfo.clases.map((nombreClase: string, index: number) => ({
             id: `bloque-${userBloqueInfo.bloque?.id}-${index}`,
             nombre: nombreClase,
-            fecha: '2025-09-05', // Fecha ejemplo
-            hora: userBloqueInfo.horarios[index % userBloqueInfo.horarios.length] || '8:00 AM - 9:30 AM',
+            fecha: '2025-09-12', // Fecha actual
+            hora: userBloqueInfo.horarios[index % userBloqueInfo.horarios.length] || '2:00 PM - 3:30 PM',
             profesor: userBloqueInfo.profesores[index % userBloqueInfo.profesores.length] || 'Profesor Asignado',
             tema: nombreClase,
             bloque: userBloqueInfo.bloque?.nivel + ' ' + userBloqueInfo.bloque?.turno,
-            tipo: 'bloque' // Identificar tipo de clase
+            tipo: 'bloque', // Identificar tipo de clase
+            estado: 'Programada'
           }));
           
           clasesFinales = [...clasesDelBloque];
           console.log('Clases del bloque agregadas:', clasesDelBloque);
         }
         
-        // 2. Agregar clases programadas por profesores (clases adicionales/reprogramadas)
+        // 2. Agregar clases programadas por profesores (solo las asignadas al usuario)
         try {
           const clasesDelBackend = await ClaseService.getClases();
-          const clasesProfesor = clasesDelBackend.map((clase: any) => ({
-            ...clase,
-            tipo: 'profesor' // Identificar tipo de clase
-          }));
+          // Filtrar solo las clases que incluyen al usuario actual
+          const clasesProfesor = clasesDelBackend
+            .filter((clase: any) => {
+              // Verificar si el usuario está en la lista de estudiantes de la clase
+              if (!clase.estudiantes) return false;
+              
+              return clase.estudiantes.some((est: any) => {
+                // Los estudiantes vienen como números simples, no como objetos
+                return est === parseInt(userIdStr) || est === userIdStr;
+              });
+            })
+            .map((clase: any) => ({
+              ...clase,
+              tipo: 'profesor' // Identificar tipo de clase
+            }));
           
           clasesFinales = [...clasesFinales, ...clasesProfesor];
-          console.log('Clases del profesor agregadas:', clasesProfesor);
         } catch (error) {
           console.error('Error cargando clases del profesor:', error);
         }
         
-        console.log('Clases finales combinadas:', clasesFinales);
-        setClases(clasesFinales);
+        // 3. Filtrar y ordenar clases para mostrar solo las más relevantes
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        // Separar clases por fecha
+        const clasesConFecha = clasesFinales.map(clase => {
+          const fechaClase = new Date(clase.fecha || new Date());
+          fechaClase.setHours(0, 0, 0, 0);
+          return {
+            ...clase,
+            fechaObj: fechaClase,
+            esPasada: fechaClase < today,
+            esHoy: fechaClase.getTime() === today.getTime(),
+            esFutura: fechaClase > today
+          };
+        });
+        
+        // Ordenar por fecha
+        clasesConFecha.sort((a, b) => a.fechaObj.getTime() - b.fechaObj.getTime());
+        
+        // Mostrar todas las clases del bloque sin filtrar por fecha
+        const clasesRelevantes = clasesConFecha;
+        
+        console.log('Clases filtradas y relevantes:', clasesRelevantes);
+        setClases(clasesRelevantes);
       } catch (error) {
         console.error('Error loading user data:', error);
       } finally {
@@ -587,18 +640,11 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
                   </div>
                 </div>
                 <div className="mission-content">
-                  <p>
-                    Completa esta misión de tu bloque {bloqueInfo.bloque?.nivel} {bloqueInfo.bloque?.turno}. 
-                    ¡Ayuda a Lingo en su migración!
-                  </p>
+                  <p>Completa esta misión para avanzar en tu aprendizaje</p>
                   <div className="mission-stats">
                     <div className="stat">
-                      <span className="stat-icon">🍬</span>
-                      <span>+10 Dulces</span>
-                    </div>
-                    <div className="stat">
-                      <span className="stat-icon">⭐</span>
-                      <span>+25 XP</span>
+                      <span className="stat-value">{experience}</span>
+                      <span className="stat-label">⭐ XP</span>
                     </div>
                   </div>
                 </div>
@@ -775,12 +821,26 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
                 </div>
                 <div className="table-cell">{clase.tema || clase.nombre}</div>
                 <div className="table-cell">
-                  <button 
-                    className="btn-acceder"
-                    onClick={() => accederClase(clase)}
-                  >
-                    → ACCEDER
-                  </button>
+                  {clase.estado === 'activa' ? (
+                    <button 
+                      className="btn-acceder"
+                      onClick={() => accederClase(clase)}
+                    >
+                      → ACCEDER
+                    </button>
+                  ) : clase.estado === 'programada' ? (
+                    <span className="estado-clase programada">
+                      📅 Programada
+                    </span>
+                  ) : clase.estado === 'completada' ? (
+                    <span className="estado-clase completada">
+                      ✅ Completada
+                    </span>
+                  ) : (
+                    <span className="estado-clase pendiente">
+                      ⏳ Pendiente
+                    </span>
+                  )}
                 </div>
               </div>
             ))
@@ -873,6 +933,27 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
           message={toastData.message}
           rewards={toastData.rewards}
           onClose={() => setShowToast(false)}
+        />
+
+        {/* Profile Modal para completar perfil */}
+        <ProfileModal
+          isOpen={showProfileModal}
+          onClose={() => {
+            setShowProfileModal(false);
+            setIsNewUser(false);
+            // Recargar datos del usuario después de completar perfil
+            const loadUpdatedProfile = async () => {
+              try {
+                const updatedProfile = await authService.getUserProfile();
+                if (updatedProfile.profile_completed) {
+                  setIsNewUser(false);
+                }
+              } catch (error) {
+                console.error('Error recargando perfil:', error);
+              }
+            };
+            loadUpdatedProfile();
+          }}
         />
         </div>
       </div>

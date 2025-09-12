@@ -1,11 +1,84 @@
+/* Estilos para el contenedor del formulario */
+.form-container {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+  margin: 0;
+  min-height: auto;
+  padding: 0.5rem;
+}
+
+.form-container form {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.form-container .form-group {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 1rem;
+}
+
+.form-container input,
+.form-container select {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.form-container .button-group {
+  display: flex;
+  gap: 1rem;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin-top: 2rem;
+  justify-content: center;
+}
+
+.form-container .button-group button {
+  flex: 1;
+  max-width: 200px;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.form-container .form-submit-btn {
+  background: #007bff;
+  color: white;
+  border: none;
+}
+
+.form-container .form-submit-btn:hover {
+  background: #0056b3;
+}
+
+.form-container .form-cancel-btn {
+  background: #6c757d;
+  color: white;
+  border: none;
+}
+
+.form-container .form-cancel-btn:hover {
+  background: #545b62;
+}
+
 /* Estilos para la lista de estudiantes mejorada */
 .estudiantes-container {
-  max-height: 300px;
+  max-height: 200px;
   overflow-y: auto;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
   background: #f9fafb;
-  padding: 12px;
+  padding: 8px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .loading-message, .empty-message {
@@ -34,22 +107,25 @@
 }
 
 .estudiantes-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .estudiante-card {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  padding: 16px;
+  gap: 8px;
+  padding: 8px;
   background: white;
-  border: 2px solid #e5e7eb;
-  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s ease;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  font-size: 12px;
 }
 
 .estudiante-card:hover {
@@ -119,6 +195,12 @@
   
   .estudiante-nombre {
     font-size: 13px;
+  }
+}
+
+@media (max-width: 600px) {
+  .estudiantes-grid {
+    grid-template-columns: 1fr;
   }
 }
 

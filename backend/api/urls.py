@@ -4,6 +4,8 @@ from . import views
 from .views import ClaseViewSet, MediaItemViewSet
 from . import especializacion_views
 from . import evaluacion_views
+from . import notificacion_views
+from . import calificacion_views
 
 router = routers.DefaultRouter()
 router.register(r'clases', ClaseViewSet)
@@ -69,6 +71,18 @@ urlpatterns = [
     path('student/respuestas/', evaluacion_views.student_respuestas_view, name='student_respuestas'),
     path('evaluaciones/<int:pk>/respuestas/', evaluacion_views.profesor_respuestas_view, name='profesor_respuestas'),
     path('reportes/progreso/', evaluacion_views.reportes_progreso_view, name='reportes_progreso'),
+    
+    # Endpoints para notificaciones
+    path('notificaciones/', notificacion_views.obtener_notificaciones, name='obtener_notificaciones'),
+    path('notificaciones/<int:notificacion_id>/marcar-leida/', notificacion_views.marcar_notificacion_leida, name='marcar_notificacion_leida'),
+    path('notificaciones/marcar-todas-leidas/', notificacion_views.marcar_todas_leidas, name='marcar_todas_leidas'),
+    
+    # Endpoints para calificación
+    path('calificaciones/por-calificar/', calificacion_views.obtener_respuestas_por_calificar, name='respuestas_por_calificar'),
+    path('calificaciones/calificadas/', calificacion_views.obtener_respuestas_calificadas, name='respuestas_calificadas'),
+    path('calificaciones/<int:respuesta_id>/', calificacion_views.obtener_detalle_respuesta, name='detalle_respuesta'),
+    path('calificaciones/<int:respuesta_id>/calificar/', calificacion_views.calificar_respuesta, name='calificar_respuesta'),
+    path('calificaciones/<int:respuesta_id>/actualizar/', calificacion_views.actualizar_calificacion, name='actualizar_calificacion'),
 ]
 
 urlpatterns += router.urls

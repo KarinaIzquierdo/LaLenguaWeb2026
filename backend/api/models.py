@@ -263,6 +263,12 @@ class RespuestaEvaluacion(models.Model):
     advertencias = models.IntegerField(default=0)
     completado = models.BooleanField(default=False)
     fecha_envio = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+    
+    # Campos para calificación del profesor
+    calificacion = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, help_text="Calificación sobre 100")
+    comentarios_profesor = models.TextField(blank=True, null=True, help_text="Comentarios del profesor")
+    fecha_calificacion = models.DateTimeField(null=True, blank=True)
+    calificado_por = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name='calificaciones_realizadas')
 
     class Meta:
         unique_together = ('estudiante', 'evaluacion')
@@ -270,3 +276,47 @@ class RespuestaEvaluacion(models.Model):
 
     def __str__(self):
         return f"Respuesta de {self.estudiante.username} para {self.evaluacion.titulo}"
+
+
+class Notificacion(models.Model):
+    """
+    Modelo para notificaciones del sistema dirigidas a profesores
+    """
+    TIPO_CHOICES = [
+        ('clase_proxima', 'Clase Próxima'),
+        ('evaluacion_subida', 'Evaluación Subida'),
+        ('evaluacion_pendiente', 'Evaluación Pendiente'),
+        ('estudiante_sin_evaluar', 'Estudiante Sin Evaluar'),
+        ('clase_hoy', 'Clase Hoy'),
+        ('evaluacion_vencida', 'Evaluación Vencida'),
+    ]
+    
+    PRIORIDAD_CHOICES = [
+        ('baja', 'Baja'),
+        ('media', 'Media'),
+        ('alta', 'Alta'),
+        ('urgente', 'Urgente'),
+    ]
+    
+    profesor = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='notificaciones')
+    tipo = models.CharField(max_length=30, choices=TIPO_CHOICES)
+    titulo = models.CharField(max_length=200)
+    mensaje = models.TextField()
+    prioridad = models.CharField(max_length=10, choices=PRIORIDAD_CHOICES, default='media')
+    leida = models.BooleanField(default=False)
+    
+    # Referencias opcionales a objetos relacionados
+    clase_relacionada = models.ForeignKey(Clase, on_delete=models.CASCADE, null=True, blank=True)
+    evaluacion_relacionada = models.ForeignKey(Evaluacion, on_delete=models.CASCADE, null=True, blank=True)
+    estudiante_relacionado = models.ForeignKey(CustomUser, on_delete=models.CASCADE, null=True, blank=True, related_name='notificaciones_sobre_mi')
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Notificación'
+        verbose_name_plural = 'Notificaciones'
+    
+    def __str__(self):
+        return f"{self.titulo} - {self.profesor.username}"
