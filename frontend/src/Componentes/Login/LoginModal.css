@@ -30,10 +30,13 @@
   width: 90%;
   max-width: 450px;
   max-height: 90vh;
-  overflow: hidden;
+  /* Permitir que el contenido interno administre el scroll */
+  overflow: visible;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   animation: slideUp 0.3s ease-out;
   position: relative;
+  display: flex;
+  flex-direction: column;
 }
 
 @keyframes slideUp {
@@ -88,6 +91,9 @@
 /* Modal Body */
 .login-modal-body {
   padding: 30px;
+  /* Habilitar scroll interno cuando el contenido es alto */
+  overflow-y: auto;
+  max-height: calc(90vh - 85px);
 }
 
 /* Welcome Section */
@@ -126,6 +132,8 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
+  /* Reservar espacio extra para el botón sticky */
+  padding-bottom: 80px;
 }
 
 .form-group {
@@ -185,8 +193,12 @@
   cursor: pointer;
   transition: all 0.3s ease;
   margin-top: 10px;
-  position: relative;
+  /* Mantener visible el botón en pantallas pequeñas */
+  position: sticky;
+  bottom: 0;
+  width: 100%;
   overflow: hidden;
+  box-shadow: 0 -6px 20px rgba(0,0,0,0.06);
 }
 
 .login-button:hover:not(:disabled) {

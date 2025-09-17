@@ -3,10 +3,14 @@
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
-  overflow: hidden;
+  /* Permitir desplazamiento vertical cuando el contenido es largo */
+  overflow-y: auto;
+  overflow-x: hidden;
   margin: 0;
+  /* Limitar altura para que quepa en la ventana y se pueda hacer scroll */
+  max-height: calc(100vh - 160px);
   min-height: auto;
-  padding: 0.5rem;
+  padding: 1rem;
 }
 
 .form-container form {
@@ -37,6 +41,12 @@
   box-sizing: border-box;
   margin-top: 2rem;
   justify-content: center;
+  /* Mantener visibles los botones aunque el usuario haga scroll */
+  position: sticky;
+  bottom: 0;
+  background: linear-gradient(180deg, rgba(255,255,255,0) 0%, #ffffff 40%);
+  padding-bottom: 0.5rem;
+  padding-top: 0.5rem;
 }
 
 .form-container .button-group button {

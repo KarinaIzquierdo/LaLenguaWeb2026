@@ -236,6 +236,13 @@ export default function FormularioUsuarios() {
     setIsLoading(false);
   };
 
+  // Cancelar formulario de creación/edición
+  const handleCancel = () => {
+    setShowForm(false);
+    setEditingUser(null);
+    setFormErrors({});
+  };
+
   /**
    * @function handleSubmit
    * @brief Maneja el envío del formulario para crear o actualizar un usuario.
@@ -262,18 +269,32 @@ export default function FormularioUsuarios() {
       };
       const result = await userService.register(registerData);
       if (result.success) {
-        // El bloque ya se guarda en el backend, no necesitamos localStorage
         // Refrescar usuarios desde backend
         try {
           const data = await userService.getAll();
           setUsers(data);
+          // Sincronizar asignación local (el Dashboard del estudiante lee localStorage)
+          try {
+            if (formData.bloque_asignado) {
+              const newId: any = (result as any)?.user?.id || (result as any)?.user?.pk || null;
+              let targetId: any = newId;
+              if (!targetId) {
+                const created = (data as any[]).find(u => u.correo === registerData.email);
+                if (created) targetId = created.id;
+              }
+              if (targetId) {
+                bloqueService.assignBloqueToUser(String(targetId), formData.bloque_asignado);
+              }
+            }
+          } catch {
+            // No bloquear el flujo por un error de sincronización local
+          }
         } catch (error) {
           console.log('Usuario creado exitosamente, pero no se pudo refrescar la lista');
         }
         setShowForm(false);
         setEditingUser(null);
         setFormErrors({});
-        
         // Resetear formulario
         setFormData({
           nombres: '',
@@ -290,25 +311,32 @@ export default function FormularioUsuarios() {
       setIsLoading(false);
       return;
     }
+
     // Simular una operación asíncrona para editar (debería ser llamada real al backend)
     await new Promise(resolve => setTimeout(resolve, 1000));
     // Refrescar usuarios desde backend
     const data = await userService.getAll();
     setUsers(data);
+    // Sincronizar asignación local para el usuario editado
+    try {
+      if (editingUser) {
+        const userIdStr = String(editingUser.id);
+        const bloqueId = formData.bloque_asignado || '';
+        if (bloqueId) {
+          bloqueService.assignBloqueToUser(userIdStr, bloqueId);
+        } else {
+          const assignments = bloqueService.getUserBlockAssignments();
+          delete assignments[userIdStr];
+          localStorage.setItem('user_blocks_assignment', JSON.stringify(assignments));
+        }
+      }
+    } catch {
+      // Continuar sin bloquear la UI
+    }
     setShowForm(false);
     setEditingUser(null);
     setFormErrors({});
     setIsLoading(false);
-  };
-
-  /**
-   * @function handleCancel
-   * @brief Cancela la operación de creación/edición y oculta el formulario.
-   */
-  const handleCancel = () => {
-    setShowForm(false);
-    setEditingUser(null);
-    setFormErrors({});
   };
 
   // Cargar usuarios reales al montar el componente

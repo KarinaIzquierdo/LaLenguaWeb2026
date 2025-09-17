@@ -7,6 +7,8 @@ import Footer from './Componentes/Layout/PiePagina'
 import Dashboard from './Componentes/DashboardUsu/Dashboard_Usuario'
 import DashboardProfesor from './Componentes/DashboardProfesor/Dashboard_Profesor'
 import LoginModal from './Componentes/Login/LoginModal'
+import ResetPassword from './Componentes/Login/ResetPassword'
+import NewPassword from './Componentes/Login/NewPassword'
 import UserInfoModal from './Componentes/UserInfo/UserInfoModal'
 import { authService } from './services/authService'
 import { ThemeProvider } from './context/ThemeContext'
@@ -153,6 +155,11 @@ function App() {
                 />
               </>
             } />
+            
+            {/* Recuperar contraseña */}
+            <Route path="/reset-password" element={<ResetPassword />} />
+            {/* Nueva contraseña (con token) */}
+            <Route path="/new-password" element={<NewPassword />} />
             
             {/* Ruta del Blog */}
             <Route path="/blog" element={

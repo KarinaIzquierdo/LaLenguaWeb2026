@@ -28,6 +28,7 @@ interface ValidationResult {
 const EMAILJS_CONFIG = {
   serviceId: 'service_yypcyqc', // Tu Service ID
   templateId: 'template_kqcqa2b', // Tu plantilla contactenos
+  passwordResetTemplateId: 'template_c5au9og', // Plantilla para reset de contraseña
   publicKey: '5IX1jA4A1wE1BoI8J', // Tu Public Key
   recipientEmail: 'the.languagess@gmail.com'
 };
@@ -121,4 +122,57 @@ export const validateFormData = (formData: FormData): ValidationResult => {
   }
 
   return { isValid: true };
+};
+
+/**
+ * Envía un email de recuperación de contraseña usando EmailJS
+ * Plantilla: EMAILJS_CONFIG.passwordResetTemplateId (template_c5au9og)
+ */
+export const sendPasswordResetEmail = async (
+  email: string,
+  options: { resetLink?: string; code?: string; appName?: string } = {}
+): Promise<EmailResponse> => {
+  try {
+    const { resetLink, code, appName } = options;
+    const fallbackLink = `${window.location.origin}/reset-password?email=${encodeURIComponent(email)}`;
+    let finalResetLink = resetLink || fallbackLink;
+    // Asegurar enlace absoluto si viene relativo del backend
+    if (finalResetLink && finalResetLink.startsWith('/')) {
+      finalResetLink = `${window.location.origin}${finalResetLink}`;
+    }
+
+    const templateParams: Record<string, any> = {
+      to_email: email,
+      to: email,
+      reply_to: email,
+      reset_link: finalResetLink,
+      reset_code: code || '',
+      app_name: appName || 'La Lengua',
+      support_email: EMAILJS_CONFIG.recipientEmail,
+    };
+    // Debug (dev): validar que el destinatario no esté vacío (Vite env)
+    try {
+      // import.meta.env.MODE disponible en Vite
+      // @ts-ignore
+      const mode = (import.meta && import.meta.env && import.meta.env.MODE) || 'production';
+      if (mode !== 'production') {
+        console.log('[EmailJS templateParams][reset]', templateParams);
+      }
+    } catch {}
+
+    const response = await emailjs.send(
+      EMAILJS_CONFIG.serviceId,
+      EMAILJS_CONFIG.passwordResetTemplateId,
+      templateParams,
+      EMAILJS_CONFIG.publicKey
+    );
+    console.log('Email de recuperación enviado:', response);
+    return { success: true, message: 'Hemos enviado un correo con instrucciones para recuperar tu contraseña.' };
+  } catch (error) {
+    console.error('Error al enviar email de recuperación:', error);
+    return {
+      success: false,
+      message: 'No pudimos enviar el correo de recuperación. Intenta de nuevo en unos minutos.'
+    };
+  }
 };

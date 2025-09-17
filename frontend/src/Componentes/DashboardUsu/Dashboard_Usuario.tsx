@@ -274,6 +274,15 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
         const profile = await authService.getUserProfile();
         const userIdStr = profile.id?.toString() || '';
         setUserId(userIdStr);
+        // Sincronizar asignación de bloque desde backend al localStorage (si existe)
+        try {
+          const backendBloque = (profile as any)?.bloque_asignado || (profile as any)?.bloque || null;
+          if (userIdStr && backendBloque && typeof backendBloque === 'string') {
+            bloqueService.assignBloqueToUser(userIdStr, backendBloque);
+          }
+        } catch (e) {
+          // No bloquear el flujo
+        }
         
         // Cargar datos específicos del usuario desde localStorage
         const todayStr = new Date().toDateString();

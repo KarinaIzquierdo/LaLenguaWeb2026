@@ -6,6 +6,9 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes
+from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from .models import CustomUser, Profesor, Clase, Evaluation, MediaItem, Club, ClubMaterial, Especializacion, Evaluacion, Notificacion, RespuestaEvaluacion
 from .serializers import (
     UserSerializer, LoginSerializer, ChangePasswordSerializer, ClaseSerializer,
@@ -52,6 +55,96 @@ def login_view(request):
         'message': 'Credenciales inválidas',
         'errors': serializer.errors
     }, status=status.HTTP_400_BAD_REQUEST)
+
+# ==================== RESET DE CONTRASEÑA (PÚBLICO) ====================
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def request_password_reset_view(request):
+    """
+    Solicita un restablecimiento de contraseña enviando un token.
+    - Entrada: { email }
+    - Salida: { success, message, reset_link? } (reset_link incluido solo en dev para conveniencia)
+    """
+    email = (request.data.get('email') or '').strip().lower()
+    # Respuesta genérica para evitar enumeración de usuarios
+    generic_response = Response({
+        'success': True,
+        'message': 'Si el correo existe, se han enviado instrucciones.'
+    }, status=status.HTTP_200_OK)
+
+    if not email:
+        return Response({
+            'success': False,
+            'message': 'Email requerido'
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        user = CustomUser.objects.get(email__iexact=email)
+    except CustomUser.DoesNotExist:
+        # Intentar mapear por parte local a dominios institucionales
+        try:
+            local_part = email.split('@')[0]
+            candidate_emails = [
+                f"{local_part}@thelanguage.co",
+                f"{local_part}@soy.thelanguage.co",
+            ]
+            user = CustomUser.objects.filter(email__in=candidate_emails).first()
+            if not user:
+                return generic_response
+        except Exception:
+            return generic_response
+
+    try:
+        token_generator = PasswordResetTokenGenerator()
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        token = token_generator.make_token(user)
+        # Formato token combinado para el frontend: uid.token
+        combined = f"{uid}.{token}"
+        # Link sugerido (frontend): /new-password?token=<uid.token>
+        reset_link = f"/new-password?token={combined}"
+        return Response({
+            'success': True,
+            'message': 'Se han enviado instrucciones a tu correo.',
+            'token': combined,
+            'reset_link': reset_link,
+        }, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({
+            'success': False,
+            'message': f'No se pudo generar el token: {str(e)}'
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def reset_password_view(request):
+    """
+    Confirma el restablecimiento con token y nueva contraseña.
+    - Entrada: { token: "<uid>.<token>", new_password }
+    """
+    combined = (request.data.get('token') or '').strip()
+    new_password = request.data.get('new_password') or ''
+
+    if not combined or '.' not in combined:
+        return Response({ 'success': False, 'message': 'Token inválido' }, status=status.HTTP_400_BAD_REQUEST)
+    if not new_password or len(new_password) < 8:
+        return Response({ 'success': False, 'message': 'Contraseña inválida (mínimo 8 caracteres)' }, status=status.HTTP_400_BAD_REQUEST)
+
+    uidb64, token = combined.split('.', 1)
+    try:
+        uid = urlsafe_base64_decode(uidb64).decode()
+        user = CustomUser.objects.get(pk=uid)
+    except Exception:
+        return Response({ 'success': False, 'message': 'Token inválido' }, status=status.HTTP_400_BAD_REQUEST)
+
+    token_generator = PasswordResetTokenGenerator()
+    if not token_generator.check_token(user, token):
+        return Response({ 'success': False, 'message': 'Token inválido o expirado' }, status=status.HTTP_400_BAD_REQUEST)
+
+    user.set_password(new_password)
+    user.save()
+    return Response({ 'success': True, 'message': 'Contraseña actualizada correctamente.' }, status=status.HTTP_200_OK)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
