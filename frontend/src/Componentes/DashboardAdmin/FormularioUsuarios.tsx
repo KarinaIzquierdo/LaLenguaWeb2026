@@ -5,7 +5,7 @@
 
 import "./formulario-usuarios.css";
 import React, { useState, useEffect } from 'react';
-import { FaEdit, FaToggleOn, FaToggleOff, FaPlus, FaSpinner } from 'react-icons/fa';
+import { FaEdit, FaToggleOn, FaToggleOff, FaPlus, FaSpinner, FaTrash } from 'react-icons/fa';
 import { userService } from '../../services/userService';
 import type { RegisterData } from '../../services/userService';
 import { rolMapFrontendToBackend } from '../../services/rolMap';
@@ -157,17 +157,10 @@ export default function FormularioUsuarios() {
         correo: correoBase ? correoBase + dominio : '',
       }));
     } else if (name === 'correo') {
-      // Solo deja la parte antes de la arroba
-      let correoBase = value.split('@')[0];
-      let dominio = '@thelanguage.co';
-      if (formData.rol === 'Profesor') {
-        dominio = '@soy.thelanguage.co';
-      } else if (formData.rol === 'Admin') {
-        dominio = '@thelanguage.co';
-      }
+      // Permitir edición libre del correo sin auto-completar dominio
       setFormData(prev => ({
         ...prev,
-        correo: correoBase ? correoBase + dominio : '',
+        correo: value,
       }));
     } else {
       setFormData(prev => ({
@@ -241,6 +234,40 @@ export default function FormularioUsuarios() {
     setShowForm(false);
     setEditingUser(null);
     setFormErrors({});
+  };
+
+  /**
+   * @function handleDeleteUser
+   * @brief Elimina permanentemente un usuario del sistema.
+   * @param {number} userId - El ID del usuario a eliminar.
+   * @param {string} userName - El nombre del usuario para confirmación.
+   */
+  const handleDeleteUser = async (userId: number, userName: string) => {
+    const confirmDelete = window.confirm(
+      `¿Estás seguro de que deseas eliminar permanentemente al usuario "${userName}"?\n\nEsta acción no se puede deshacer y eliminará:\n- Toda la información del usuario\n- Sus evaluaciones y respuestas\n- Su historial de clases\n- Cualquier dato asociado`
+    );
+    
+    if (!confirmDelete) return;
+    
+    const doubleConfirm = window.confirm(
+      `ÚLTIMA CONFIRMACIÓN:\n\n¿Realmente deseas ELIMINAR PERMANENTEMENTE a "${userName}"?\n\nEscribe "ELIMINAR" en tu mente y presiona OK para continuar.`
+    );
+    
+    if (!doubleConfirm) return;
+    
+    try {
+      setIsLoading(true);
+      await userService.deleteUser(userId);
+      // Refrescar usuarios desde backend
+      const data = await userService.getAll();
+      setUsers(data);
+      alert(`Usuario "${userName}" eliminado exitosamente.`);
+    } catch (error) {
+      console.error('Error al eliminar usuario:', error);
+      alert('Error al eliminar el usuario. Inténtalo nuevamente.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   /**
@@ -441,6 +468,16 @@ export default function FormularioUsuarios() {
                         )}
                         <span>{user.activo ? 'Desactivar' : 'Activar'}</span>
                       </button>
+                      <button 
+                        onClick={() => handleDeleteUser(user.id, `${user.nombres} ${user.apellidos}`)} 
+                        className="action-button delete-button"
+                        disabled={isLoading}
+                        aria-label={`Eliminar usuario ${user.nombres} ${user.apellidos}`}
+                        title="Eliminar usuario permanentemente"
+                      >
+                        <FaTrash />
+                        <span>Eliminar</span>
+                      </button>
                     </td>
                   </tr>
                   );
@@ -511,7 +548,7 @@ export default function FormularioUsuarios() {
               name="correo"
               value={formData.correo}
               onChange={handleChange}
-              placeholder="ejemplo@colegio.com"
+              placeholder="usuario@thelanguage.co"
               required
               aria-describedby={formErrors.correo ? "correo-error" : undefined}
               aria-invalid={!!formErrors.correo}
@@ -535,59 +572,55 @@ export default function FormularioUsuarios() {
               <option value="Estudiante">Estudiante</option>
               <option value="Profesor">Profesor</option>
               <option value="Admin">Admin</option>
+              <option value="Financiero">Financiero</option>
             </select>
           </div>
 
-          {formData.rol === 'Estudiante' && (
-            <>
-              <div className="form-field">
-                <label htmlFor="bloque_asignado">Bloque Asignado</label>
-                <select
-                  id="bloque_asignado"
-                  name="bloque_asignado"
-                  value={formData.bloque_asignado}
-                  onChange={handleChange}
-                >
-                  <option value="">Sin asignar</option>
-                  {bloques.map((bloque) => (
-                    <option key={bloque.id} value={bloque.id}>
-                      {bloque.nivel} {bloque.turno}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              
-              <div className="form-field">
-                <label htmlFor="especializacion_id">Especialización</label>
-                <select
-                  id="especializacion_id"
-                  name="especializacion_id"
-                  value={formData.especializacion_id || ''}
-                  onChange={handleChange}
-                >
-                  <option value="">Sin especialización</option>
-                  {especializaciones.map((especializacion) => (
-                    <option key={especializacion.id} value={especializacion.id}>
-                      {especializacion.nombre} - {especializacion.duracion}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </>
-          )}
+          <div className="form-field">
+            <label htmlFor="bloque_asignado">Bloque Asignado</label>
+            <select
+              id="bloque_asignado"
+              name="bloque_asignado"
+              value={formData.bloque_asignado}
+              onChange={handleChange}
+            >
+              <option value="">Sin asignar</option>
+              {bloques.map((bloque) => (
+                <option key={bloque.id} value={bloque.id}>
+                  {bloque.nivel} {bloque.turno}
+                </option>
+              ))}
+            </select>
+          </div>
 
-          {!editingUser && (
-            <div className={`form-field ${formErrors.contrasena ? 'error' : ''}`}>
-              <label htmlFor="contrasena">Contraseña *</label>
-              <input
-                type="password"
-                id="contrasena"
-                name="contrasena"
-                value={formData.contrasena}
-                onChange={handleChange}
-                placeholder="Mínimo 8 caracteres"
-                required
-                aria-describedby={formErrors.contrasena ? "contrasena-error" : undefined}
+          <div className="form-field">
+            <label htmlFor="especializacion_id">Especialización</label>
+            <select
+              id="especializacion_id"
+              name="especializacion_id"
+              value={formData.especializacion_id || ''}
+              onChange={handleChange}
+            >
+              <option value="">Sin especialización</option>
+              {especializaciones.map((especializacion) => (
+                <option key={especializacion.id} value={especializacion.id}>
+                  {especializacion.nombre} - {especializacion.duracion}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className={`form-field ${formErrors.contrasena ? 'error' : ''}`}>
+            <label htmlFor="contrasena">{editingUser ? 'Nueva Contraseña (opcional)' : 'Contraseña *'}</label>
+            <input
+              type="password"
+              id="contrasena"
+              name="contrasena"
+              value={formData.contrasena}
+              onChange={handleChange}
+              placeholder={editingUser ? "Dejar vacío para mantener actual" : "Mínimo 8 caracteres"}
+              required={!editingUser}
+              aria-describedby={formErrors.contrasena ? "contrasena-error" : undefined}
                 aria-invalid={!!formErrors.contrasena}
               />
               {formErrors.contrasena && (
@@ -596,7 +629,6 @@ export default function FormularioUsuarios() {
                 </span>
               )}
             </div>
-          )}
 
           <div className="button-group">
             <button 

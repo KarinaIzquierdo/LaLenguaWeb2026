@@ -75,11 +75,14 @@
   border: none;
   padding: var(--spacing-sm) var(--spacing-lg);
   border-radius: var(--border-radius-md);
-  font-weight: 600;
-  font-size: 1rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-decoration: none;
   cursor: pointer;
-  transition: var(--transition-smooth);
-  margin-bottom: var(--spacing-xl);
+  transition: var(--transition-base);
+  min-height: 30px;
+  white-space: nowrap;
+  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -225,8 +228,8 @@
 .users-table td:last-child {
   text-align: right;
   white-space: nowrap;
-  width: 220px; /* Ancho fijo para la columna de acciones */
-  min-width: 220px;
+  width: 280px; /* Ancho aumentado para 3 botones */
+  min-width: 280px;
 }
 
 /* Estilos para el estado Activo/Inactivo */
@@ -281,32 +284,26 @@
   border: 1px solid rgba(239, 68, 68, 0.2);
 }
 
-/* Botones de acción en la tabla */
+/* Celda de acciones */
 .actions-cell {
   display: flex;
   gap: var(--spacing-xs);
   justify-content: flex-end;
   align-items: center;
-  white-space: nowrap;
-  min-width: 200px; /* Asegurar espacio mínimo */
+  flex-wrap: nowrap;
+  padding: var(--spacing-sm);
 }
 
+/* Botones de acción */
 .action-button {
-  background: var(--primary-blue);
-  color: #ffffff;
-  border: none;
-  padding: var(--spacing-xs) var(--spacing-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: 6px 10px;
+  border: 1px solid transparent;
   border-radius: var(--border-radius-sm);
   font-size: 0.75rem;
   font-weight: 500;
-  cursor: pointer;
-  transition: var(--transition-smooth);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  box-shadow: 0 2px 8px var(--shadow-color);
-  min-width: 80px;
   min-height: 32px;
   position: relative;
   overflow: hidden;
@@ -343,15 +340,47 @@
 }
 
 .edit-button {
-  background: var(--warning);
+  background: linear-gradient(135deg, #60a5fa, #3b82f6);
+  color: white;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.edit-button:hover {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.25);
 }
 
 .deactivate-button {
-  background: var(--danger);
+  background: linear-gradient(135deg, #fb7185, #f43f5e);
+  color: white;
+  border: 1px solid rgba(244, 63, 94, 0.2);
+}
+
+.deactivate-button:hover {
+  background: linear-gradient(135deg, #f43f5e, #e11d48);
+  box-shadow: 0 4px 15px rgba(244, 63, 94, 0.25);
 }
 
 .activate-button {
-  background: var(--success);
+  background: linear-gradient(135deg, #34d399, #10b981);
+  color: white;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.activate-button:hover {
+  background: linear-gradient(135deg, #10b981, #059669);
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.25);
+}
+
+.delete-button {
+  background: linear-gradient(135deg, #f87171, #ef4444);
+  color: white;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.delete-button:hover {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.25);
 }
 
 /* Contenedor principal del formulario */

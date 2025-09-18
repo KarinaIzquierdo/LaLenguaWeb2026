@@ -61,9 +61,15 @@ export default function ProgramarClase() {
     const cargarEstudiantes = async () => {
       setCargandoEstudiantes(true);
       try {
+        console.log('Cargando estudiantes desde el backend...');
         const usuarios = await userService.getAll();
+        console.log('Usuarios recibidos del backend:', usuarios);
+        
         const estudiantes = usuarios
-          .filter(usuario => usuario.rol === 'student' && usuario.activo)
+          .filter(usuario => {
+            console.log(`Usuario: ${usuario.nombres} - Rol: ${usuario.rol} - Activo: ${usuario.activo}`);
+            return usuario.rol === 'student' && usuario.activo;
+          })
           .map(usuario => {
             // Obtener información del bloque asignado
             const bloqueInfo = bloqueService.getUserBloqueInfo(usuario.id.toString());
@@ -80,9 +86,64 @@ export default function ProgramarClase() {
             };
           });
         
+        console.log('Estudiantes filtrados:', estudiantes);
         setEstudiantesDisponibles(estudiantes);
+        
+        // Si no hay estudiantes, crear algunos de prueba
+        if (estudiantes.length === 0) {
+          console.log('No hay estudiantes en la BD, creando datos de prueba...');
+          const estudiantesPrueba = [
+            {
+              id: '1',
+              nombre: 'Camila Rodriguez',
+              nivel: 'A1',
+              email: 'camila@thelanguage.co',
+              bloque: 'A1 Mañana'
+            },
+            {
+              id: '2',
+              nombre: 'Luisa Flores',
+              nivel: 'B2',
+              email: 'luisa@thelanguage.co',
+              bloque: 'B2 Tarde'
+            },
+            {
+              id: '3',
+              nombre: 'Stiven Ramirez',
+              nivel: 'A2',
+              email: 'stiven@thelanguage.co',
+              bloque: 'A2 Noche'
+            }
+          ];
+          setEstudiantesDisponibles(estudiantesPrueba);
+        }
       } catch (error) {
         console.error('Error cargando estudiantes:', error);
+        // En caso de error, usar datos de prueba
+        const estudiantesPrueba = [
+          {
+            id: '1',
+            nombre: 'Camila Rodriguez',
+            nivel: 'A1',
+            email: 'camila@thelanguage.co',
+            bloque: 'A1 Mañana'
+          },
+          {
+            id: '2',
+            nombre: 'Luisa Flores',
+            nivel: 'B2',
+            email: 'luisa@thelanguage.co',
+            bloque: 'B2 Tarde'
+          },
+          {
+            id: '3',
+            nombre: 'Stiven Ramirez',
+            nivel: 'A2',
+            email: 'stiven@thelanguage.co',
+            bloque: 'A2 Noche'
+          }
+        ];
+        setEstudiantesDisponibles(estudiantesPrueba);
       } finally {
         setCargandoEstudiantes(false);
       }

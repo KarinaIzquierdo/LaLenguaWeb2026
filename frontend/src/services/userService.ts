@@ -34,6 +34,14 @@ export const userService = {
         body: JSON.stringify({ ...data, email }),
       });
       const result = await response.json();
+      
+      // Si el registro fue exitoso y hay un bloque asignado, guardarlo en localStorage
+      if (result.success && data.bloque_asignado && result.user) {
+        const { bloqueService } = await import('./bloqueService');
+        bloqueService.assignBloqueToUser(result.user.id.toString(), data.bloque_asignado);
+        console.log(`Bloque ${data.bloque_asignado} asignado al usuario ${result.user.id}`);
+      }
+      
       return result;
     } catch (error) {
       return { success: false, message: 'Error de conexión' };
@@ -71,6 +79,22 @@ export const userService = {
       const token = localStorage.getItem('token');
       const response = await fetch(`${API_BASE_URL}/users/${userId}/toggle-active/`, {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : '',
+        },
+      });
+      return await response.json();
+    } catch (error) {
+      return { success: false, message: 'Error de conexión' };
+    }
+  },
+
+  async deleteUser(userId: number): Promise<any> {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/users/${userId}/`, {
+        method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': token ? `Bearer ${token}` : '',

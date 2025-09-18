@@ -53,4 +53,69 @@ export const ClaseService = {
     );
     return res.data;
   },
+
+  // Generar clases desde bloques asignados al profesor
+  generarClasesDesdeBloque: async (profesorNombre: string) => {
+    try {
+      // Importar bloqueService dinámicamente para evitar dependencias circulares
+      const { bloqueService } = await import('./bloqueService');
+      const bloques = bloqueService.getBloques();
+      
+      // Encontrar bloques donde el profesor está asignado
+      const bloquesDelProfesor = bloques.filter(bloque => 
+        bloque.profesores.some(prof => prof.includes(profesorNombre))
+      );
+      
+      const clasesGeneradas = [];
+      let claseId = Date.now(); // ID único basado en timestamp
+      
+      for (const bloque of bloquesDelProfesor) {
+        // Generar clases para cada clase del bloque
+        for (let i = 0; i < bloque.clases.length; i++) {
+          const clase = bloque.clases[i];
+          const horario = bloque.horarios[i] || '08:00';
+          const meetLink = (bloque.meetLinks && bloque.meetLinks[i]) || '';
+          
+          // Generar fechas para las próximas 2 semanas
+          const fechasClases = [];
+          const hoy = new Date();
+          
+          // Generar 6 clases (3 por semana durante 2 semanas)
+          for (let semana = 0; semana < 2; semana++) {
+            for (let dia = 0; dia < 3; dia++) {
+              const fecha = new Date(hoy);
+              fecha.setDate(hoy.getDate() + (semana * 7) + dia + 1);
+              fechasClases.push(fecha.toISOString().split('T')[0]);
+            }
+          }
+          
+          // Crear clases para cada fecha
+          fechasClases.forEach((fecha, index) => {
+            clasesGeneradas.push({
+              id: claseId++,
+              nombre: `${clase} - ${bloque.nivel} ${bloque.turno}`,
+              profesorId: 1, // ID por defecto
+              fecha: fecha,
+              hora: horario,
+              duracion: 60,
+              tema: clase,
+              descripcion: `Clase de ${clase} para el bloque ${bloque.nivel} ${bloque.turno}`,
+              estudiantes: [`Estudiante ${index + 1}`, `Estudiante ${index + 2}`],
+              meetLink: meetLink,
+              meet_link: meetLink,
+              estado: 'programada',
+              tipoClase: 'grupal'
+            });
+          });
+        }
+      }
+      
+      console.log(`Clases generadas para ${profesorNombre}:`, clasesGeneradas.length);
+      console.log('Bloques encontrados:', bloquesDelProfesor.map(b => `${b.nivel} ${b.turno}`));
+      return clasesGeneradas;
+    } catch (error) {
+      console.error('Error generando clases desde bloques:', error);
+      return [];
+    }
+  }
 };

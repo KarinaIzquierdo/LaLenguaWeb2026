@@ -6,6 +6,16 @@ from . import especializacion_views
 from . import evaluacion_views
 from . import notificacion_views
 from . import calificacion_views
+from . import profesor_views
+from . import user_views
+from .plan_views import (
+    planes_list_view, plan_create_view, plan_update_view, plan_delete_view, plan_toggle_view,
+    ventas_list_view, venta_create_view, venta_update_view, estadisticas_financieras_view
+)
+from .subscription_views import (
+    asignar_plan_usuario_view, usuarios_sin_plan_view, planes_por_vencer_view,
+    suscripciones_activas_view, enviar_recordatorio_pago_view, renovar_plan_view
+)
 
 router = routers.DefaultRouter()
 router.register(r'clases', ClaseViewSet)
@@ -28,8 +38,10 @@ urlpatterns = [
     path('auth/profesor/verify-token/', views.profesor_verify_token_view, name='profesor_verify_token'),
     path('auth/profesor/profile/', views.profesor_profile_view, name='profesor_profile'),
     path('auth/profesor/change-password/', views.profesor_change_password_view, name='profesor_change_password'),
+    path('profesores/list/', profesor_views.get_profesores_list, name='profesores_list'),
     path('users/<int:user_id>/toggle-active/', views.toggle_user_active_view, name='toggle_user_active'),
     path('users/', views.list_users_view, name='list_users'),
+    path('users/<int:user_id>/', user_views.delete_user_view, name='delete_user'),
     
     # Endpoints para galería
     path('gallery/', views.gallery_list_view, name='gallery_list'),
@@ -76,6 +88,7 @@ urlpatterns = [
     
     # Endpoints para notificaciones
     path('notificaciones/', notificacion_views.obtener_notificaciones, name='obtener_notificaciones'),
+    path('notificaciones/crear/', notificacion_views.crear_notificacion, name='crear_notificacion'),
     path('notificaciones/<int:notificacion_id>/marcar-leida/', notificacion_views.marcar_notificacion_leida, name='marcar_notificacion_leida'),
     path('notificaciones/marcar-todas-leidas/', notificacion_views.marcar_todas_leidas, name='marcar_todas_leidas'),
     
@@ -85,6 +98,25 @@ urlpatterns = [
     path('calificaciones/<int:respuesta_id>/', calificacion_views.obtener_detalle_respuesta, name='detalle_respuesta'),
     path('calificaciones/<int:respuesta_id>/calificar/', calificacion_views.calificar_respuesta, name='calificar_respuesta'),
     path('calificaciones/<int:respuesta_id>/actualizar/', calificacion_views.actualizar_calificacion, name='actualizar_calificacion'),
+    
+    # Endpoints para sistema financiero
+    path('planes/', planes_list_view, name='planes_list'),
+    path('planes/create/', plan_create_view, name='plan_create'),
+    path('planes/<int:pk>/update/', plan_update_view, name='plan_update'),
+    path('planes/<int:pk>/delete/', plan_delete_view, name='plan_delete'),
+    path('planes/<int:pk>/toggle/', plan_toggle_view, name='plan_toggle'),
+    path('ventas/', ventas_list_view, name='ventas_list'),
+    path('ventas/create/', venta_create_view, name='venta_create'),
+    path('ventas/<int:pk>/update/', venta_update_view, name='venta_update'),
+    path('estadisticas/financieras/', estadisticas_financieras_view, name='estadisticas_financieras'),
+    
+    # Endpoints para gestión de suscripciones
+    path('suscripciones/asignar-plan/', asignar_plan_usuario_view, name='asignar_plan'),
+    path('suscripciones/usuarios-sin-plan/', usuarios_sin_plan_view, name='usuarios_sin_plan'),
+    path('suscripciones/planes-por-vencer/', planes_por_vencer_view, name='planes_por_vencer'),
+    path('suscripciones/activas/', suscripciones_activas_view, name='suscripciones_activas'),
+    path('suscripciones/recordatorio/', enviar_recordatorio_pago_view, name='recordatorio_pago'),
+    path('suscripciones/renovar/', renovar_plan_view, name='renovar_plan'),
 ]
 
 urlpatterns += router.urls

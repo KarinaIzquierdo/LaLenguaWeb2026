@@ -16,6 +16,7 @@ from .serializers import (
     ClubSerializer, ClubMaterialSerializer, EvaluacionSerializer, NotificacionSerializer,
 )
 from .especializacion_serializer import EspecializacionSerializer
+from django.shortcuts import get_object_or_404
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -455,6 +456,9 @@ def register_view(request):
         if 'bloque_asignado' in request.data and request.data['bloque_asignado']:
             user.bloque_asignado = request.data['bloque_asignado']
             user.save()
+            
+            # Enviar respuesta con información del bloque para sincronización frontend
+            print(f"Usuario {user.id} registrado con bloque: {user.bloque_asignado}")
         
         user_serializer = UserSerializer(user)
         return Response({

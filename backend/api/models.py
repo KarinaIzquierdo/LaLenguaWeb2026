@@ -31,6 +31,7 @@ class CustomUser(AbstractUser):
         ('student', 'Estudiante'),
         ('profesor', 'Profesor'),
         ('admin', 'Administrador'),
+        ('financiero', 'Financiero'),
     ]
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='student')
     
@@ -320,3 +321,101 @@ class Notificacion(models.Model):
     
     def __str__(self):
         return f"{self.titulo} - {self.profesor.username}"
+
+
+class Plan(models.Model):
+    """
+    Modelo para los planes de precios disponibles
+    """
+    TIPO_CHOICES = [
+        ('basico', 'Plan Básico'),
+        ('especializado', 'Plan con Especialización'),
+        ('premium', 'Plan Premium'),
+    ]
+    
+    nombre = models.CharField(max_length=100)
+    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES)
+    descripcion = models.TextField()
+    precio_base = models.DecimalField(max_digits=10, decimal_places=2)
+    duracion_meses = models.IntegerField(default=1)
+    caracteristicas = models.JSONField(default=list)  # Lista de características incluidas
+    activo = models.BooleanField(default=True)
+    color_tema = models.CharField(max_length=7, default='#2563eb')  # Color hex para la tarjeta
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['precio_base']
+        verbose_name = 'Plan'
+        verbose_name_plural = 'Planes'
+    
+    def __str__(self):
+        return f"{self.nombre} - ${self.precio_base}"
+
+
+class Venta(models.Model):
+    """
+    Modelo para registrar las ventas realizadas
+    """
+    ESTADO_CHOICES = [
+        ('pendiente', 'Pendiente'),
+        ('pagado', 'Pagado'),
+        ('cancelado', 'Cancelado'),
+        ('reembolsado', 'Reembolsado'),
+    ]
+    
+    METODO_PAGO_CHOICES = [
+        ('efectivo', 'Efectivo'),
+        ('transferencia', 'Transferencia'),
+        ('tarjeta', 'Tarjeta'),
+        ('paypal', 'PayPal'),
+        ('otro', 'Otro'),
+    ]
+    
+    # Información del cliente
+    estudiante = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='ventas')
+    
+    # Información del plan
+    plan = models.ForeignKey(Plan, on_delete=models.CASCADE, related_name='ventas')
+    especializacion = models.ForeignKey(Especializacion, on_delete=models.SET_NULL, null=True, blank=True, related_name='ventas')
+    
+    # Información financiera
+    precio_plan = models.DecimalField(max_digits=10, decimal_places=2)
+    precio_especializacion = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    descuento = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    precio_total = models.DecimalField(max_digits=10, decimal_places=2)
+    
+    # Información de pago
+    metodo_pago = models.CharField(max_length=20, choices=METODO_PAGO_CHOICES)
+    referencia_pago = models.CharField(max_length=100, blank=True, null=True)
+    estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='pendiente')
+    
+    # Información adicional
+    notas = models.TextField(blank=True, null=True)
+    vendido_por = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name='ventas_realizadas')
+    
+    # Fechas
+    fecha_venta = models.DateTimeField(auto_now_add=True)
+    fecha_pago = models.DateTimeField(null=True, blank=True)
+    fecha_inicio_plan = models.DateField(null=True, blank=True)
+    fecha_fin_plan = models.DateField(null=True, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Venta'
+        verbose_name_plural = 'Ventas'
+    
+    def __str__(self):
+        return f"Venta #{self.id} - {self.estudiante.username} - ${self.precio_total}"
+    
+    @property
+    def dias_restantes(self):
+        """Calcula los días restantes del plan"""
+        if self.fecha_fin_plan:
+            from datetime import date
+            return (self.fecha_fin_plan - date.today()).days
+        return None

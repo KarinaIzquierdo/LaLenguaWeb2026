@@ -42,6 +42,21 @@ export const Sidebar = ({ onLogout }: { onLogout: () => void }) => {
               Especializaciones
             </NavLink>
           </li>
+          <li>
+            <NavLink to="/admin/planes-precios" className={({ isActive }) => isActive ? 'active' : ''}>
+              💰 Planes y Precios
+            </NavLink>
+          </li>
+          <li>
+            <NavLink to="/admin/registro-ventas" className={({ isActive }) => isActive ? 'active' : ''}>
+              📊 Registro de Ventas
+            </NavLink>
+          </li>
+          <li>
+            <NavLink to="/admin/gestion-suscripciones" className={({ isActive }) => isActive ? 'active' : ''}>
+              👥 Gestión de Suscripciones
+            </NavLink>
+          </li>
         </ul>
         <button className="logout-button" onClick={onLogout} style={{ marginTop: '2rem', width: '100%' }}>
           Cerrar sesión

@@ -8,7 +8,6 @@ import CalificarEvaluaciones from './CalificarEvaluaciones';
 import { userService } from '../../services/userService';
 import GestionCLB from './GestionCLB';
 import MisClubs from './MisClubs';
-import CalendarioClases from './CalendarioClases';
 import ReportesProgreso from './ReportesProgreso';
 import NotificacionesProfesor from './NotificacionesProfesor';
 import EstudiantesView from './EstudiantesView';
@@ -106,7 +105,6 @@ export default function DashboardProfesor({ onLogout }: DashboardProfesorProps =
           {activeView === 'gestion-clb' && <GestionCLB profesorId={1} />}
           {activeView === 'mis-clubs' && <MisClubs />}
           {activeView === 'estudiantes' && <EstudiantesView />}
-          {activeView === 'calendario' && <CalendarioClases />}
           {activeView === 'reportes' && <ReportesProgreso />}
           {activeView === 'notificaciones' && <NotificacionesProfesor />}
           {activeView === 'calificar-evaluaciones' && <CalificarEvaluaciones />}

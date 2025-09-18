@@ -161,7 +161,8 @@ def obtener_notificaciones(request):
     """
     Obtiene las notificaciones del profesor autenticado y genera nuevas automáticamente
     """
-    if request.user.role != 'profesor':
+    # Verificar si el usuario es profesor o tiene permisos
+    if not (request.user.role == 'profesor' or request.user.is_profesor):
         return Response({
             'success': False,
             'message': 'Solo los profesores pueden acceder a las notificaciones'
@@ -245,4 +246,50 @@ def marcar_todas_leidas(request):
         return Response({
             'success': False,
             'message': f'Error: {str(e)}'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+def crear_notificacion(request):
+    """
+    Crea una nueva notificación para un profesor específico
+    """
+    try:
+        data = request.data
+        profesor_id = data.get('profesor_id')
+        titulo = data.get('titulo')
+        mensaje = data.get('mensaje')
+        tipo = data.get('tipo', 'asignacion_bloque')
+        prioridad = data.get('prioridad', 'media')
+        
+        # Validar que el profesor existe
+        try:
+            profesor = CustomUser.objects.get(id=profesor_id, role='profesor')
+        except CustomUser.DoesNotExist:
+            return Response({
+                'success': False,
+                'message': 'Profesor no encontrado'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Crear la notificación
+        notificacion = Notificacion.objects.create(
+            profesor=profesor,
+            tipo=tipo,
+            titulo=titulo,
+            mensaje=mensaje,
+            prioridad=prioridad
+        )
+        
+        serializer = NotificacionSerializer(notificacion)
+        
+        return Response({
+            'success': True,
+            'message': 'Notificación creada exitosamente',
+            'notificacion': serializer.data
+        }, status=status.HTTP_201_CREATED)
+        
+    except Exception as e:
+        return Response({
+            'success': False,
+            'message': f'Error al crear notificación: {str(e)}'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

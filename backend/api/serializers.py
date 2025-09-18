@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import authenticate
-from .models import CustomUser, Clase, Evaluation, MediaItem, Club, ClubMaterial, Especializacion, Evaluacion, RespuestaEvaluacion, Notificacion
+from .models import CustomUser, Clase, Evaluation, MediaItem, Club, ClubMaterial, Especializacion, Evaluacion, RespuestaEvaluacion, Notificacion, Plan, Venta
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -280,3 +280,43 @@ class NotificacionSerializer(serializers.ModelSerializer):
             return f"hace {minutes} minuto{'s' if minutes > 1 else ''}"
         else:
             return "hace unos segundos"
+
+
+class EspecializacionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Especializacion
+        fields = ['id', 'nombre', 'descripcion', 'precio_adicional', 'activo', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class PlanSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Plan
+        fields = ['id', 'nombre', 'tipo', 'descripcion', 'precio_base', 'duracion_meses', 
+                 'caracteristicas', 'activo', 'color_tema', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class VentaSerializer(serializers.ModelSerializer):
+    estudiante_nombre = serializers.CharField(source='estudiante.get_full_name', read_only=True)
+    plan_nombre = serializers.CharField(source='plan.nombre', read_only=True)
+    especializacion_nombre = serializers.CharField(source='especializacion.nombre', read_only=True)
+    vendido_por_nombre = serializers.CharField(source='vendido_por.get_full_name', read_only=True)
+    
+    class Meta:
+        model = Venta
+        fields = ['id', 'estudiante', 'estudiante_nombre', 'plan', 'plan_nombre', 
+                 'especializacion', 'especializacion_nombre', 'precio_plan', 'precio_especializacion',
+                 'descuento', 'precio_total', 'metodo_pago', 'referencia_pago', 'estado',
+                 'notas', 'vendido_por', 'vendido_por_nombre', 'fecha_venta', 'fecha_pago',
+                 'fecha_inicio_plan', 'fecha_fin_plan', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
+    
+    def create(self, validated_data):
+        # Calcular precio total automáticamente
+        precio_plan = validated_data.get('precio_plan', 0)
+        precio_especializacion = validated_data.get('precio_especializacion', 0)
+        descuento = validated_data.get('descuento', 0)
+        validated_data['precio_total'] = precio_plan + precio_especializacion - descuento
+        
+        return super().create(validated_data)

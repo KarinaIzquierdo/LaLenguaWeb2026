@@ -21,6 +21,9 @@ import ProgramarClases from './Componentes/DashboardAdmin/ProgramarClases'
 import BloquesView from './Componentes/DashboardAdmin/BloquesView'
 import GestionGaleria from './Componentes/DashboardAdmin/GestionGaleria'
 import Especializaciones from './Componentes/DashboardAdmin/Especializaciones'
+import PlanesPrecios from './Componentes/DashboardAdmin/PlanesPrecios';
+import RegistroVentas from './Componentes/DashboardAdmin/RegistroVentas';
+import GestionSuscripciones from './Componentes/DashboardAdmin/GestionSuscripciones';
 
 function App() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
@@ -228,6 +231,9 @@ function App() {
               <Route path="bloques" element={<BloquesView />} />
               <Route path="galeria" element={<GestionGaleria />} />
               <Route path="especializaciones" element={<Especializaciones />} />
+              <Route path="planes-precios" element={<PlanesPrecios />} />
+              <Route path="registro-ventas" element={<RegistroVentas />} />
+              <Route path="gestion-suscripciones" element={<GestionSuscripciones />} />
             </Route>
             
             {/* Ruta de login - redirige al home */}

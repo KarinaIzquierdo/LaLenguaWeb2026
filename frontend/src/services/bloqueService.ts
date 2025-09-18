@@ -6,6 +6,8 @@ export interface Bloque {
   clases: string[];
   misiones: string[];
   horarios: string[];
+  fechasClases: string[];
+  meetLinks: string[];
 }
 
 export interface BloqueData {
@@ -15,6 +17,8 @@ export interface BloqueData {
   clases: string;
   misiones: string;
   horarios: string;
+  fechasClases: string;
+  meetLinks: string;
 }
 
 class BloqueService {
@@ -37,7 +41,9 @@ class BloqueService {
       profesores: bloqueData.profesores.split(',').map(p => p.trim()),
       clases: bloqueData.clases.split(',').map(c => c.trim()),
       misiones: bloqueData.misiones.split(',').map(m => m.trim()),
-      horarios: bloqueData.horarios.split(',').map(h => h.trim())
+      horarios: bloqueData.horarios.split(',').map(h => h.trim()),
+      fechasClases: bloqueData.fechasClases.split(',').map(f => f.trim()),
+      meetLinks: bloqueData.meetLinks ? bloqueData.meetLinks.split(',').map(m => m.trim()) : []
     };
 
     // Verificar si ya existe y actualizar, o agregar nuevo
@@ -109,14 +115,45 @@ class BloqueService {
     misiones: string[];
     profesores: string[];
     horarios: string[];
+    meetLinks: string[];
+    fechasClases: string[];
   } {
     const bloque = this.getUserAssignedBloque(userId);
+    console.log(`[BloqueService] getUserBloqueInfo para usuario ${userId}:`, bloque);
     return {
       bloque,
       clases: bloque ? bloque.clases : [],
       misiones: bloque ? bloque.misiones : [],
       profesores: bloque ? bloque.profesores : [],
-      horarios: bloque ? bloque.horarios : []
+      horarios: bloque ? bloque.horarios : [],
+      meetLinks: bloque ? bloque.meetLinks || [] : [],
+      fechasClases: bloque ? bloque.fechasClases || [] : []
+    };
+  }
+
+  // Eliminar bloque
+  deleteBloque(bloqueId: string): boolean {
+    const bloques = this.getBloques();
+    const index = bloques.findIndex(b => b.id === bloqueId);
+    if (index >= 0) {
+      bloques.splice(index, 1);
+      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(bloques));
+      return true;
+    }
+    return false;
+  }
+
+  // Convertir bloque a formato de edición
+  bloqueToData(bloque: Bloque): BloqueData {
+    return {
+      nivel: bloque.nivel,
+      turno: bloque.turno,
+      profesores: bloque.profesores.join(', '),
+      clases: bloque.clases.join(', '),
+      misiones: bloque.misiones.join(', '),
+      horarios: bloque.horarios.join(', '),
+      fechasClases: (bloque.fechasClases || []).join(', '),
+      meetLinks: (bloque.meetLinks || []).join(', ')
     };
   }
 

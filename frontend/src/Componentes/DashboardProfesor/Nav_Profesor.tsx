@@ -34,15 +34,37 @@ export default function NavProfesor({ profesorData, activeView, setActiveView, o
     return () => clearInterval(interval);
   }, []);
 
+  // Actualizar contador cuando se abre el panel de notificaciones
+  useEffect(() => {
+    if (activeView === 'notificaciones') {
+      const actualizarContador = async () => {
+        try {
+          const response = await notificacionService.obtenerNotificaciones();
+          if (response.success) {
+            setNoLeidasCount(response.no_leidas);
+          }
+        } catch (error) {
+          console.error('Error al actualizar contador:', error);
+        }
+      };
+      
+      // Actualizar inmediatamente al abrir
+      actualizarContador();
+      
+      // Actualizar cada 5 segundos mientras esté abierto
+      const intervalNotif = setInterval(actualizarContador, 5000);
+      return () => clearInterval(intervalNotif);
+    }
+  }, [activeView]);
+
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: '🏠' },
     { id: 'clases', label: 'Mis Clases', icon: '📚' },
-    { id: 'calendario', label: 'Calendario', icon: '📅' },
     { id: 'programar-clase', label: 'Programar Clase', icon: '➕' },
     { id: 'crear-evaluacion', label: 'Evaluaciones', icon: '📝' },
     { id: 'calificar-evaluaciones', label: 'Calificar Evaluaciones', icon: '📊' },
     { id: 'reportes', label: 'Reportes de Progreso', icon: '📋' },
-    { id: 'notificaciones', label: 'Notificaciones', icon: '🔔', badge: noLeidasCount },
+    { id: 'notificaciones', label: 'Notificaciones', icon: '🔔', badge: noLeidasCount > 0 ? noLeidasCount : undefined },
     { id: 'estudiantes', label: 'Estudiantes', icon: '👥' },
     { id: 'mis-clubs', label: 'Mis Clubs', icon: '🏷️' },
     { id: 'gestion-clb', label: 'Gestión CLB', icon: '📂' }

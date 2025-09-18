@@ -171,26 +171,39 @@ export const authService = {
   },
 
   // Perfil del usuario autenticado
-  getUserProfile: async (): Promise<any> => {
-    const token = authService.getToken();
-    if (!token) throw new Error('No token available');
-    try {
-      const response = await fetch(`${API_BASE_URL}/auth/profile/`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      if (!response.ok) {
-        throw new Error('Failed to fetch profile');
-      }
-      const data = await response.json();
-      return data.user || data;
-    } catch (error) {
-      console.error('Get profile failed:', error);
-      throw error;
+  async getUserProfile(): Promise<any> {
+    const token = this.getToken();
+    if (!token) {
+      throw new Error('No token found');
     }
+
+    const response = await fetch(`${API_BASE_URL}/auth/profile/`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to get user profile');
+    }
+
+    const data = await response.json();
+    const profile = data.user || data;
+    
+    // Si el usuario tiene bloque_asignado pero no está en localStorage, sincronizar
+    if (profile.bloque_asignado && profile.id) {
+      const { bloqueService } = await import('./bloqueService');
+      const userBloqueInfo = bloqueService.getUserBloqueInfo(profile.id.toString());
+      
+      // Si no hay bloque asignado en localStorage, asignarlo
+      if (!userBloqueInfo.bloque) {
+        console.log(`Sincronizando bloque ${profile.bloque_asignado} para usuario ${profile.id}`);
+        bloqueService.assignBloqueToUser(profile.id.toString(), profile.bloque_asignado);
+      }
+    }
+    
+    return profile;
   },
 
   // Actualizar información adicional del usuario
