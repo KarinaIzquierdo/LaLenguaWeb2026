@@ -163,3 +163,12 @@ CORS_ALLOW_CREDENTIALS = True
 
 # Allow all hosts for development
 ALLOWED_HOSTS = ['*']
+
+# Email Configuration
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'your-email@gmail.com'  # Cambiar por tu email
+EMAIL_HOST_PASSWORD = 'your-app-password'  # Cambiar por tu contraseña de aplicación
+DEFAULT_FROM_EMAIL = 'The Language <noreply@thelanguage.co>'

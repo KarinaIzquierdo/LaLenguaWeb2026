@@ -28,7 +28,7 @@ interface ValidationResult {
 const EMAILJS_CONFIG = {
   serviceId: 'service_yypcyqc', // Tu Service ID
   templateId: 'template_kqcqa2b', // Tu plantilla contactenos
-  passwordResetTemplateId: 'template_c5au9og', // Plantilla para reset de contraseña
+  passwordResetTemplateId: 'template_c5au9og', // Plantilla específica para reset de contraseña
   publicKey: '5IX1jA4A1wE1BoI8J', // Tu Public Key
   recipientEmail: 'the.languagess@gmail.com'
 };
@@ -143,12 +143,7 @@ export const sendPasswordResetEmail = async (
 
     const templateParams: Record<string, any> = {
       to_email: email,
-      to: email,
-      reply_to: email,
       reset_link: finalResetLink,
-      reset_code: code || '',
-      app_name: appName || 'La Lengua',
-      support_email: EMAILJS_CONFIG.recipientEmail,
     };
     // Debug (dev): validar que el destinatario no esté vacío (Vite env)
     try {

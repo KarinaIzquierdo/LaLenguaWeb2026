@@ -41,6 +41,9 @@ class CustomUser(AbstractUser):
     # Especialización asignada (relación con modelo Especializacion)
     especializacion = models.ForeignKey('Especializacion', on_delete=models.SET_NULL, null=True, blank=True, related_name='estudiantes')
     
+    # Correo personal para recuperación de contraseña
+    correo_personal = models.EmailField(blank=True, null=True, help_text="Correo personal para recuperación de contraseña")
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True)

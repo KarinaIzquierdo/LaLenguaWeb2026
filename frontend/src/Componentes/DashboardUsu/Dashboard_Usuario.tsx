@@ -81,6 +81,10 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
   const [evaluaciones, setEvaluaciones] = useState<any[]>([]);
   const [isLoadingEvaluaciones, setIsLoadingEvaluaciones] = useState(false);
 
+  // Paginación states
+  const [currentPage, setCurrentPage] = useState(1);
+  const clasesPerPage = 5;
+
   // Evaluation functions
   const startEvaluation = (type: string) => {
     setCurrentEvaluation(type);
@@ -439,10 +443,30 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
           };
         });
         
-        // Ordenar por fecha
-        clasesConFecha.sort((a, b) => a.fechaObj.getTime() - b.fechaObj.getTime());
+        // Ordenar por prioridad: activas primero, programadas en medio, completadas al final
+        clasesConFecha.sort((a, b) => {
+          // Definir prioridad por estado
+          const getPrioridad = (estado: string) => {
+            switch (estado) {
+              case 'activa': return 1;
+              case 'programada': return 2;
+              case 'completada': return 3;
+              default: return 2; // Por defecto como programada
+            }
+          };
+          
+          const prioridadA = getPrioridad(a.estado);
+          const prioridadB = getPrioridad(b.estado);
+          
+          // Si tienen la misma prioridad, ordenar por fecha
+          if (prioridadA === prioridadB) {
+            return a.fechaObj.getTime() - b.fechaObj.getTime();
+          }
+          
+          return prioridadA - prioridadB;
+        });
         
-        // Mostrar todas las clases del bloque sin filtrar por fecha
+        // Mostrar todas las clases ordenadas por prioridad
         const clasesRelevantes = clasesConFecha;
         
         console.log('Clases filtradas y relevantes:', clasesRelevantes);
@@ -881,45 +905,78 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
           ) : clases.length === 0 ? (
             <div className="no-classes-message">No hay clases programadas</div>
           ) : (
-            clases.map((clase, index) => (
-              <div key={clase.id || index} className="table-row">
-                <div className="table-cell">{clase.fecha || 'Por definir'}</div>
-                <div className="table-cell">{clase.hora || 'Por definir'}</div>
-                <div className="table-cell">
-                  {clase.profesor || 'Sin asignar'}
-                  {clase.tipo === 'profesor' && <span className="clase-extra"> (Reprogramada)</span>}
+            (() => {
+              // Calcular clases para la página actual
+              const indexOfLastClase = currentPage * clasesPerPage;
+              const indexOfFirstClase = indexOfLastClase - clasesPerPage;
+              const clasesActuales = clases.slice(indexOfFirstClase, indexOfLastClase);
+              
+              return clasesActuales.map((clase, index) => (
+                <div key={clase.id || (indexOfFirstClase + index)} className="table-row">
+                  <div className="table-cell">{clase.fecha || 'Por definir'}</div>
+                  <div className="table-cell">{clase.hora || 'Por definir'}</div>
+                  <div className="table-cell">
+                    {clase.profesor || 'Sin asignar'}
+                    {clase.tipo === 'profesor' && <span className="clase-extra"> (Reprogramada)</span>}
+                  </div>
+                  <div className="table-cell">{clase.tema || clase.nombre}</div>
+                  <div className="table-cell">
+                    {(() => {
+                      console.log(`Renderizando clase: ${clase.tema || clase.nombre} - Estado: ${clase.estado}`);
+                      return null;
+                    })()}
+                    {clase.estado === 'activa' ? (
+                      <button 
+                        className="btn-acceder"
+                        onClick={() => accederClase(clase)}
+                      >
+                        → ACCEDER
+                      </button>
+                    ) : clase.estado === 'programada' ? (
+                      <span className="estado-clase programada">
+                        📅 Programada
+                      </span>
+                    ) : clase.estado === 'completada' ? (
+                      <span className="estado-clase completada">
+                        ✅ Completada
+                      </span>
+                    ) : (
+                      <span className="estado-clase pendiente">
+                        ⏳ Pendiente
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <div className="table-cell">{clase.tema || clase.nombre}</div>
-                <div className="table-cell">
-                  {(() => {
-                    console.log(`Renderizando clase: ${clase.tema || clase.nombre} - Estado: ${clase.estado}`);
-                    return null;
-                  })()}
-                  {clase.estado === 'activa' ? (
-                    <button 
-                      className="btn-acceder"
-                      onClick={() => accederClase(clase)}
-                    >
-                      → ACCEDER
-                    </button>
-                  ) : clase.estado === 'programada' ? (
-                    <span className="estado-clase programada">
-                      📅 Programada
-                    </span>
-                  ) : clase.estado === 'completada' ? (
-                    <span className="estado-clase completada">
-                      ✅ Completada
-                    </span>
-                  ) : (
-                    <span className="estado-clase pendiente">
-                      ⏳ Pendiente
-                    </span>
-                  )}
-                </div>
-              </div>
-            ))
+              ));
+            })()
           )}
         </div>
+        
+        {/* Controles de paginación */}
+        {clases.length > clasesPerPage && (
+          <div className="pagination-controls">
+            <button 
+              className="pagination-btn"
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+            >
+              ← Anterior
+            </button>
+            
+            <span className="pagination-info">
+              Página {currentPage} de {Math.ceil(clases.length / clasesPerPage)} 
+              ({clases.length} clases total)
+            </span>
+            
+            <button 
+              className="pagination-btn"
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(clases.length / clasesPerPage)))}
+              disabled={currentPage === Math.ceil(clases.length / clasesPerPage)}
+            >
+              Siguiente →
+            </button>
+          </div>
+        )}
       </div>
 
 

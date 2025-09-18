@@ -27,6 +27,7 @@ interface Usuario {
   nombres: string;
   apellidos: string;
   correo: string;
+  correo_personal?: string;
   rol: string;
   activo: boolean;
   bloque_asignado?: string;
@@ -65,6 +66,7 @@ export default function FormularioUsuarios() {
     nombres: '',
     apellidos: '',
     correo: '',
+    correo_personal: '',
     rol: 'Estudiante',
     contrasena: '',
     bloque_asignado: '',
@@ -207,6 +209,7 @@ export default function FormularioUsuarios() {
       nombres: user.nombres,
       apellidos: user.apellidos,
       correo: user.correo,
+      correo_personal: user.correo_personal || '',
       rol: user.rol,
       contrasena: '', // Contraseña no se edita directamente aquí por seguridad
       bloque_asignado: user.bloque_asignado || '',
@@ -541,7 +544,7 @@ export default function FormularioUsuarios() {
           </div>
 
           <div className={`form-field ${formErrors.correo ? 'error' : ''}`}>
-            <label htmlFor="correo">Correo electrónico *</label>
+            <label htmlFor="correo">Correo Electrónico (Login) *</label>
             <input
               type="email"
               id="correo"
@@ -556,6 +559,25 @@ export default function FormularioUsuarios() {
             {formErrors.correo && (
               <span id="correo-error" className="error-message" role="alert">
                 {formErrors.correo}
+              </span>
+            )}
+          </div>
+
+          <div className={`form-field ${formErrors.correo_personal ? 'error' : ''}`}>
+            <label htmlFor="correo_personal">Correo Personal (Recuperación)</label>
+            <input
+              type="email"
+              id="correo_personal"
+              name="correo_personal"
+              value={formData.correo_personal}
+              onChange={handleChange}
+              placeholder="correo.personal@gmail.com"
+              aria-describedby={formErrors.correo_personal ? "correo-personal-error" : undefined}
+              aria-invalid={!!formErrors.correo_personal}
+            />
+            {formErrors.correo_personal && (
+              <span id="correo-personal-error" className="error-message" role="alert">
+                {formErrors.correo_personal}
               </span>
             )}
           </div>

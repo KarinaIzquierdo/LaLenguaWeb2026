@@ -1876,6 +1876,53 @@ body {
             border-bottom: none;
         }
 
+        /* Controles de paginación */
+        .pagination-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 28px;
+            background: white;
+            border-top: 1px solid #e2e8f0;
+            border-radius: 0 0 16px 16px;
+            margin-top: -1px;
+        }
+
+        .pagination-btn {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .pagination-btn:hover:not(:disabled) {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+
+        .pagination-btn:disabled {
+            background: #e5e7eb;
+            color: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .pagination-info {
+            font-size: 14px;
+            color: #64748b;
+            font-weight: 500;
+        }
+
         .date-cell {
             font-weight: 600;
             color: #1e293b;

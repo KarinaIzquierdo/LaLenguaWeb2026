@@ -7,7 +7,7 @@ class UserSerializer(serializers.ModelSerializer):
         model = CustomUser
         fields = ('id', 'username', 'email', 'first_name', 'last_name', 'phone', 'country', 'city', 'level', 
                  'birth_date', 'cedula', 'address', 'emergency_contact', 'emergency_phone', 
-                 'english_level', 'learning_goals', 'profile_completed', 'role', 'is_profesor', 'is_active', 'bloque_asignado', 'especializacion')
+                 'english_level', 'learning_goals', 'profile_completed', 'role', 'is_profesor', 'is_active', 'bloque_asignado', 'especializacion', 'correo_personal')
         read_only_fields = ('id',)
 
 class LoginSerializer(serializers.Serializer):
@@ -121,7 +121,7 @@ class UserRegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CustomUser
-        fields = ('first_name', 'last_name', 'email', 'role', 'password', 'bloque_asignado', 'especializacion')
+        fields = ('first_name', 'last_name', 'email', 'role', 'password', 'bloque_asignado', 'especializacion', 'correo_personal')
 
     def validate_email(self, value):
         if CustomUser.objects.filter(email__iexact=value).exists():
@@ -132,6 +132,7 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         password = validated_data.pop('password')
         bloque_asignado = validated_data.pop('bloque_asignado', None)
         especializacion = validated_data.pop('especializacion', None)
+        correo_personal = validated_data.pop('correo_personal', None)
         user = CustomUser(**validated_data)
         user.username = validated_data['email']  # Usar email como username
         user.set_password(password)
@@ -141,6 +142,8 @@ class UserRegisterSerializer(serializers.ModelSerializer):
             user.bloque_asignado = bloque_asignado
         if especializacion:
             user.especializacion = especializacion
+        if correo_personal:
+            user.correo_personal = correo_personal
         user.save()
         return user
 

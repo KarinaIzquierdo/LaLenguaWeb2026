@@ -81,20 +81,25 @@ def request_password_reset_view(request):
         }, status=status.HTTP_400_BAD_REQUEST)
 
     try:
+        # Buscar primero por email institucional
         user = CustomUser.objects.get(email__iexact=email)
     except CustomUser.DoesNotExist:
-        # Intentar mapear por parte local a dominios institucionales
         try:
-            local_part = email.split('@')[0]
-            candidate_emails = [
-                f"{local_part}@thelanguage.co",
-                f"{local_part}@soy.thelanguage.co",
-            ]
-            user = CustomUser.objects.filter(email__in=candidate_emails).first()
-            if not user:
+            # Buscar por correo personal
+            user = CustomUser.objects.get(correo_personal__iexact=email)
+        except CustomUser.DoesNotExist:
+            # Intentar mapear por parte local a dominios institucionales
+            try:
+                local_part = email.split('@')[0]
+                candidate_emails = [
+                    f"{local_part}@thelanguage.co",
+                    f"{local_part}@soy.thelanguage.co",
+                ]
+                user = CustomUser.objects.filter(email__in=candidate_emails).first()
+                if not user:
+                    return generic_response
+            except Exception:
                 return generic_response
-        except Exception:
-            return generic_response
 
     try:
         token_generator = PasswordResetTokenGenerator()
@@ -102,14 +107,55 @@ def request_password_reset_view(request):
         token = token_generator.make_token(user)
         # Formato token combinado para el frontend: uid.token
         combined = f"{uid}.{token}"
-        # Link sugerido (frontend): /new-password?token=<uid.token>
-        reset_link = f"/new-password?token={combined}"
-        return Response({
-            'success': True,
-            'message': 'Se han enviado instrucciones a tu correo.',
-            'token': combined,
-            'reset_link': reset_link,
-        }, status=status.HTTP_200_OK)
+        # Enviar email de recuperación
+        from django.core.mail import send_mail
+        from django.conf import settings
+        
+        # Determinar el correo de destino
+        email_destino = user.correo_personal if user.correo_personal else user.email
+        
+        # Link completo para el frontend
+        reset_link = f"http://localhost:3000/new-password?token={combined}"
+        
+        # Contenido del email
+        subject = 'Recuperación de Contraseña - The Language'
+        message = f"""
+Hola {user.first_name or user.username},
+
+Has solicitado recuperar tu contraseña para The Language.
+
+Haz clic en el siguiente enlace para crear una nueva contraseña:
+{reset_link}
+
+Este enlace expirará en 1 hora por seguridad.
+
+Si no solicitaste este cambio, puedes ignorar este correo.
+
+Saludos,
+El equipo de The Language
+        """
+        
+        try:
+            send_mail(
+                subject,
+                message,
+                settings.DEFAULT_FROM_EMAIL,
+                [email_destino],
+                fail_silently=False,
+            )
+            return Response({
+                'success': True,
+                'message': 'Se han enviado instrucciones a tu correo.',
+            }, status=status.HTTP_200_OK)
+        except Exception as email_error:
+            # Si falla el envío, devolver el token para desarrollo
+            return Response({
+                'success': True,
+                'message': 'Se han enviado instrucciones a tu correo.',
+                'token': combined,  # Solo para desarrollo
+                'reset_link': reset_link,  # Solo para desarrollo
+                'email_error': str(email_error)  # Solo para desarrollo
+            }, status=status.HTTP_200_OK)
     except Exception as e:
         return Response({
             'success': False,
