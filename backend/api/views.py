@@ -393,6 +393,67 @@ def mobile_classes_view(request):
             'clases': []
         }, status=status.HTTP_400_BAD_REQUEST)
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def mobile_evaluations_view(request):
+    """
+    Endpoint para obtener las evaluaciones asignadas al estudiante autenticado
+    Formato optimizado para aplicaciones móviles
+    """
+    user = request.user
+    
+    try:
+        # Obtener todas las evaluaciones asignadas al usuario
+        evaluaciones = user.evaluaciones_asignadas.filter(estado='publicada').order_by('-fecha_limite')
+        
+        # Formatear las evaluaciones para móvil
+        evaluaciones_data = []
+        for evaluacion in evaluaciones:
+            # Verificar si el estudiante ya entregó la evaluación
+            respuesta = evaluacion.respuestas.filter(estudiante=user).first()
+            
+            # Determinar estado de la evaluación para el estudiante
+            if respuesta and respuesta.completado:
+                estado_estudiante = 'entregada'
+                fecha_entrega = respuesta.fecha_envio.isoformat() if respuesta.fecha_envio else ''
+                calificacion = float(respuesta.calificacion) if respuesta.calificacion else None
+            else:
+                estado_estudiante = 'pendiente'
+                fecha_entrega = ''
+                calificacion = None
+            
+            # Obtener nombre completo del profesor
+            profesor_nombre = f"{evaluacion.profesor.first_name} {evaluacion.profesor.last_name}".strip()
+            if not profesor_nombre:
+                profesor_nombre = evaluacion.profesor.username
+            
+            evaluaciones_data.append({
+                'id': evaluacion.id,
+                'titulo': evaluacion.titulo,
+                'descripcion': evaluacion.descripcion if evaluacion.descripcion else '',
+                'tipo': evaluacion.tipo,
+                'profesor': profesor_nombre,
+                'fecha_limite': evaluacion.fecha_limite.isoformat() if evaluacion.fecha_limite else '',
+                'archivo_url': request.build_absolute_uri(evaluacion.archivo.url) if evaluacion.archivo else '',
+                'estado_estudiante': estado_estudiante,
+                'fecha_entrega': fecha_entrega,
+                'calificacion': calificacion,
+                'created_at': evaluacion.created_at.isoformat() if evaluacion.created_at else ''
+            })
+        
+        return Response({
+            'success': True,
+            'total': len(evaluaciones_data),
+            'evaluaciones': evaluaciones_data
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response({
+            'success': False,
+            'message': f'Error al obtener evaluaciones: {str(e)}',
+            'evaluaciones': []
+        }, status=status.HTTP_400_BAD_REQUEST)
+
 # ==================== RESET DE CONTRASEÑA (PÚBLICO) ====================
 
 @api_view(['POST'])

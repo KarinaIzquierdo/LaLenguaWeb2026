@@ -126,6 +126,7 @@ urlpatterns = [
     path('profile/', views.mobile_profile_view, name='mobile_profile'),  # Perfil para Android
     path('profile/update/', views.mobile_update_profile_view, name='mobile_update_profile'),  # Actualizar perfil desde Android
     path('classes/', views.mobile_classes_view, name='mobile_classes'),  # Clases programadas del usuario
+    path('evaluations/', views.mobile_evaluations_view, name='mobile_evaluations'),  # Evaluaciones asignadas al usuario
 ]
 
 urlpatterns += router.urls
