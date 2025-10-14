@@ -404,7 +404,11 @@ def mobile_evaluations_view(request):
     
     try:
         # Obtener todas las evaluaciones asignadas al usuario
-        evaluaciones = user.evaluaciones_asignadas.filter(estado='publicada').order_by('-fecha_limite')
+        # Soportar ambos estados: 'publicada' y 'published' (por inconsistencia en BD)
+        from django.db.models import Q
+        evaluaciones = user.evaluaciones_asignadas.filter(
+            Q(estado='publicada') | Q(estado='published')
+        ).order_by('-fecha_limite')
         
         # Formatear las evaluaciones para móvil
         evaluaciones_data = []
