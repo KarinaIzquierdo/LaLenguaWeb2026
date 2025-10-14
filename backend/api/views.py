@@ -348,6 +348,51 @@ def mobile_update_profile_view(request):
             'message': f'Error al actualizar perfil: {str(e)}'
         }, status=status.HTTP_400_BAD_REQUEST)
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def mobile_classes_view(request):
+    """
+    Endpoint para obtener las clases programadas del usuario autenticado
+    Formato optimizado para aplicaciones móviles
+    """
+    user = request.user
+    
+    try:
+        # Obtener todas las clases del usuario
+        clases = user.clases.all().order_by('fecha', 'hora')
+        
+        # Formatear las clases para móvil
+        clases_data = []
+        for clase in clases:
+            clases_data.append({
+                'id': clase.id,
+                'nombre': clase.nombre,
+                'profesor': clase.profesor,
+                'fecha': clase.fecha.isoformat(),
+                'hora': clase.hora,
+                'duracion': clase.duracion,
+                'tema': clase.tema if clase.tema else '',
+                'descripcion': clase.descripcion if clase.descripcion else '',
+                'tipo_clase': clase.tipo_clase,
+                'modalidad': clase.modalidad,
+                'meet_link': clase.meet_link if clase.meet_link else '',
+                'estado': clase.estado,
+                'created_at': clase.created_at.isoformat() if clase.created_at else ''
+            })
+        
+        return Response({
+            'success': True,
+            'total': len(clases_data),
+            'clases': clases_data
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response({
+            'success': False,
+            'message': f'Error al obtener clases: {str(e)}',
+            'clases': []
+        }, status=status.HTTP_400_BAD_REQUEST)
+
 # ==================== RESET DE CONTRASEÑA (PÚBLICO) ====================
 
 @api_view(['POST'])

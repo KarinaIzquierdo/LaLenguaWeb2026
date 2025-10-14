@@ -20,6 +20,7 @@ def api_info_view(request):
                 "login": "/api/login/",  # Endpoint específico para móviles (POST)
                 "profile": "/api/profile/",  # Obtener perfil móvil (GET)
                 "update_profile_mobile": "/api/profile/update/",  # Actualizar perfil móvil (PUT/PATCH)
+                "classes": "/api/classes/",  # Obtener clases programadas del usuario (GET)
                 "web_login": "/api/auth/login/",  # Endpoint para web
                 "web_profile": "/api/auth/profile/",  # Endpoint complejo para web
                 "web_update_profile": "/api/auth/update-profile/",  # Actualizar perfil web (POST)
