@@ -17,14 +17,15 @@ def api_info_view(request):
         "base_url": request.build_absolute_uri('/api/'),
         "endpoints": {
             "authentication": {
-                "login": "/api/login/",  # Endpoint específico para móviles
-                "profile": "/api/profile/",  # Endpoint simple para móviles
+                "login": "/api/login/",  # Endpoint específico para móviles (POST)
+                "profile": "/api/profile/",  # Obtener perfil móvil (GET)
+                "update_profile_mobile": "/api/profile/update/",  # Actualizar perfil móvil (PUT/PATCH)
                 "web_login": "/api/auth/login/",  # Endpoint para web
                 "web_profile": "/api/auth/profile/",  # Endpoint complejo para web
+                "web_update_profile": "/api/auth/update-profile/",  # Actualizar perfil web (POST)
                 "register": "/api/auth/register/",
                 "verify_token": "/api/auth/verify-token/",
-                "change_password": "/api/auth/change-password/",
-                "update_profile": "/api/auth/update-profile/"
+                "change_password": "/api/auth/change-password/"
             },
             "classes": {
                 "list": "/api/clases/",

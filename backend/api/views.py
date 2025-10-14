@@ -253,6 +253,101 @@ def mobile_profile_view(request):
         'correo_personal': user.correo_personal if user.correo_personal else ''
     }, status=status.HTTP_200_OK)
 
+@api_view(['PUT', 'PATCH'])
+@permission_classes([IsAuthenticated])
+def mobile_update_profile_view(request):
+    """
+    Endpoint específico para actualizar perfil desde aplicaciones móviles
+    Acepta formato simple con snake_case
+    """
+    user = request.user
+    data = request.data
+    
+    try:
+        # Actualizar campos - Soportar snake_case (formato móvil)
+        if 'first_name' in data:
+            user.first_name = data.get('first_name', '')
+        
+        if 'last_name' in data:
+            user.last_name = data.get('last_name', '')
+        
+        if 'phone' in data:
+            user.phone = data.get('phone', '')
+        
+        if 'country' in data:
+            user.country = data.get('country', '')
+        
+        if 'city' in data:
+            user.city = data.get('city', '')
+        
+        if 'english_level' in data:
+            user.english_level = data.get('english_level', '')
+        
+        if 'birth_date' in data:
+            birth_value = data.get('birth_date')
+            if birth_value:
+                user.birth_date = birth_value
+        
+        if 'cedula' in data:
+            user.cedula = data.get('cedula', '')
+        
+        if 'address' in data:
+            user.address = data.get('address', '')
+        
+        if 'emergency_contact' in data:
+            user.emergency_contact = data.get('emergency_contact', '')
+        
+        if 'emergency_phone' in data:
+            user.emergency_phone = data.get('emergency_phone', '')
+        
+        if 'learning_goals' in data:
+            user.learning_goals = data.get('learning_goals', '')
+        
+        if 'correo_personal' in data:
+            user.correo_personal = data.get('correo_personal', '')
+        
+        # Marcar perfil como completado
+        user.profile_completed = True
+        user.save()
+        
+        # Devolver el perfil actualizado
+        first_name = user.first_name if user.first_name else ''
+        last_name = user.last_name if user.last_name else ''
+        full_name = f"{first_name} {last_name}".strip()
+        if not full_name:
+            full_name = user.username if user.username else ''
+        
+        return Response({
+            'success': True,
+            'message': 'Perfil actualizado exitosamente',
+            'user': {
+                'id': user.id,
+                'username': user.username if user.username else '',
+                'email': user.email if user.email else '',
+                'first_name': first_name,
+                'last_name': last_name,
+                'phone': user.phone if user.phone else '',
+                'country': user.country if user.country else '',
+                'city': user.city if user.city else '',
+                'role': user.role if user.role else 'student',
+                'english_level': user.english_level if user.english_level else '',
+                'full_name': full_name,
+                'birth_date': user.birth_date.isoformat() if user.birth_date else '',
+                'address': user.address if user.address else '',
+                'learning_goals': user.learning_goals if user.learning_goals else '',
+                'profile_completed': user.profile_completed if user.profile_completed is not None else False,
+                'bloque_asignado': user.bloque_asignado if user.bloque_asignado else '',
+                'created_at': user.created_at.isoformat() if user.created_at else '',
+                'correo_personal': user.correo_personal if user.correo_personal else ''
+            }
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response({
+            'success': False,
+            'message': f'Error al actualizar perfil: {str(e)}'
+        }, status=status.HTTP_400_BAD_REQUEST)
+
 # ==================== RESET DE CONTRASEÑA (PÚBLICO) ====================
 
 @api_view(['POST'])
