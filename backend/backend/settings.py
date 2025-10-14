@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
 from pathlib import Path
+from decouple import config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -20,10 +21,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-c$_jrh4xhq&ux#(40!%5nlhd7&68!&qgnl$ek_o+mb@0o(z#5&'
+SECRET_KEY = config('SECRET_KEY', default='django-insecure-c$_jrh4xhq&ux#(40!%5nlhd7&68!&qgnl$ek_o+mb@0o(z#5&')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = config('DEBUG', default=True, cast=bool)
 
 AUTH_USER_MODEL = 'api.CustomUser'
 
@@ -184,6 +185,6 @@ EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'your-email@gmail.com'  # Cambiar por tu email
-EMAIL_HOST_PASSWORD = 'your-app-password'  # Cambiar por tu contraseña de aplicación
+EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='your-email@gmail.com')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='your-app-password')
 DEFAULT_FROM_EMAIL = 'The Language <noreply@thelanguage.co>'
