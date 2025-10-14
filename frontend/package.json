@@ -16,7 +16,7 @@
     "@react-three/fiber": "^9.3.0",
     "@types/react-router-dom": "^5.3.3",
     "@types/three": "^0.179.0",
-    "axios": "^1.11.0",
+    "axios": "^1.12.2",
     "chart.js": "^4.5.0",
     "framer-motion": "^12.23.12",
     "lottie-react": "^2.4.1",

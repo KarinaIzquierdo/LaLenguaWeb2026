@@ -72,7 +72,7 @@ function PiePagina() {
           <h3>Contacto</h3>
           <div className="contact-info">
             <p>📧 hello@thelanguage.com</p>
-            <p>📱 +57 300 555 0123</p>
+            <p>📱 +57 316 4844819</p>
             <p>📍 Bogotá, Colombia</p>
           </div>
         </div>

@@ -8,6 +8,7 @@ from . import notificacion_views
 from . import calificacion_views
 from . import profesor_views
 from . import user_views
+from . import mobile_views
 from .plan_views import (
     planes_list_view, plan_create_view, plan_update_view, plan_delete_view, plan_toggle_view,
     ventas_list_view, venta_create_view, venta_update_view, estadisticas_financieras_view
@@ -117,6 +118,12 @@ urlpatterns = [
     path('suscripciones/activas/', suscripciones_activas_view, name='suscripciones_activas'),
     path('suscripciones/recordatorio/', enviar_recordatorio_pago_view, name='recordatorio_pago'),
     path('suscripciones/renovar/', renovar_plan_view, name='renovar_plan'),
+    
+    # Endpoints específicos para móviles
+    path('mobile/info/', mobile_views.api_info_view, name='mobile_api_info'),
+    path('mobile/config/', mobile_views.mobile_config_view, name='mobile_config'),
+    path('login/', views.mobile_login_view, name='mobile_login'),  # Endpoint para Android
+    path('profile/', views.mobile_profile_view, name='mobile_profile'),  # Perfil para Android
 ]
 
 urlpatterns += router.urls

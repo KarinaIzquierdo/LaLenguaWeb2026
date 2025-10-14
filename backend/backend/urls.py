@@ -18,8 +18,11 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from api.views import home_view, favicon_view
 
 urlpatterns = [
+    path('', home_view, name='home'),  # Página de inicio
+    path('favicon.ico', favicon_view, name='favicon'),  # Favicon
     path('admin/', admin.site.urls),
     path('api/', include('api.urls')),
 ]

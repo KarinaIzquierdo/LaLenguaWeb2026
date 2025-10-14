@@ -22,13 +22,13 @@ interface ChangePasswordData {
   new_password: string;
 }
 
-const API_BASE_URL = 'http://localhost:8000/api';
+const API_BASE_URL = 'http://127.0.0.1:8000';
 
 export const authService = {
   // Login del usuario
   async login(credentials: LoginCredentials): Promise<LoginResponse> {
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/login/`, {
+      const response = await fetch(`${API_BASE_URL}/api/auth/login/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(credentials),
@@ -55,7 +55,7 @@ export const authService = {
   // Solicitar restablecimiento de contraseña (backend opcional)
   async requestPasswordReset(email: string): Promise<{ success: boolean; message: string; reset_link?: string; token?: string }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/request-password-reset/`, {
+      const response = await fetch(`${API_BASE_URL}/api/auth/request-password-reset/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })
@@ -79,7 +79,7 @@ export const authService = {
   // Confirmar restablecimiento (token + nueva contraseña)
   async resetPassword(token: string, new_password: string): Promise<{ success: boolean; message: string }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/reset-password/`, {
+      const response = await fetch(`${API_BASE_URL}/api/auth/reset-password/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, new_password })
@@ -126,7 +126,7 @@ export const authService = {
       if (!token) {
         return { success: false, message: 'No estás autenticado' };
       }
-      const response = await fetch(`${API_BASE_URL}/auth/change-password/`, {
+      const response = await fetch(`${API_BASE_URL}/api/auth/change-password/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -151,7 +151,7 @@ export const authService = {
     const token = authService.getToken();
     if (!token) return false;
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/verify-token/`, {
+      const response = await fetch(`${API_BASE_URL}/api/auth/verify-token/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -177,7 +177,7 @@ export const authService = {
       throw new Error('No token found');
     }
 
-    const response = await fetch(`${API_BASE_URL}/auth/profile/`, {
+    const response = await fetch(`${API_BASE_URL}/api/auth/profile/`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
@@ -213,7 +213,7 @@ export const authService = {
       if (!token) {
         return { success: false, message: 'No estás autenticado' };
       }
-      const response = await fetch(`${API_BASE_URL}/auth/update-profile/`, {
+      const response = await fetch(`${API_BASE_URL}/api/auth/update-profile/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

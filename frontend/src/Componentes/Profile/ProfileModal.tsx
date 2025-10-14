@@ -22,6 +22,7 @@ interface UserProfile {
   emergency_contact: string;
   emergency_phone: string;
   learning_goals: string;
+  correo_personal: string;
   profile_completed: boolean;
 }
 
@@ -46,6 +47,7 @@ export default function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
     emergency_contact: '',
     emergency_phone: '',
     learning_goals: '',
+    correo_personal: '',
     profile_completed: false
   });
 
@@ -121,6 +123,7 @@ export default function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
       emergency_contact: '',
       emergency_phone: '',
       learning_goals: '',
+      correo_personal: '',
       profile_completed: false
     });
     setIsEditing(false);
@@ -357,6 +360,21 @@ export default function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                     />
                   ) : (
                     <div className="field-value">{profile.learning_goals || 'No especificado'}</div>
+                  )}
+                </div>
+
+                <div className="field-group">
+                  <label>Correo Personal</label>
+                  {isEditing ? (
+                    <input
+                      type="email"
+                      name="correo_personal"
+                      value={formData.correo_personal}
+                      onChange={handleInputChange}
+                      placeholder="correo.personal@ejemplo.com"
+                    />
+                  ) : (
+                    <div className="field-value">{profile.correo_personal || 'No especificado'}</div>
                   )}
                 </div>
               </div>

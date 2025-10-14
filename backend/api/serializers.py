@@ -11,12 +11,19 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = ('id',)
 
 class LoginSerializer(serializers.Serializer):
-    email = serializers.EmailField()
+    email = serializers.EmailField(required=False)
+    username = serializers.CharField(required=False)
     password = serializers.CharField()
 
     def validate(self, data):
+        # Aceptar tanto email como username para compatibilidad con Android
         email = data.get('email')
+        username = data.get('username')
         password = data.get('password')
+
+        # Si viene username, usarlo como email (para Android)
+        if username and not email:
+            email = username
 
         if email and password:
             # Buscar usuario por email (case insensitive)
@@ -33,7 +40,7 @@ class LoginSerializer(serializers.Serializer):
             except CustomUser.DoesNotExist:
                 raise serializers.ValidationError('Email o contraseña incorrectos.')
         else:
-            raise serializers.ValidationError('Debe proporcionar email y contraseña.')
+            raise serializers.ValidationError('Debe proporcionar email/username y contraseña.')
 
         return data
 

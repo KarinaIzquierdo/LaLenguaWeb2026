@@ -4,6 +4,8 @@ from rest_framework.decorators import api_view, permission_classes, parser_class
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from django.http import HttpResponse
+from django.shortcuts import render
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
@@ -17,6 +19,118 @@ from .serializers import (
 )
 from .especializacion_serializer import EspecializacionSerializer
 from django.shortcuts import get_object_or_404
+
+def home_view(request):
+    """
+    Página de inicio del API de Lengua
+    """
+    html_content = """
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Lengua API</title>
+        <style>
+            body {
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                margin: 0;
+                padding: 0;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                min-height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .container {
+                text-align: center;
+                max-width: 800px;
+                padding: 40px 20px;
+            }
+            .logo {
+                font-size: 3rem;
+                font-weight: bold;
+                margin-bottom: 20px;
+                text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            }
+            .subtitle {
+                font-size: 1.2rem;
+                margin-bottom: 40px;
+                opacity: 0.9;
+            }
+            .api-info {
+                background: rgba(255,255,255,0.1);
+                border-radius: 15px;
+                padding: 30px;
+                margin: 20px 0;
+                backdrop-filter: blur(10px);
+            }
+            .endpoint {
+                background: rgba(255,255,255,0.2);
+                padding: 15px;
+                margin: 10px 0;
+                border-radius: 8px;
+                font-family: monospace;
+                font-size: 0.9rem;
+            }
+            .status {
+                display: inline-block;
+                background: #28a745;
+                padding: 5px 15px;
+                border-radius: 20px;
+                font-size: 0.8rem;
+                margin-bottom: 20px;
+            }
+            .footer {
+                margin-top: 40px;
+                opacity: 0.7;
+                font-size: 0.9rem;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="logo">📚 Lengua API</div>
+            <div class="subtitle">Sistema de Aprendizaje de Inglés</div>
+            <div class="status">🟢 API Funcionando</div>
+            
+            <div class="api-info">
+                <h3>🔗 Endpoints Principales</h3>
+                <div class="endpoint">POST /api/login/ - Login móvil</div>
+                <div class="endpoint">POST /api/auth/login/ - Login web</div>
+                <div class="endpoint">GET /api/auth/profile/ - Perfil usuario</div>
+                <div class="endpoint">GET /api/clases/ - Lista de clases</div>
+                <div class="endpoint">GET /api/mobile/info/ - Info para móviles</div>
+            </div>
+            
+            <div class="api-info">
+                <h3>📱 Plataformas Soportadas</h3>
+                <p>✅ Aplicación Web React</p>
+                <p>✅ Aplicación Móvil Android</p>
+                <p>✅ APIs REST completas</p>
+            </div>
+            
+            <div class="footer">
+                <p>© 2025 Lengua - Sistema de Aprendizaje</p>
+                <p>Desarrollado con Django REST Framework</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    return HttpResponse(html_content)
+
+def favicon_view(request):
+    """
+    Favicon simple para evitar errores 404
+    """
+    # SVG favicon simple
+    svg_content = '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="40" fill="#667eea"/>
+        <text x="50" y="60" font-family="Arial" font-size="40" fill="white" text-anchor="middle">L</text>
+    </svg>'''
+    return HttpResponse(svg_content, content_type="image/svg+xml")
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -56,6 +170,88 @@ def login_view(request):
         'message': 'Credenciales inválidas',
         'errors': serializer.errors
     }, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def mobile_login_view(request):
+    """
+    Endpoint específico para aplicaciones móviles Android
+    Acepta username/password y devuelve solo el token
+    """
+    print(f"Mobile login request data: {request.data}")  # Debug
+    
+    username = request.data.get('username')
+    password = request.data.get('password')
+    
+    if not username or not password:
+        return Response({
+            'error': 'Username y password son requeridos'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Buscar usuario por email (username es el email)
+    try:
+        user = CustomUser.objects.get(email__iexact=username)
+        if user.check_password(password):
+            if user.is_active:
+                # Generar token JWT
+                refresh = RefreshToken.for_user(user)
+                access_token = refresh.access_token
+                
+                # Respuesta simple que espera Android
+                return Response({
+                    'token': str(access_token)
+                }, status=status.HTTP_200_OK)
+            else:
+                return Response({
+                    'error': 'Cuenta desactivada'
+                }, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({
+                'error': 'Credenciales inválidas'
+            }, status=status.HTTP_400_BAD_REQUEST)
+    except CustomUser.DoesNotExist:
+        return Response({
+            'error': 'Credenciales inválidas'
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def mobile_profile_view(request):
+    """
+    Endpoint específico para obtener perfil de usuario en aplicaciones móviles
+    Devuelve formato simple y directo
+    """
+    user = request.user
+    
+    # Asegurar que TODOS los campos sean strings, nunca None/null
+    first_name = user.first_name if user.first_name else ''
+    last_name = user.last_name if user.last_name else ''
+    full_name = f"{first_name} {last_name}".strip()
+    if not full_name:
+        full_name = user.username if user.username else ''
+    
+    return Response({
+        'id': user.id,
+        'username': user.username if user.username else '',
+        'email': user.email if user.email else '',
+        'first_name': first_name,
+        'last_name': last_name,
+        'phone': user.phone if user.phone else '',
+        'country': user.country if user.country else '',
+        'city': user.city if user.city else '',
+        'role': user.role if user.role else 'student',
+        'english_level': user.english_level if user.english_level else '',
+        'full_name': full_name,
+        
+        # Campos adicionales para perfil completo - NUNCA null
+        'birth_date': user.birth_date.isoformat() if user.birth_date else '',
+        'address': user.address if user.address else '',
+        'learning_goals': user.learning_goals if user.learning_goals else '',
+        'profile_completed': user.profile_completed if user.profile_completed is not None else False,
+        'bloque_asignado': user.bloque_asignado if user.bloque_asignado else '',
+        'created_at': user.created_at.isoformat() if user.created_at else '',
+        'correo_personal': user.correo_personal if user.correo_personal else ''
+    }, status=status.HTTP_200_OK)
 
 # ==================== RESET DE CONTRASEÑA (PÚBLICO) ====================
 
@@ -253,31 +449,60 @@ def update_profile_view(request):
     data = request.data
     
     try:
-        # Actualizar campos del usuario
-        if 'firstName' in data:
-            user.first_name = data['firstName']
-        if 'lastName' in data:
-            user.last_name = data['lastName']
-        if 'birthDate' in data:
-            user.birth_date = data['birthDate']
+        # Actualizar campos del usuario - Soportar camelCase y snake_case
+        # Nombre
+        if 'firstName' in data or 'first_name' in data:
+            user.first_name = data.get('firstName') or data.get('first_name', '')
+        
+        # Apellido
+        if 'lastName' in data or 'last_name' in data:
+            user.last_name = data.get('lastName') or data.get('last_name', '')
+        
+        # Fecha de nacimiento
+        if 'birthDate' in data or 'birth_date' in data:
+            birth_value = data.get('birthDate') or data.get('birth_date')
+            if birth_value:
+                user.birth_date = birth_value
+        
+        # Cédula
         if 'cedula' in data:
-            user.cedula = data['cedula']
+            user.cedula = data.get('cedula', '')
+        
+        # Teléfono
         if 'phone' in data:
-            user.phone = data['phone']
+            user.phone = data.get('phone', '')
+        
+        # Dirección
         if 'address' in data:
-            user.address = data['address']
+            user.address = data.get('address', '')
+        
+        # Ciudad
         if 'city' in data:
-            user.city = data['city']
+            user.city = data.get('city', '')
+        
+        # País
         if 'country' in data:
-            user.country = data['country']
-        if 'emergencyContact' in data:
-            user.emergency_contact = data['emergencyContact']
-        if 'emergencyPhone' in data:
-            user.emergency_phone = data['emergencyPhone']
-        if 'englishLevel' in data:
-            user.english_level = data['englishLevel']
-        if 'learningGoals' in data:
-            user.learning_goals = data['learningGoals']
+            user.country = data.get('country', '')
+        
+        # Contacto de emergencia
+        if 'emergencyContact' in data or 'emergency_contact' in data:
+            user.emergency_contact = data.get('emergencyContact') or data.get('emergency_contact', '')
+        
+        # Teléfono de emergencia
+        if 'emergencyPhone' in data or 'emergency_phone' in data:
+            user.emergency_phone = data.get('emergencyPhone') or data.get('emergency_phone', '')
+        
+        # ✅ NIVEL DE INGLÉS - Soportar ambos formatos
+        if 'englishLevel' in data or 'english_level' in data:
+            user.english_level = data.get('englishLevel') or data.get('english_level', '')
+        
+        # ✅ OBJETIVOS DE APRENDIZAJE - Soportar ambos formatos
+        if 'learningGoals' in data or 'learning_goals' in data:
+            user.learning_goals = data.get('learningGoals') or data.get('learning_goals', '')
+        
+        # ✅ CORREO PERSONAL - Agregar soporte
+        if 'correoPersonal' in data or 'correo_personal' in data:
+            user.correo_personal = data.get('correoPersonal') or data.get('correo_personal', '')
         
         # Marcar perfil como completado
         user.profile_completed = True
