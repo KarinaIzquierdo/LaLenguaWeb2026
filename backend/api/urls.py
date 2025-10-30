@@ -9,6 +9,7 @@ from . import calificacion_views
 from . import profesor_views
 from . import user_views
 from . import mobile_views
+from . import bloque_views
 from .plan_views import (
     planes_list_view, plan_create_view, plan_update_view, plan_delete_view, plan_toggle_view,
     ventas_list_view, venta_create_view, venta_update_view, estadisticas_financieras_view
@@ -32,7 +33,7 @@ urlpatterns = [
     path('auth/profile/', views.user_profile_view, name='user_profile'),
     path('auth/update-profile/', views.update_profile_view, name='update_profile'),
     path('auth/register/', views.register_view, name='register'),
-    path('evaluations/', views.user_evaluations_view, name='user_evaluations'),
+    # path('evaluations/', views.user_evaluations_view, name='user_evaluations'),  # ❌ OBSOLETO - Conflicto con endpoint móvil
     
     # Endpoints para profesores
     path('auth/profesor/login/', views.profesor_login_view, name='profesor_login'),
@@ -51,7 +52,7 @@ urlpatterns = [
     path('gallery/<int:pk>/delete/', views.gallery_delete_view, name='gallery_delete'),
 
     # Endpoints para Clubs (CLB)
-    path('clubs/', views.clubs_list_view, name='clubs_list'),
+    # path('clubs/', views.clubs_list_view, name='clubs_list'),  # ❌ Comentado - Conflicto con endpoint móvil
     path('clubs/create/', views.club_create_view, name='club_create'),
     path('clubs/<int:club_id>/materials/', views.club_materials_list_view, name='club_materials_list'),
     path('clubs/<int:club_id>/materials/create/', views.club_material_create_view, name='club_material_create'),
@@ -67,6 +68,15 @@ urlpatterns = [
     path('especializaciones/<int:pk>/update/', especializacion_views.especializaciones_update_view, name='especializaciones_update'),
     path('especializaciones/<int:pk>/delete/', especializacion_views.especializaciones_delete_view, name='especializaciones_delete'),
     path('especializaciones/<int:pk>/toggle/', especializacion_views.especializaciones_toggle_view, name='especializaciones_toggle'),
+    
+    # Endpoints para bloques
+    path('bloques/', bloque_views.bloques_list_view, name='bloques_list'),
+    path('bloques/create/', bloque_views.bloque_create_view, name='bloque_create'),
+    path('bloques/<int:pk>/', bloque_views.bloque_detail_view, name='bloque_detail'),
+    path('bloques/<int:pk>/update/', bloque_views.bloque_update_view, name='bloque_update'),
+    path('bloques/<int:pk>/delete/', bloque_views.bloque_delete_view, name='bloque_delete'),
+    path('bloques/<int:pk>/estudiantes/', bloque_views.bloque_estudiantes_view, name='bloque_estudiantes'),
+    path('bloques/<int:pk>/toggle/', bloque_views.bloque_toggle_view, name='bloque_toggle'),
     
     # Endpoints para evaluaciones
     path('evaluaciones/', evaluacion_views.evaluaciones_list_view, name='evaluaciones_list'),
@@ -126,7 +136,11 @@ urlpatterns = [
     path('profile/', views.mobile_profile_view, name='mobile_profile'),  # Perfil para Android
     path('profile/update/', views.mobile_update_profile_view, name='mobile_update_profile'),  # Actualizar perfil desde Android
     path('classes/', views.mobile_classes_view, name='mobile_classes'),  # Clases programadas del usuario
+    path('classes/create/', views.mobile_create_class_view, name='mobile_create_class'),  # Crear clase desde móvil
+    path('professors/', views.mobile_professors_list_view, name='mobile_professors_list'),  # Lista de profesores
+    path('students/', views.mobile_students_list_view, name='mobile_students_list'),  # Lista de estudiantes
     path('evaluations/', views.mobile_evaluations_view, name='mobile_evaluations'),  # Evaluaciones asignadas al usuario
+    path('clubs/', views.mobile_clubs_view, name='mobile_clubs'),  # Clubs y materiales del usuario
 ]
 
 urlpatterns += router.urls

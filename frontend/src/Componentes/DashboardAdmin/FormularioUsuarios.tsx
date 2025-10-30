@@ -66,7 +66,7 @@ export default function FormularioUsuarios() {
     nombres: '',
     apellidos: '',
     correo: '',
-    correo_personal: '',
+    correo_personal: '',  // Ahora es el campo principal
     rol: 'Estudiante',
     contrasena: '',
     bloque_asignado: '',
@@ -122,10 +122,11 @@ export default function FormularioUsuarios() {
       errors.apellidos = 'Los apellidos son obligatorios';
     }
     
-    if (!formData.correo.trim()) {
-      errors.correo = 'El correo es obligatorio';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.correo)) {
-      errors.correo = 'El formato del correo no es válido';
+    // Validar correo_personal (ahora es obligatorio)
+    if (!formData.correo_personal?.trim()) {
+      errors.correo_personal = 'El correo personal es obligatorio';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.correo_personal)) {
+      errors.correo_personal = 'El formato del correo no es válido';
     }
     
     if (!editingUser && !formData.contrasena.trim()) {
@@ -144,32 +145,11 @@ export default function FormularioUsuarios() {
    */
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    if (name === 'rol') {
-      let dominio = '@thelanguage.co';
-      if (value === 'Profesor') {
-        dominio = '@soy.thelanguage.co';
-      } else if (value === 'Admin') {
-        dominio = '@thelanguage.co';
-      }
-      // Solo deja la parte antes de la arroba
-      let correoBase = formData.correo.split('@')[0];
-      setFormData(prev => ({
-        ...prev,
-        rol: value,
-        correo: correoBase ? correoBase + dominio : '',
-      }));
-    } else if (name === 'correo') {
-      // Permitir edición libre del correo sin auto-completar dominio
-      setFormData(prev => ({
-        ...prev,
-        correo: value,
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        [name]: name === 'especializacion_id' ? (value === '' ? undefined : parseInt(value)) : value,
-      }));
-    }
+    // Ya no necesitamos lógica especial para cambiar dominios
+    setFormData(prev => ({
+      ...prev,
+      [name]: name === 'especializacion_id' ? (value === '' ? undefined : parseInt(value)) : value,
+    }));
     if (formErrors[name]) {
       setFormErrors(prev => ({
         ...prev,
@@ -189,6 +169,7 @@ export default function FormularioUsuarios() {
       nombres: '',
       apellidos: '',
       correo: '',
+      correo_personal: '',
       rol: 'Estudiante',
       contrasena: '',
       bloque_asignado: '',
@@ -291,7 +272,8 @@ export default function FormularioUsuarios() {
       const registerData: RegisterData = {
         first_name: formData.nombres,
         last_name: formData.apellidos,
-        email: formData.correo,
+        email: formData.correo || undefined,  // Opcional, se genera automáticamente si no se proporciona
+        correo_personal: formData.correo_personal!,  // Obligatorio
         role: rolMapFrontendToBackend[formData.rol],
         password: formData.contrasena,
         bloque_asignado: formData.bloque_asignado,
@@ -299,6 +281,9 @@ export default function FormularioUsuarios() {
       };
       const result = await userService.register(registerData);
       if (result.success) {
+        // El backend envía automáticamente el email de bienvenida
+        console.log('✅ Usuario creado. Email de bienvenida enviado automáticamente por el backend.');
+
         // Refrescar usuarios desde backend
         try {
           const data = await userService.getAll();
@@ -309,7 +294,7 @@ export default function FormularioUsuarios() {
               const newId: any = (result as any)?.user?.id || (result as any)?.user?.pk || null;
               let targetId: any = newId;
               if (!targetId) {
-                const created = (data as any[]).find(u => u.correo === registerData.email);
+                const created = (data as any[]).find(u => u.correo_personal === registerData.correo_personal);
                 if (created) targetId = created.id;
               }
               if (targetId) {
@@ -322,6 +307,10 @@ export default function FormularioUsuarios() {
         } catch (error) {
           console.log('Usuario creado exitosamente, pero no se pudo refrescar la lista');
         }
+        
+        // Mostrar mensaje de éxito
+        alert(`✅ Usuario creado exitosamente!\n\nSe ha enviado un email de bienvenida a: ${formData.correo_personal}`);
+        
         setShowForm(false);
         setEditingUser(null);
         setFormErrors({});
@@ -330,6 +319,7 @@ export default function FormularioUsuarios() {
           nombres: '',
           apellidos: '',
           correo: '',
+          correo_personal: '',
           rol: 'Estudiante',
           contrasena: '',
           bloque_asignado: '',
@@ -407,7 +397,7 @@ export default function FormularioUsuarios() {
                 <tr>
                   <th>ID</th>
                   <th>Nombre Completo</th>
-                  <th>Correo</th>
+                  <th>Correo Personal</th>
                   <th>Rol</th>
                   <th>Bloque</th>
                   <th>Especialización</th>
@@ -421,7 +411,7 @@ export default function FormularioUsuarios() {
                     <tr key={user.id}>
                       <td>{user.id}</td>
                       <td>{`${user.nombres} ${user.apellidos}`}</td>
-                      <td>{user.correo}</td>
+                      <td>{user.correo_personal || user.correo}</td>
                       <td>{user.rol}</td>
                       <td>
                         <span className="bloque-badge">
@@ -543,35 +533,16 @@ export default function FormularioUsuarios() {
             )}
           </div>
 
-          <div className={`form-field ${formErrors.correo ? 'error' : ''}`}>
-            <label htmlFor="correo">Correo Electrónico (Login) *</label>
-            <input
-              type="email"
-              id="correo"
-              name="correo"
-              value={formData.correo}
-              onChange={handleChange}
-              placeholder="usuario@thelanguage.co"
-              required
-              aria-describedby={formErrors.correo ? "correo-error" : undefined}
-              aria-invalid={!!formErrors.correo}
-            />
-            {formErrors.correo && (
-              <span id="correo-error" className="error-message" role="alert">
-                {formErrors.correo}
-              </span>
-            )}
-          </div>
-
           <div className={`form-field ${formErrors.correo_personal ? 'error' : ''}`}>
-            <label htmlFor="correo_personal">Correo Personal (Recuperación)</label>
+            <label htmlFor="correo_personal">Correo Personal (Login) *</label>
             <input
               type="email"
               id="correo_personal"
               name="correo_personal"
               value={formData.correo_personal}
               onChange={handleChange}
-              placeholder="correo.personal@gmail.com"
+              placeholder="usuario@gmail.com o usuario@outlook.com"
+              required
               aria-describedby={formErrors.correo_personal ? "correo-personal-error" : undefined}
               aria-invalid={!!formErrors.correo_personal}
             />
@@ -580,6 +551,31 @@ export default function FormularioUsuarios() {
                 {formErrors.correo_personal}
               </span>
             )}
+            <small style={{ color: '#666', fontSize: '0.85rem', marginTop: '4px', display: 'block' }}>
+              Este será el correo que el usuario usará para iniciar sesión
+            </small>
+          </div>
+
+          <div className={`form-field ${formErrors.correo ? 'error' : ''}`}>
+            <label htmlFor="correo">Correo Institucional (Opcional)</label>
+            <input
+              type="email"
+              id="correo"
+              name="correo"
+              value={formData.correo}
+              onChange={handleChange}
+              placeholder="Se genera automáticamente si se deja vacío"
+              aria-describedby={formErrors.correo ? "correo-error" : undefined}
+              aria-invalid={!!formErrors.correo}
+            />
+            {formErrors.correo && (
+              <span id="correo-error" className="error-message" role="alert">
+                {formErrors.correo}
+              </span>
+            )}
+            <small style={{ color: '#666', fontSize: '0.85rem', marginTop: '4px', display: 'block' }}>
+              Si se deja vacío, se generará automáticamente como: usuario@thelanguage.co
+            </small>
           </div>
 
           <div className="form-field">

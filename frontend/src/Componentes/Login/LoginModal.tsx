@@ -129,14 +129,14 @@ export default function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps
 
           <form onSubmit={handleSubmit} className="login-form">
             <div className="form-group">
-              <label htmlFor="email">Email</label>
+              <label htmlFor="email">Correo Personal</label>
               <input
                 type="email"
                 id="email"
                 name="email"
                 value={formData.email}
                 onChange={handleInputChange}
-                placeholder="Ingresa tu email"
+                placeholder="tucorreo@gmail.com"
                 className="login-input"
                 disabled={isLoading}
               />
@@ -192,14 +192,14 @@ export default function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps
           <div className="login-modal-body">
             <p>Te enviaremos un correo con instrucciones para restablecer tu contraseña.</p>
             <div className="form-group">
-              <label htmlFor="reset-email">Email</label>
+              <label htmlFor="reset-email">Correo Personal</label>
               <input
                 type="email"
                 id="reset-email"
                 name="reset-email"
                 value={resetEmail}
                 onChange={(e) => setResetEmail(e.target.value)}
-                placeholder="tucorreo@thelanguage.co"
+                placeholder="tucorreo@gmail.com"
                 className="login-input"
               />
             </div>

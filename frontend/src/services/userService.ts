@@ -4,7 +4,8 @@ const API_BASE_URL = 'http://localhost:8000/api';
 export interface RegisterData {
   first_name: string;
   last_name: string;
-  email: string;
+  email?: string;  // Ahora es opcional, se genera automáticamente si no se proporciona
+  correo_personal: string;  // Ahora es obligatorio - correo personal del usuario
   role: string;
   password: string;
   bloque_asignado?: string;
@@ -21,17 +22,12 @@ export interface RegisterResponse {
 export const userService = {
   async register(data: RegisterData): Promise<RegisterResponse> {
     try {
-      // Ajustar el email según el rol
-      let email = data.email.split('@')[0];
-      if (data.role === 'student') {
-        email = email + '@thelanguage.co';
-      } else if (data.role === 'profesor') {
-        email = email + '@soy.thelanguage.co';
-      }
+      // Ya no modificamos el correo_personal, se envía tal cual
+      // El backend generará el email institucional automáticamente si no se proporciona
       const response = await fetch(`${API_BASE_URL}/auth/register/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...data, email }),
+        body: JSON.stringify(data),
       });
       const result = await response.json();
       
@@ -65,9 +61,11 @@ export const userService = {
         nombres: user.first_name,
         apellidos: user.last_name,
         correo: user.email,
+        correo_personal: user.correo_personal,
         rol: user.role,
         activo: user.is_active,
         bloque_asignado: user.bloque_asignado,
+        especializacion_id: user.especializacion,
       }));
     } catch (error) {
       return [];

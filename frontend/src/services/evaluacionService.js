@@ -27,12 +27,20 @@ const makeAuthenticatedRequest = async (url, options = {}) => {
     headers,
   });
   
+  const data = await response.json();
+  
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    // Si hay errores específicos en la respuesta, construir un mensaje de error detallado
+    if (data.errors) {
+      const errorMessage = Object.entries(data.errors)
+        .map(([field, errors]) => `${field}: ${errors.join(', ')}`)
+        .join('\n');
+      throw new Error(errorMessage);
+    }
+    throw new Error(data.message || `Error del servidor: ${response.status}`);
   }
   
-  return response.json();
+  return data;
 };
 
 export const evaluacionService = {
@@ -47,9 +55,9 @@ export const evaluacionService = {
     
     // Agregar campos básicos
     formData.append('titulo', evaluacionData.titulo);
-    formData.append('descripcion', evaluacionData.descripcion);
+    formData.append('descripcion', evaluacionData.descripcion || '');
     formData.append('tipo', evaluacionData.tipo);
-    formData.append('estado', evaluacionData.estado || 'draft');
+    formData.append('estado', evaluacionData.estado || 'borrador');
     
     // Agregar archivo si existe
     if (evaluacionData.archivo) {
@@ -61,11 +69,9 @@ export const evaluacionService = {
       formData.append('fecha_limite', evaluacionData.fecha_limite);
     }
     
-    // Agregar estudiantes asignados
+    // Agregar estudiantes asignados como un array JSON
     if (evaluacionData.estudiantes_asignados && evaluacionData.estudiantes_asignados.length > 0) {
-      evaluacionData.estudiantes_asignados.forEach(studentId => {
-        formData.append('estudiantes_asignados', studentId);
-      });
+      formData.append('estudiantes_asignados', JSON.stringify(evaluacionData.estudiantes_asignados));
     }
     
     return makeAuthenticatedRequest(`${API_BASE_URL}/evaluaciones/create/`, {

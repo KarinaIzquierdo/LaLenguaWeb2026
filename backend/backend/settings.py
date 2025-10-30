@@ -178,7 +178,7 @@ CORS_ALLOW_HEADERS = [
 ]
 
 # Allow all hosts for development
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '10.0.2.2']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '10.0.2.2', '10.6.247.110', '172.20.10.3', '0.0.0.0']
 
 # Email Configuration
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'

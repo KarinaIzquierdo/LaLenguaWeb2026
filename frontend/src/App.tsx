@@ -164,28 +164,16 @@ function App() {
             {/* Nueva contraseña (con token) */}
             <Route path="/new-password" element={<NewPassword />} />
             
-            {/* Ruta del Blog */}
+            {/* Ruta del Blog - Pública para todos */}
             <Route path="/blog" element={
-              isAuthenticated ? (
-                userRole === 'student' ? (
-                  <Navigate to="/dashboard" replace />
-                ) : userRole === 'profesor' ? (
-                  <Navigate to="/dashboard-profesor" replace />
-                ) : userRole === 'admin' ? (
-                  <Navigate to="/admin" replace />
-                ) : (
-                  <Navigate to="/" replace />
-                )
-              ) : (
-                <>
-                  <Blog />
-                  <LoginModal 
-                    isOpen={isLoginModalOpen}
-                    onClose={handleCloseModal}
-                    onLogin={handleLogin}
-                  />
-                </>
-              )
+              <>
+                <Blog />
+                <LoginModal 
+                  isOpen={isLoginModalOpen}
+                  onClose={handleCloseModal}
+                  onLogin={handleLogin}
+                />
+              </>
             } />
             
             {/* Dashboard de estudiante */}

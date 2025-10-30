@@ -41,10 +41,12 @@ function authHeaders(): HeadersInit {
 export const clbService = {
   async getClubs(): Promise<Club[]> {
     const res = await fetch(`${API_BASE_URL}/clubs/`, { headers: jsonHeaders() });
-    const text = await res.text();
-    if (!res.ok) throw new Error(`HTTP ${res.status}: ${text}`);
-    const data = JSON.parse(text);
-    return data.data as Club[];
+    const data = await res.json();
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${JSON.stringify(data)}`);
+    // Si data ya es un array, devolverlo directamente
+    if (Array.isArray(data)) return data as Club[];
+    // Si no, intentar con data.clubs o data.data
+    return (data.clubs || data.data || []) as Club[];
   },
   async createClub(payload: { name: string; description?: string }): Promise<Club> {
     const res = await fetch(`${API_BASE_URL}/clubs/create/`, {

@@ -29,6 +29,7 @@ const EMAILJS_CONFIG = {
   serviceId: 'service_yypcyqc', // Tu Service ID
   templateId: 'template_kqcqa2b', // Tu plantilla contactenos
   passwordResetTemplateId: 'template_c5au9og', // Plantilla específica para reset de contraseña
+  welcomeTemplateId: 'template_kqcqa2b', // Reutilizamos la plantilla de contacto para bienvenida
   publicKey: '5IX1jA4A1wE1BoI8J', // Tu Public Key
   recipientEmail: 'the.languagess@gmail.com'
 };
@@ -168,6 +169,93 @@ export const sendPasswordResetEmail = async (
     return {
       success: false,
       message: 'No pudimos enviar el correo de recuperación. Intenta de nuevo en unos minutos.'
+    };
+  }
+};
+
+/**
+ * Envía un email de bienvenida cuando se registra un nuevo usuario
+ * @param userInfo - Información del usuario registrado
+ * @returns Promise<EmailResponse>
+ */
+export const sendWelcomeEmail = async (
+  userInfo: {
+    email: string;
+    firstName: string;
+    lastName: string;
+    role: string;
+    temporaryPassword: string;
+  }
+): Promise<EmailResponse> => {
+  try {
+    const roleNames: Record<string, string> = {
+      student: 'Estudiante',
+      profesor: 'Profesor',
+      admin: 'Administrador',
+      financiero: 'Financiero'
+    };
+
+    // Adaptamos los parámetros para usar la plantilla de contacto existente
+    const templateParams = {
+      to_email: userInfo.email,
+      from_name: `The Language - Sistema`,
+      from_email: EMAILJS_CONFIG.recipientEmail,
+      message: `
+¡Bienvenido a The Language!
+
+Hola ${userInfo.firstName} ${userInfo.lastName},
+
+Tu cuenta ha sido creada exitosamente con el rol de ${roleNames[userInfo.role] || userInfo.role}.
+
+📋 TUS CREDENCIALES DE ACCESO:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Correo Personal (Login): ${userInfo.email}
+Contraseña Temporal: ${userInfo.temporaryPassword}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚠️ IMPORTANTE: Por tu seguridad, te recomendamos cambiar tu contraseña después de iniciar sesión.
+
+🚀 PRÓXIMOS PASOS:
+1. Accede a: ${window.location.origin}
+2. Inicia sesión con tu correo personal y contraseña temporal
+3. Completa tu perfil con tu información personal
+4. Cambia tu contraseña desde tu perfil
+
+Si tienes alguna pregunta, no dudes en contactarnos.
+
+¡Que tengas un excelente día! 🌟
+
+Saludos,
+El equipo de The Language
+      `.trim()
+    };
+
+    // Debug en desarrollo
+    try {
+      // @ts-ignore
+      const mode = (import.meta && import.meta.env && import.meta.env.MODE) || 'production';
+      if (mode !== 'production') {
+        console.log('[EmailJS templateParams][welcome]', templateParams);
+      }
+    } catch {}
+
+    const response = await emailjs.send(
+      EMAILJS_CONFIG.serviceId,
+      EMAILJS_CONFIG.welcomeTemplateId,
+      templateParams,
+      EMAILJS_CONFIG.publicKey
+    );
+
+    console.log('Email de bienvenida enviado:', response);
+    return {
+      success: true,
+      message: 'Email de bienvenida enviado correctamente'
+    };
+  } catch (error) {
+    console.error('Error al enviar email de bienvenida:', error);
+    return {
+      success: false,
+      message: 'No se pudo enviar el email de bienvenida'
     };
   }
 };

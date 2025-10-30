@@ -188,18 +188,19 @@ def mobile_login_view(request):
             'error': 'Username y password son requeridos'
         }, status=status.HTTP_400_BAD_REQUEST)
     
-    # Buscar usuario por email (username es el email)
+    # Buscar usuario por correo_personal (username es el correo personal)
     try:
-        user = CustomUser.objects.get(email__iexact=username)
+        user = CustomUser.objects.get(correo_personal__iexact=username)
         if user.check_password(password):
             if user.is_active:
                 # Generar token JWT
                 refresh = RefreshToken.for_user(user)
                 access_token = refresh.access_token
                 
-                # Respuesta simple que espera Android
+                # Respuesta con token y rol para Android
                 return Response({
-                    'token': str(access_token)
+                    'token': str(access_token),
+                    'role': user.role if hasattr(user, 'role') else 'student'
                 }, status=status.HTTP_200_OK)
             else:
                 return Response({
@@ -352,19 +353,25 @@ def mobile_update_profile_view(request):
 @permission_classes([IsAuthenticated])
 def mobile_classes_view(request):
     """
-    Endpoint para obtener las clases programadas del usuario autenticado
+    Endpoint para obtener las clases del usuario autenticado
     Formato optimizado para aplicaciones móviles
+    Filtra clases futuras y separa por estado
     """
     user = request.user
     
     try:
-        # Obtener todas las clases del usuario
-        clases = user.clases.all().order_by('fecha', 'hora')
+        from datetime import date
+        hoy = date.today()
         
-        # Formatear las clases para móvil
-        clases_data = []
-        for clase in clases:
-            clases_data.append({
+        # Obtener todas las clases del usuario
+        todas_clases = user.clases.all().order_by('fecha', 'hora')
+        
+        # Separar clases por estado y fecha
+        clases_proximas = []
+        clases_completadas = []
+        
+        for clase in todas_clases:
+            clase_data = {
                 'id': clase.id,
                 'nombre': clase.nombre,
                 'profesor': clase.profesor,
@@ -378,12 +385,28 @@ def mobile_classes_view(request):
                 'meet_link': clase.meet_link if clase.meet_link else '',
                 'estado': clase.estado,
                 'created_at': clase.created_at.isoformat() if clase.created_at else ''
-            })
+            }
+            
+            # Clasificar según estado y fecha
+            if clase.estado == 'completada':
+                clases_completadas.append(clase_data)
+            elif clase.estado in ['programada', 'activa'] and clase.fecha >= hoy:
+                # Solo clases futuras o de hoy
+                clases_proximas.append(clase_data)
+            elif clase.estado == 'programada' and clase.fecha < hoy:
+                # Clases pasadas que quedaron como "programada" -> marcarlas como completadas
+                clase_data['estado'] = 'completada'
+                clases_completadas.append(clase_data)
+            else:
+                # Cualquier otro caso (clases pasadas)
+                clases_completadas.append(clase_data)
         
         return Response({
             'success': True,
-            'total': len(clases_data),
-            'clases': clases_data
+            'total': len(clases_proximas) + len(clases_completadas),
+            'proximas': clases_proximas,
+            'completadas': clases_completadas,
+            'clases': clases_proximas + clases_completadas  # Mantener compatibilidad
         }, status=status.HTTP_200_OK)
         
     except Exception as e:
@@ -391,6 +414,261 @@ def mobile_classes_view(request):
             'success': False,
             'message': f'Error al obtener clases: {str(e)}',
             'clases': []
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def mobile_create_class_view(request):
+    """
+    Endpoint para crear una nueva clase desde aplicaciones móviles
+    Admins y profesores pueden crear clases
+    """
+    user = request.user
+    
+    print(f"📝 CREATE CLASS - Usuario: {user.username} (Role: {getattr(user, 'role', 'N/A')})")
+    print(f"📋 Datos recibidos: {request.data}")
+    
+    # Verificar que el usuario sea admin o profesor
+    user_role = getattr(user, 'role', None)
+    if user_role not in ['admin', 'profesor']:
+        return Response({
+            'success': False,
+            'message': 'Solo los administradores y profesores pueden crear clases'
+        }, status=status.HTTP_403_FORBIDDEN)
+    
+    try:
+        # Extraer datos del request
+        data = request.data.copy()
+        
+        # Validar campos requeridos
+        required_fields = ['nombre', 'fecha', 'hora', 'duracion', 'tema', 'modalidad']
+        missing_fields = [field for field in required_fields if not data.get(field)]
+        
+        if missing_fields:
+            return Response({
+                'success': False,
+                'message': f'Campos requeridos faltantes: {", ".join(missing_fields)}'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Si es admin, puede especificar el profesor. Si es profesor, usa su propio nombre
+        if user_role == 'admin':
+            # Admin puede especificar el profesor en el request, o usar su propio nombre
+            if 'profesor' not in data or not data['profesor']:
+                data['profesor'] = f"{user.first_name} {user.last_name}" if user.first_name else user.username
+            # Si el admin envió 'profesor', se usa ese valor
+        else:
+            # Si es profesor, siempre usa su propio nombre
+            data['profesor'] = f"{user.first_name} {user.last_name}" if user.first_name else user.username
+        
+        # Crear la clase usando el serializer
+        serializer = ClaseSerializer(data=data, context={'request': request})
+        
+        if serializer.is_valid():
+            clase = serializer.save()
+            
+            # Asignar estudiantes si se proporcionaron
+            if 'estudiantes' in data and data['estudiantes']:
+                estudiante_ids = data['estudiantes']
+                if isinstance(estudiante_ids, str):
+                    estudiante_ids = [int(id.strip()) for id in estudiante_ids.split(',')]
+                
+                estudiantes = CustomUser.objects.filter(id__in=estudiante_ids)
+                clase.estudiantes.set(estudiantes)
+                print(f"✅ Asignados {estudiantes.count()} estudiantes a la clase")
+            
+            print(f"✅ Clase creada: {clase.nombre} (ID: {clase.id})")
+            
+            return Response({
+                'success': True,
+                'message': 'Clase creada exitosamente',
+                'clase': ClaseSerializer(clase, context={'request': request}).data
+            }, status=status.HTTP_201_CREATED)
+        
+        print(f"❌ Error de validación: {serializer.errors}")
+        return Response({
+            'success': False,
+            'message': 'Error de validación',
+            'errors': serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+        
+    except Exception as e:
+        print(f"❌ Error al crear clase: {str(e)}")
+        return Response({
+            'success': False,
+            'message': f'Error al crear clase: {str(e)}'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def mobile_professors_list_view(request):
+    """
+    Endpoint para obtener la lista de profesores
+    Para uso en selección de profesor al programar clases (admin)
+    """
+    user = request.user
+    
+    print(f"👨‍🏫 PROFESSORS LIST - Usuario: {user.username}")
+    
+    try:
+        # Obtener todos los profesores (usuarios con role='profesor')
+        profesores = CustomUser.objects.filter(role='profesor').order_by('first_name', 'last_name')
+        
+        profesores_data = []
+        for profesor in profesores:
+            profesores_data.append({
+                'id': profesor.id,
+                'username': profesor.username,
+                'email': profesor.email,
+                'first_name': profesor.first_name or '',
+                'last_name': profesor.last_name or '',
+                'full_name': f"{profesor.first_name} {profesor.last_name}".strip() or profesor.username
+            })
+        
+        print(f"✅ Total profesores encontrados: {len(profesores_data)}")
+        
+        return Response({
+            'success': True,
+            'total': len(profesores_data),
+            'professors': profesores_data
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        print(f"❌ Error al obtener profesores: {str(e)}")
+        return Response({
+            'success': False,
+            'message': f'Error al obtener profesores: {str(e)}',
+            'professors': []
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def mobile_students_list_view(request):
+    """
+    Endpoint para obtener la lista de estudiantes
+    Para uso en selección de estudiantes al programar clases
+    """
+    user = request.user
+    
+    print(f"👥 STUDENTS LIST - Usuario: {user.username}")
+    
+    try:
+        # Obtener todos los estudiantes (usuarios con role='student')
+        estudiantes = CustomUser.objects.filter(role='student').order_by('first_name', 'last_name')
+        
+        estudiantes_data = []
+        for estudiante in estudiantes:
+            estudiantes_data.append({
+                'id': estudiante.id,
+                'username': estudiante.username,
+                'email': estudiante.email,
+                'first_name': estudiante.first_name or '',
+                'last_name': estudiante.last_name or '',
+                'full_name': f"{estudiante.first_name} {estudiante.last_name}".strip() or estudiante.username
+            })
+        
+        print(f"✅ Total estudiantes encontrados: {len(estudiantes_data)}")
+        
+        return Response({
+            'success': True,
+            'total': len(estudiantes_data),
+            'students': estudiantes_data
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        print(f"❌ Error al obtener estudiantes: {str(e)}")
+        return Response({
+            'success': False,
+            'message': f'Error al obtener estudiantes: {str(e)}',
+            'students': []
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def mobile_clubs_view(request):
+    """
+    Endpoint para obtener los clubs del estudiante autenticado con sus materiales
+    Formato optimizado para aplicaciones móviles
+    """
+    # Verificar si hay token en el header
+    auth_header = request.headers.get('Authorization', 'NO AUTH HEADER')
+    print(f"🔑 Authorization Header: {auth_header[:50]}..." if len(auth_header) > 50 else f"🔑 Authorization Header: {auth_header}")
+    
+    user = request.user
+    print(f"🔍 MOBILE CLUBS - Usuario: {user.username} (ID: {user.id}) - Email: {user.email}")
+    
+    try:
+        # Obtener clubs donde el usuario es estudiante o profesor
+        from django.db.models import Q
+        clubs = Club.objects.filter(Q(students=user) | Q(profesor=user)).distinct()
+        
+        print(f"📚 Total clubs encontrados: {clubs.count()}")
+        if clubs.count() > 0:
+            for club in clubs:
+                print(f"  - Club ID {club.id}: {club.name}")
+        else:
+            print(f"⚠️ El usuario {user.email} NO tiene clubs asignados")
+        
+        # Formatear los clubs para móvil
+        clubs_data = []
+        for club in clubs:
+            # Obtener materiales activos del club
+            materiales = club.materials.filter(is_active=True).order_by('-created_at')[:10]  # Últimos 10
+            
+            materiales_data = []
+            for material in materiales:
+                # Construir URL del archivo de forma segura
+                file_url = ''
+                if material.file:
+                    try:
+                        file_url = request.build_absolute_uri(material.file.url)
+                    except Exception:
+                        file_url = material.file.url if material.file.url else ''
+                
+                materiales_data.append({
+                    'id': material.id,
+                    'week': material.week,
+                    'title': material.title,
+                    'description': material.description if material.description else '',
+                    'resource_type': material.resource_type,
+                    'url': material.url if material.url else '',
+                    'file_url': file_url,
+                    'created_at': material.created_at.isoformat() if material.created_at else ''
+                })
+            
+            # Obtener nombre del profesor
+            profesor_nombre = f"{club.profesor.first_name} {club.profesor.last_name}".strip()
+            if not profesor_nombre:
+                profesor_nombre = club.profesor.username
+            
+            clubs_data.append({
+                'id': club.id,
+                'name': club.name,
+                'description': club.description if club.description else '',
+                'profesor': profesor_nombre,
+                'total_students': club.students.count(),
+                'materials': materiales_data,
+                'created_at': club.created_at.isoformat() if club.created_at else ''
+            })
+        
+        print(f"✅ Enviando {len(clubs_data)} clubs al cliente")
+        
+        return Response({
+            'success': True,
+            'total': len(clubs_data),
+            'clubs': clubs_data
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        print(f"❌ ERROR en mobile_clubs_view: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return Response({
+            'success': False,
+            'message': f'Error al obtener clubs: {str(e)}',
+            'clubs': []
         }, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET'])
@@ -401,6 +679,7 @@ def mobile_evaluations_view(request):
     Formato optimizado para aplicaciones móviles
     """
     user = request.user
+    print(f"🔍 MOBILE EVALUATIONS - Usuario: {user.username} (ID: {user.id})")
     
     try:
         # Obtener todas las evaluaciones asignadas al usuario
@@ -409,6 +688,8 @@ def mobile_evaluations_view(request):
         evaluaciones = user.evaluaciones_asignadas.filter(
             Q(estado='publicada') | Q(estado='published')
         ).order_by('-fecha_limite')
+        
+        print(f"📚 Total evaluaciones encontradas: {evaluaciones.count()}")
         
         # Formatear las evaluaciones para móvil
         evaluaciones_data = []
@@ -431,6 +712,15 @@ def mobile_evaluations_view(request):
             if not profesor_nombre:
                 profesor_nombre = evaluacion.profesor.username
             
+            # Construir URL del archivo de forma segura
+            archivo_url = ''
+            if evaluacion.archivo:
+                try:
+                    archivo_url = request.build_absolute_uri(evaluacion.archivo.url)
+                except Exception:
+                    # Si falla build_absolute_uri, usar URL relativa
+                    archivo_url = evaluacion.archivo.url if evaluacion.archivo.url else ''
+            
             evaluaciones_data.append({
                 'id': evaluacion.id,
                 'titulo': evaluacion.titulo,
@@ -438,12 +728,14 @@ def mobile_evaluations_view(request):
                 'tipo': evaluacion.tipo,
                 'profesor': profesor_nombre,
                 'fecha_limite': evaluacion.fecha_limite.isoformat() if evaluacion.fecha_limite else '',
-                'archivo_url': request.build_absolute_uri(evaluacion.archivo.url) if evaluacion.archivo else '',
+                'archivo_url': archivo_url,
                 'estado_estudiante': estado_estudiante,
                 'fecha_entrega': fecha_entrega,
                 'calificacion': calificacion,
                 'created_at': evaluacion.created_at.isoformat() if evaluacion.created_at else ''
             })
+        
+        print(f"✅ Enviando {len(evaluaciones_data)} evaluaciones al cliente")
         
         return Response({
             'success': True,
@@ -452,6 +744,9 @@ def mobile_evaluations_view(request):
         }, status=status.HTTP_200_OK)
         
     except Exception as e:
+        print(f"❌ ERROR en mobile_evaluations_view: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return Response({
             'success': False,
             'message': f'Error al obtener evaluaciones: {str(e)}',
@@ -482,12 +777,12 @@ def request_password_reset_view(request):
         }, status=status.HTTP_400_BAD_REQUEST)
 
     try:
-        # Buscar primero por email institucional
-        user = CustomUser.objects.get(email__iexact=email)
+        # Buscar PRIMERO por correo personal (ahora es el campo principal de login)
+        user = CustomUser.objects.get(correo_personal__iexact=email)
     except CustomUser.DoesNotExist:
         try:
-            # Buscar por correo personal
-            user = CustomUser.objects.get(correo_personal__iexact=email)
+            # Buscar por email institucional como fallback
+            user = CustomUser.objects.get(email__iexact=email)
         except CustomUser.DoesNotExist:
             # Intentar mapear por parte local a dominios institucionales
             try:
@@ -503,53 +798,38 @@ def request_password_reset_view(request):
                 return generic_response
 
     try:
+        from .email_utils import send_password_reset_email
+        
         token_generator = PasswordResetTokenGenerator()
         uid = urlsafe_base64_encode(force_bytes(user.pk))
         token = token_generator.make_token(user)
         # Formato token combinado para el frontend: uid.token
         combined = f"{uid}.{token}"
-        # Enviar email de recuperación
-        from django.core.mail import send_mail
-        from django.conf import settings
         
-        # Determinar el correo de destino
+        # Determinar el correo de destino (SIEMPRE correo personal primero)
         email_destino = user.correo_personal if user.correo_personal else user.email
         
         # Link completo para el frontend
-        reset_link = f"http://localhost:3000/new-password?token={combined}"
+        reset_link = f"http://localhost:5173/new-password?token={combined}"
         
-        # Contenido del email
-        subject = 'Recuperación de Contraseña - The Language'
-        message = f"""
-Hola {user.first_name or user.username},
-
-Has solicitado recuperar tu contraseña para The Language.
-
-Haz clic en el siguiente enlace para crear una nueva contraseña:
-{reset_link}
-
-Este enlace expirará en 1 hora por seguridad.
-
-Si no solicitaste este cambio, puedes ignorar este correo.
-
-Saludos,
-El equipo de The Language
-        """
+        # Nombre del usuario
+        user_name = f"{user.first_name} {user.last_name}".strip() or user.username
         
+        # Enviar email usando la utilidad de Django
         try:
-            send_mail(
-                subject,
-                message,
-                settings.DEFAULT_FROM_EMAIL,
-                [email_destino],
-                fail_silently=False,
+            send_password_reset_email(
+                user_email=email_destino,
+                user_name=user_name,
+                reset_link=reset_link
             )
             return Response({
                 'success': True,
                 'message': 'Se han enviado instrucciones a tu correo.',
+                'reset_link': reset_link  # Solo para desarrollo/testing
             }, status=status.HTTP_200_OK)
         except Exception as email_error:
             # Si falla el envío, devolver el token para desarrollo
+            print(f"⚠️ Error al enviar email de recuperación: {str(email_error)}")
             return Response({
                 'success': True,
                 'message': 'Se han enviado instrucciones a tu correo.',
@@ -924,6 +1204,15 @@ def register_view(request):
     """
     Endpoint para registrar un nuevo usuario (estudiante, profesor o admin)
     """
+    from .serializers import MobileUserSerializer
+    from .email_utils import send_welcome_email
+    
+    # Log para depuración
+    print("=" * 50)
+    print("📝 REGISTRO DE USUARIO - Datos recibidos:")
+    print(f"Data: {request.data}")
+    print("=" * 50)
+    
     serializer = UserRegisterSerializer(data=request.data)
     if serializer.is_valid():
         user = serializer.save()
@@ -934,15 +1223,47 @@ def register_view(request):
             user.save()
             
             # Enviar respuesta con información del bloque para sincronización frontend
-            print(f"Usuario {user.id} registrado con bloque: {user.bloque_asignado}")
+            print(f"✅ Usuario {user.id} registrado con bloque: {user.bloque_asignado}")
         
-        user_serializer = UserSerializer(user)
+        # Enviar email de bienvenida al correo personal
+        if user.correo_personal:
+            try:
+                # Mapeo de roles para mostrar en español
+                role_names = {
+                    'student': 'Estudiante',
+                    'profesor': 'Profesor',
+                    'admin': 'Administrador',
+                    'financiero': 'Financiero'
+                }
+                user_role = role_names.get(user.role, user.role)
+                user_name = f"{user.first_name} {user.last_name}".strip() or user.username
+                
+                # Obtener la contraseña del request (solo disponible en este momento)
+                temporary_password = request.data.get('password', '')
+                
+                # Enviar email de bienvenida
+                send_welcome_email(
+                    user_email=user.correo_personal,
+                    user_name=user_name,
+                    user_role=user_role,
+                    temporary_password=temporary_password,
+                    login_url='http://localhost:5173'  # Cambiar en producción
+                )
+                print(f"📧 Email de bienvenida enviado a: {user.correo_personal}")
+            except Exception as e:
+                print(f"⚠️ No se pudo enviar el email de bienvenida: {str(e)}")
+                # No fallar el registro si el email falla
+        
+        user_serializer = MobileUserSerializer(user)
         return Response({
             'success': True,
             'user': user_serializer.data,
             'message': 'Usuario registrado exitosamente'
         }, status=status.HTTP_201_CREATED)
     else:
+        print("❌ ERRORES DE VALIDACIÓN:")
+        print(serializer.errors)
+        print("=" * 50)
         return Response({
             'success': False,
             'errors': serializer.errors
@@ -985,8 +1306,9 @@ def list_users_view(request):
     """
     Endpoint para listar todos los usuarios
     """
-    users = CustomUser.objects.all()
-    serializer = UserSerializer(users, many=True)
+    from .serializers import MobileUserSerializer
+    users = CustomUser.objects.all().order_by('-date_joined')
+    serializer = MobileUserSerializer(users, many=True)
     return Response(serializer.data)
 
 
@@ -1014,6 +1336,17 @@ class MediaItemViewSet(viewsets.ModelViewSet):
         """
         Guardar el elemento multimedia
         """
+        print("=" * 50)
+        print("📸 CREAR ELEMENTO MULTIMEDIA")
+        print(f"Data recibida: {self.request.data}")
+        print(f"Files: {self.request.FILES}")
+        print("=" * 50)
+        
+        if not serializer.is_valid():
+            print("❌ ERRORES DE VALIDACIÓN:")
+            print(serializer.errors)
+            print("=" * 50)
+        
         serializer.save()
     
     def perform_destroy(self, instance):
@@ -1029,12 +1362,19 @@ class MediaItemViewSet(viewsets.ModelViewSet):
 def gallery_list_view(request):
     """
     Endpoint público para obtener todos los elementos de la galería
+    Formato optimizado para aplicaciones móviles
     """
+    print(f"🖼️ GALLERY LIST - Obteniendo elementos de galería")
+    
     media_items = MediaItem.objects.filter(is_active=True).order_by('-created_at')
     serializer = MediaItemSerializer(media_items, many=True, context={'request': request})
+    
+    print(f"📊 Total elementos encontrados: {media_items.count()}")
+    
     return Response({
         'success': True,
-        'data': serializer.data
+        'total': media_items.count(),
+        'items': serializer.data
     }, status=status.HTTP_200_OK)
 
 
@@ -1185,13 +1525,39 @@ def club_material_create_view(request, club_id):
     if not (user == club.profesor or getattr(user, 'role', None) == 'admin'):
         return Response({'success': False, 'message': 'No autorizado'}, status=status.HTTP_403_FORBIDDEN)
 
-    data = request.data.copy()
-    data['club'] = str(club.id)
+    # Construir el diccionario de datos manualmente
+    data = {
+        'club': str(club.id),
+        'week': request.data.get('week'),
+        'title': request.data.get('title'),
+        'description': request.data.get('description'),
+        'resource_type': request.data.get('resource_type'),
+    }
+    
+    # Manejar URL o archivo según el tipo de recurso
+    if data['resource_type'] == 'url':
+        data['url'] = request.data.get('url')
+    elif data['resource_type'] == 'file' and 'file' in request.FILES:
+        data['file'] = request.FILES['file']
+    
     serializer = ClubMaterialSerializer(data=data, context={'request': request})
     if serializer.is_valid():
-        mat = serializer.save(created_by=user, is_active=True)
-        return Response({'success': True, 'data': ClubMaterialSerializer(mat, context={'request': request}).data}, status=status.HTTP_201_CREATED)
-    return Response({'success': False, 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            mat = serializer.save(created_by=user, is_active=True)
+            return Response({
+                'success': True, 
+                'data': ClubMaterialSerializer(mat, context={'request': request}).data
+            }, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({
+                'success': False,
+                'message': f'Error al guardar el material: {str(e)}'
+            }, status=status.HTTP_400_BAD_REQUEST)
+    
+    return Response({
+        'success': False, 
+        'errors': serializer.errors
+    }, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['POST'])
@@ -1199,20 +1565,28 @@ def club_material_create_view(request, club_id):
 @parser_classes([MultiPartParser, FormParser, JSONParser])
 def gallery_create_view(request):
     """
-    Endpoint para crear un nuevo elemento multimedia
+    Endpoint para crear un nuevo elemento multimedia desde aplicaciones móviles
     """
+    print(f"📤 GALLERY CREATE - Usuario: {request.user.username}")
+    print(f"📋 Datos recibidos: {request.data}")
+    
     serializer = MediaItemSerializer(data=request.data, context={'request': request})
     if serializer.is_valid():
         # Asegurar que los nuevos elementos queden activos por defecto
-        serializer.save(is_active=True)
+        item = serializer.save(is_active=True)
+        print(f"✅ Elemento creado: {item.title} (ID: {item.id})")
+        
         return Response({
             'success': True,
-            'data': serializer.data,
+            'total': 1,
+            'items': [serializer.data],
             'message': 'Elemento creado exitosamente'
         }, status=status.HTTP_201_CREATED)
     
+    print(f"❌ Error de validación: {serializer.errors}")
     return Response({
         'success': False,
+        'message': 'Error de validación',
         'errors': serializer.errors
     }, status=status.HTTP_400_BAD_REQUEST)
 

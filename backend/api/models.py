@@ -1,6 +1,36 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 
+class Bloque(models.Model):
+    """
+    Modelo para los bloques de clases (horarios y niveles)
+    """
+    nombre = models.CharField(max_length=50, help_text="Nombre del turno: Mañana, Tarde, Noche")
+    nivel = models.CharField(max_length=10, help_text="Nivel: A1, A2, B1, B2, C1, C2")
+    estado = models.CharField(max_length=20, default='configurado', help_text="Estado del bloque")
+    grupo_color = models.CharField(max_length=7, default='#FFC107', help_text="Color en formato hexadecimal")
+    horario_inicio = models.TimeField(blank=True, null=True, help_text="Hora de inicio del bloque")
+    horario_fin = models.TimeField(blank=True, null=True, help_text="Hora de fin del bloque")
+    cupo_maximo = models.IntegerField(default=20, help_text="Número máximo de estudiantes")
+    activo = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['nivel', 'nombre']
+        verbose_name = 'Bloque'
+        verbose_name_plural = 'Bloques'
+        unique_together = ['nombre', 'nivel']  # No puede haber dos "A1 - Mañana"
+    
+    def __str__(self):
+        return f"{self.nivel} - {self.nombre}"
+    
+    @property
+    def estudiantes_count(self):
+        """Cuenta cuántos estudiantes están asignados a este bloque"""
+        return CustomUser.objects.filter(bloque_asignado=str(self)).count()
+
+
 class CustomUser(AbstractUser):
     """
     Modelo de usuario personalizado para el sistema de aprendizaje de inglés

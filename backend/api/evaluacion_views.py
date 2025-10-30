@@ -44,8 +44,32 @@ def evaluacion_create_view(request):
             'message': 'Usuario no es profesor'
         }, status=status.HTTP_403_FORBIDDEN)
     
-    data = request.data.copy()
-    data['profesor'] = request.user.id
+    # En lugar de copiar request.data, crear un nuevo dict
+    data = {
+        'profesor': request.user.id,
+        'titulo': request.data.get('titulo'),
+        'descripcion': request.data.get('descripcion'),
+        'tipo': request.data.get('tipo'),
+        'estado': request.data.get('estado', 'borrador'),
+        'fecha_limite': request.data.get('fecha_limite'),
+    }
+    
+    # Manejar el archivo separadamente
+    if 'archivo' in request.FILES:
+        data['archivo'] = request.FILES['archivo']
+    
+    # Manejar estudiantes_asignados
+    estudiantes = request.data.get('estudiantes_asignados')
+    if estudiantes:
+        try:
+            if isinstance(estudiantes, str):
+                estudiantes = json.loads(estudiantes)
+            data['estudiantes_asignados'] = estudiantes
+        except json.JSONDecodeError:
+            return Response({
+                'success': False,
+                'message': 'Formato inválido para estudiantes_asignados'
+            }, status=status.HTTP_400_BAD_REQUEST)
     
     serializer = EvaluacionSerializer(data=data, context={'request': request})
     if serializer.is_valid():

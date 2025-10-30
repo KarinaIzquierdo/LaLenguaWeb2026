@@ -1,14 +1,39 @@
 from rest_framework import serializers
 from django.contrib.auth import authenticate
-from .models import CustomUser, Clase, Evaluation, MediaItem, Club, ClubMaterial, Especializacion, Evaluacion, RespuestaEvaluacion, Notificacion, Plan, Venta
+from .models import CustomUser, Clase, Evaluation, MediaItem, Club, ClubMaterial, Especializacion, Evaluacion, RespuestaEvaluacion, Notificacion, Plan, Venta, Bloque
 
 class UserSerializer(serializers.ModelSerializer):
+    especializacion_nombre = serializers.SerializerMethodField()
+    
     class Meta:
         model = CustomUser
         fields = ('id', 'username', 'email', 'first_name', 'last_name', 'phone', 'country', 'city', 'level', 
                  'birth_date', 'cedula', 'address', 'emergency_contact', 'emergency_phone', 
-                 'english_level', 'learning_goals', 'profile_completed', 'role', 'is_profesor', 'is_active', 'bloque_asignado', 'especializacion', 'correo_personal')
+                 'english_level', 'learning_goals', 'profile_completed', 'role', 'is_profesor', 'is_active', 
+                 'bloque_asignado', 'especializacion', 'especializacion_nombre', 'correo_personal')
         read_only_fields = ('id',)
+    
+    def get_especializacion_nombre(self, obj):
+        if obj.especializacion:
+            return obj.especializacion.nombre
+        return None
+
+
+class MobileUserSerializer(serializers.ModelSerializer):
+    """Serializador simplificado para la app móvil"""
+    especializacion = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = CustomUser
+        fields = ('id', 'username', 'email', 'first_name', 'last_name', 'role', 
+                 'is_active', 'bloque_asignado', 'especializacion', 'date_joined')
+        read_only_fields = ('id', 'date_joined')
+    
+    def get_especializacion(self, obj):
+        """Devolver el nombre de la especialización como string"""
+        if obj.especializacion:
+            return obj.especializacion.nombre
+        return None
 
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField(required=False)
@@ -26,9 +51,9 @@ class LoginSerializer(serializers.Serializer):
             email = username
 
         if email and password:
-            # Buscar usuario por email (case insensitive)
+            # Buscar usuario por correo_personal (case insensitive)
             try:
-                user = CustomUser.objects.get(email__iexact=email)
+                user = CustomUser.objects.get(correo_personal__iexact=email)
                 # Verificar contraseña
                 if user.check_password(password):
                     if user.is_active:
@@ -123,34 +148,77 @@ class ClaseSerializer(serializers.ModelSerializer):
 class UserRegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8)
     role = serializers.ChoiceField(choices=CustomUser.ROLE_CHOICES)
-    bloque_asignado = serializers.CharField(required=False, allow_blank=True)
-    especializacion = serializers.PrimaryKeyRelatedField(queryset=Especializacion.objects.all(), required=False, allow_null=True)
+    bloque_asignado = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    especializacion = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    correo_personal = serializers.EmailField(required=True)  # Ahora es obligatorio
+    username = serializers.CharField(required=False, allow_blank=True)
+    email = serializers.EmailField(required=False)  # Email institucional opcional
 
     class Meta:
         model = CustomUser
-        fields = ('first_name', 'last_name', 'email', 'role', 'password', 'bloque_asignado', 'especializacion', 'correo_personal')
+        fields = ('username', 'first_name', 'last_name', 'email', 'role', 'password', 'bloque_asignado', 'especializacion', 'correo_personal')
 
+    def validate_correo_personal(self, value):
+        """Validar que el correo personal sea único"""
+        if CustomUser.objects.filter(correo_personal__iexact=value).exists():
+            raise serializers.ValidationError('Ya existe un usuario con este correo personal.')
+        return value
+    
     def validate_email(self, value):
-        if CustomUser.objects.filter(email__iexact=value).exists():
+        """Validar email institucional si se proporciona"""
+        if value and CustomUser.objects.filter(email__iexact=value).exists():
             raise serializers.ValidationError('Ya existe un usuario con este correo electrónico.')
         return value
 
     def create(self, validated_data):
         password = validated_data.pop('password')
         bloque_asignado = validated_data.pop('bloque_asignado', None)
-        especializacion = validated_data.pop('especializacion', None)
-        correo_personal = validated_data.pop('correo_personal', None)
+        especializacion_str = validated_data.pop('especializacion', None)
+        correo_personal = validated_data.get('correo_personal')  # Ya no lo sacamos, está en validated_data
+        username = validated_data.pop('username', None)
+        
+        # Si no se proporcionó email institucional, generarlo automáticamente
+        if not validated_data.get('email'):
+            # Generar email institucional basado en el correo personal
+            local_part = correo_personal.split('@')[0]
+            validated_data['email'] = f"{local_part}@thelanguage.co"
+        
+        # Crear usuario
         user = CustomUser(**validated_data)
-        user.username = validated_data['email']  # Usar email como username
+        
+        # Establecer username (usar el proporcionado o el correo personal)
+        user.username = username if username else correo_personal
+        
+        # Establecer contraseña
         user.set_password(password)
-        if validated_data['role'] == 'profesor':
+        
+        # Establecer is_profesor si el rol es profesor
+        if validated_data.get('role') == 'profesor':
             user.is_profesor = True
+        
+        # Asignar bloque si se proporciona
         if bloque_asignado:
             user.bloque_asignado = bloque_asignado
-        if especializacion:
-            user.especializacion = especializacion
-        if correo_personal:
-            user.correo_personal = correo_personal
+        
+        # Buscar y asignar especialización si se proporciona
+        if especializacion_str:
+            try:
+                # Intentar buscar por nombre
+                esp = Especializacion.objects.filter(nombre__iexact=especializacion_str).first()
+                if esp:
+                    user.especializacion = esp
+                else:
+                    # Si no se encuentra, intentar por ID
+                    try:
+                        esp_id = int(especializacion_str)
+                        esp = Especializacion.objects.filter(id=esp_id).first()
+                        if esp:
+                            user.especializacion = esp
+                    except (ValueError, TypeError):
+                        pass
+            except Exception as e:
+                print(f"⚠️ Error al asignar especialización: {e}")
+        
         user.save()
         return user
 
@@ -330,3 +398,29 @@ class VentaSerializer(serializers.ModelSerializer):
         validated_data['precio_total'] = precio_plan + precio_especializacion - descuento
         
         return super().create(validated_data)
+
+
+class BloqueSerializer(serializers.ModelSerializer):
+    estudiantes_count = serializers.ReadOnlyField()
+    
+    class Meta:
+        model = Bloque
+        fields = ['id', 'nombre', 'nivel', 'estado', 'grupo_color', 'horario_inicio', 
+                 'horario_fin', 'cupo_maximo', 'activo', 'estudiantes_count', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at', 'estudiantes_count']
+    
+    def validate(self, attrs):
+        """Validar que no exista otro bloque con el mismo nombre y nivel"""
+        nombre = attrs.get('nombre')
+        nivel = attrs.get('nivel')
+        
+        # Si estamos actualizando, excluir el bloque actual de la validación
+        if self.instance:
+            existing = Bloque.objects.filter(nombre=nombre, nivel=nivel).exclude(id=self.instance.id)
+        else:
+            existing = Bloque.objects.filter(nombre=nombre, nivel=nivel)
+        
+        if existing.exists():
+            raise serializers.ValidationError(f'Ya existe un bloque {nivel} - {nombre}')
+        
+        return attrs

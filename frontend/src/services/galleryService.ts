@@ -74,7 +74,9 @@ class GalleryService {
       }
 
       const data = await response.json();
-      return data.success ? data.data : [];
+      console.log('Gallery response:', data);
+      // Backend actualizado devuelve 'items' en lugar de 'data'
+      return data.success ? (data.items || data.data || []) : [];
     } catch (error) {
       console.error('Error fetching media:', error);
       throw error;
@@ -105,7 +107,8 @@ class GalleryService {
         throw new Error(data.errors || data.message || 'Error creating media');
       }
       
-      return data.data;
+      // Backend actualizado devuelve 'items' array, tomar el primero
+      return data.items?.[0] || data.data;
     } catch (error) {
       console.error('Error creating media:', error);
       throw error;

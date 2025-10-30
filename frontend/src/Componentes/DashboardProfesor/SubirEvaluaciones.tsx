@@ -148,31 +148,33 @@ export default function SubirEvaluaciones() {
         estudiantes_asignados: formulario.estudiantesSeleccionados,
         estado: 'borrador' as const
       };
-
+      
+      // Usar el servicio de evaluaciones para crear
       const response = await evaluacionService.createEvaluacion(evaluacionData);
+      
       if (response.success) {
+        // Resetear formulario
+        setFormulario({
+          titulo: '',
+          tipo: 'quiz',
+          descripcion: '',
+          fechaLimite: '',
+          estudiantesSeleccionados: []
+        });
+        setArchivoSeleccionado(null);
+        setMostrarFormulario(false);
+        
         await loadEvaluaciones(); // Recargar la lista
-        alert('Evaluación creada exitosamente');
+        alert('Evaluación subida exitosamente');
+      } else {
+        throw new Error(response.message || 'Error al crear la evaluación');
       }
     } catch (err) {
-      alert('Error al crear la evaluación');
       console.error('Error creating evaluacion:', err);
+      alert(err instanceof Error ? err.message : 'Error al crear la evaluación');
     } finally {
       setLoading(false);
     }
-    
-    // Resetear formulario
-    setFormulario({
-      titulo: '',
-      tipo: 'quiz',
-      descripcion: '',
-      fechaLimite: '',
-      estudiantesSeleccionados: []
-    });
-    setArchivoSeleccionado(null);
-    setMostrarFormulario(false);
-
-    alert('Evaluación subida exitosamente!');
   };
 
   const publicarEvaluacion = async (id: string) => {
