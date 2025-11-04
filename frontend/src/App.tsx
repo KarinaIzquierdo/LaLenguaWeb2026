@@ -24,6 +24,7 @@ import Especializaciones from './Componentes/DashboardAdmin/Especializaciones'
 import PlanesPrecios from './Componentes/DashboardAdmin/PlanesPrecios';
 import RegistroVentas from './Componentes/DashboardAdmin/RegistroVentas';
 import GestionSuscripciones from './Componentes/DashboardAdmin/GestionSuscripciones';
+import MisionesAdmin from './Componentes/DashboardAdmin/MisionesAdmin';
 
 function App() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
@@ -222,6 +223,7 @@ function App() {
               <Route path="planes-precios" element={<PlanesPrecios />} />
               <Route path="registro-ventas" element={<RegistroVentas />} />
               <Route path="gestion-suscripciones" element={<GestionSuscripciones />} />
+              <Route path="misiones" element={<MisionesAdmin />} />
             </Route>
             
             {/* Ruta de login - redirige al home */}

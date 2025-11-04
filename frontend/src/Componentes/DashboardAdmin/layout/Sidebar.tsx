@@ -57,6 +57,11 @@ export const Sidebar = ({ onLogout }: { onLogout: () => void }) => {
               👥 Gestión de Suscripciones
             </NavLink>
           </li>
+          <li>
+            <NavLink to="/admin/misiones" className={({ isActive }) => isActive ? 'active' : ''}>
+              🎯 Misiones
+            </NavLink>
+          </li>
         </ul>
         <button className="logout-button" onClick={onLogout} style={{ marginTop: '2rem', width: '100%' }}>
           Cerrar sesión

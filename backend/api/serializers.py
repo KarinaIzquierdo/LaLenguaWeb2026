@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import authenticate
-from .models import CustomUser, Clase, Evaluation, MediaItem, Club, ClubMaterial, Especializacion, Evaluacion, RespuestaEvaluacion, Notificacion, Plan, Venta, Bloque
+from .models import CustomUser, Clase, Evaluation, MediaItem, Club, ClubMaterial, Especializacion, Evaluacion, RespuestaEvaluacion, Notificacion, Plan, Venta, Bloque, MissionExternalLink
 
 class UserSerializer(serializers.ModelSerializer):
     especializacion_nombre = serializers.SerializerMethodField()
@@ -318,13 +318,14 @@ class RespuestaEvaluacionSerializer(serializers.ModelSerializer):
         # Establecer automáticamente el estudiante desde el request
         validated_data['estudiante'] = self.context['request'].user
         return super().create(validated_data)
-    
-    def update(self, instance, validated_data):
-        # Si se está subiendo un archivo, marcar como completado
-        if 'archivo_respuesta' in validated_data and validated_data['archivo_respuesta']:
-            validated_data['completado'] = True
-        
-        return super().update(instance, validated_data)
+
+
+class MissionExternalLinkSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MissionExternalLink
+        fields = ['id', 'mission_key', 'platform', 'url', 'start_at', 'expires_at', 'is_active', 'notes',
+                  'audience_type', 'audience_value', 'user', 'status', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'status', 'created_at', 'updated_at']
 
 
 class NotificacionSerializer(serializers.ModelSerializer):

@@ -81,9 +81,85 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
   const [evaluaciones, setEvaluaciones] = useState<any[]>([]);
   const [isLoadingEvaluaciones, setIsLoadingEvaluaciones] = useState(false);
 
+  // Misiones dinámicas states
+  const [availableMissions, setAvailableMissions] = useState<Array<{mission_key: string; title: string; description: string; platform: string; xp: number}>>([]);
+  const [isLoadingMissions, setIsLoadingMissions] = useState(true);
+
   // Paginación states
   const [currentPage, setCurrentPage] = useState(1);
   const clasesPerPage = 5;
+
+  // API base para consultar enlaces de misiones
+  const API_BASE_URL = 'http://127.0.0.1:8000';
+
+  // Utilidad para crear mission_key a partir del título mostrado en la card
+  const slugify = (text: string): string => {
+    return text
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // quitar tildes
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_|_$/g, '');
+  };
+
+  // Cargar misiones disponibles desde el backend
+  const loadAvailableMissions = async () => {
+    try {
+      setIsLoadingMissions(true);
+      const params = new URLSearchParams();
+      if (userId) params.append('user_id', userId);
+      const bloqueCode = bloqueInfo?.bloque ? `${bloqueInfo.bloque.nivel}_${bloqueInfo.bloque.turno}` : '';
+      if (bloqueCode) params.append('bloque', bloqueCode);
+      const url = `${API_BASE_URL}/api/missions/available/${params.toString() ? `?${params.toString()}` : ''}`;
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        setAvailableMissions(data || []);
+      } else {
+        setAvailableMissions([]);
+      }
+    } catch (e) {
+      console.error('loadAvailableMissions error', e);
+      setAvailableMissions([]);
+    } finally {
+      setIsLoadingMissions(false);
+    }
+  };
+
+  // Abrir misión: consulta al backend el enlace vigente y lo abre en nueva pestaña
+  const openMission = async (missionTitle: string) => {
+    try {
+      const missionKey = slugify(missionTitle);
+      console.log('🎯 openMission - Title:', missionTitle, '| Key:', missionKey);
+      const params = new URLSearchParams();
+      if (userId) params.append('user_id', userId);
+      const bloqueCode = bloqueInfo?.bloque ? `${bloqueInfo.bloque.nivel}_${bloqueInfo.bloque.turno}` : '';
+      if (bloqueCode) params.append('bloque', bloqueCode);
+      const url = `${API_BASE_URL}/api/missions/${missionKey}/link/${params.toString() ? `?${params.toString()}` : ''}`;
+      console.log('🎯 Fetching URL:', url);
+      const res = await fetch(url);
+      console.log('🎯 Response status:', res.status);
+      if (res.status === 204) {
+        showNotification('info', 'Misión no disponible', 'Esta misión no tiene un enlace vigente.');
+        return;
+      }
+      if (!res.ok) {
+        throw new Error('Error consultando enlace de misión');
+      }
+      const data = await res.json();
+      console.log('🎯 Backend response:', data);
+      if (data?.url) {
+        const finalUrl: string = data.url.startsWith('http') ? data.url : `https://${data.url}`;
+        console.log('🎯 Opening URL:', finalUrl);
+        window.open(finalUrl, '_blank', 'noopener');
+      } else {
+        showNotification('info', 'Misión no disponible', 'No hay enlace configurado por ahora.');
+      }
+    } catch (e) {
+      console.error('openMission error', e);
+      showNotification('error', 'Error', 'No se pudo abrir la misión. Intenta más tarde.');
+    }
+  };
 
   // Evaluation functions
   const startEvaluation = (type: string) => {
@@ -333,6 +409,9 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
         const userBloqueInfo = bloqueService.getUserBloqueInfo(userIdStr);
         setBloqueInfo(userBloqueInfo);
         
+        // Cargar misiones disponibles después de tener userId y bloqueInfo
+        // Se ejecutará de nuevo cuando cambien estos valores
+        
         // DEBUG: Verificar datos del bloque
         console.log('=== DEBUG BLOQUE INFO ===');
         console.log('User ID:', userIdStr);
@@ -534,6 +613,13 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
     loadMaterials();
   }, [selectedClubId]);
 
+  // Cargar misiones cuando userId y bloqueInfo estén disponibles
+  useEffect(() => {
+    if (userId) {
+      loadAvailableMissions();
+    }
+  }, [userId, bloqueInfo]);
+
   useEffect(() => {
     const fetchEvaluaciones = async () => {
       setIsLoadingEvaluaciones(true);
@@ -715,8 +801,10 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
       </div>
 
       <div className="missions-grid">
-        {bloqueInfo && bloqueInfo.misiones.length > 0 ? (
-          bloqueInfo.misiones.map((mision: string, index: number) => {
+        {isLoadingMissions ? (
+          <div>Cargando misiones...</div>
+        ) : availableMissions.length > 0 ? (
+          availableMissions.map((mission, index) => {
             const missionTypes = ['vocabulary', 'grammar', 'conversation'];
             const missionIcons = ['📚', '✏️', '💬'];
             const missionTypeNames = ['Quiz Interactivo', 'Ejercicios Prácticos', 'Juego en Tiempo Real'];
@@ -725,111 +813,33 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
             const currentTypeName = missionTypeNames[index % missionTypeNames.length];
             
             return (
-              <div key={index} className={`mission-card ${currentType}`}>
+              <div key={mission.mission_key} className={`mission-card ${currentType}`}>
                 <div className="mission-header">
                   <div className="mission-icon">{currentIcon}</div>
                   <div className="mission-info">
-                    <h3>{mision}</h3>
+                    <h3>{mission.title}</h3>
                     <span className="mission-type">{currentTypeName}</span>
                   </div>
                 </div>
                 <div className="mission-content">
-                  <p>Completa esta misión para avanzar en tu aprendizaje</p>
+                  <p>{mission.description}</p>
                   <div className="mission-stats">
                     <div className="stat">
-                      <span className="stat-value">{experience}</span>
-                      <span className="stat-label">⭐ XP</span>
+                      <span className="stat-icon">🍬</span>
+                      <span>+10 Dulces</span>
+                    </div>
+                    <div className="stat">
+                      <span className="stat-icon">⭐</span>
+                      <span>+{mission.xp} XP</span>
                     </div>
                   </div>
                 </div>
-                <button className="mission-button">Jugar Ahora</button>
+                <button className="mission-button" onClick={() => openMission(mission.title)}>Jugar Ahora</button>
               </div>
             );
           })
         ) : (
-          // Misiones por defecto si no hay bloque asignado
-          <>
-            <div className="mission-card vocabulary">
-              <div className="mission-header">
-                <div className="mission-icon">📚</div>
-                <div className="mission-info">
-                  <h3>Vocabulario de Viaje</h3>
-                  <span className="mission-type">Quiz Interactivo</span>
-                </div>
-              </div>
-              <div className="mission-content">
-                <p>
-                  Aprende palabras esenciales que Lingo necesita conocer 
-                  durante su viaje. ¡Juega y aprende con Gimkit!
-                </p>
-                <div className="mission-stats">
-                  <div className="stat">
-                    <span className="stat-icon">🍬</span>
-                    <span>+10 Dulces</span>
-                  </div>
-                  <div className="stat">
-                    <span className="stat-icon">⭐</span>
-                    <span>+25 XP</span>
-                  </div>
-                </div>
-              </div>
-              <button className="mission-button">Jugar Ahora</button>
-            </div>
-
-            <div className="mission-card grammar">
-              <div className="mission-header">
-                <div className="mission-icon">✏️</div>
-                <div className="mission-info">
-                  <h3>Gramática Básica</h3>
-                  <span className="mission-type">Ejercicios Prácticos</span>
-                </div>
-              </div>
-              <div className="mission-content">
-                <p>
-                  Domina las estructuras gramaticales para ayudar a Lingo en su 
-                  ruta migratoria. ¡Practica con ejercicios interactivos!
-                </p>
-                <div className="mission-stats">
-                  <div className="stat">
-                    <span className="stat-icon">🍬</span>
-                    <span>+10 Dulces</span>
-                  </div>
-                  <div className="stat">
-                    <span className="stat-icon">⭐</span>
-                    <span>+25 XP</span>
-                  </div>
-                </div>
-              </div>
-              <button className="mission-button">Jugar Ahora</button>
-            </div>
-
-            <div className="mission-card conversation">
-              <div className="mission-header">
-                <div className="mission-icon">💬</div>
-                <div className="mission-info">
-                  <h3>Conversación Práctica</h3>
-                  <span className="mission-type">Juego en Tiempo Real</span>
-                </div>
-              </div>
-              <div className="mission-content">
-                <p>
-                  Practica conversaciones reales que Lingo podría necesitar 
-                  durante su viaje. ¡Interactúa en tiempo real!
-                </p>
-                <div className="mission-stats">
-                  <div className="stat">
-                    <span className="stat-icon">🍬</span>
-                    <span>+10 Dulces</span>
-                  </div>
-                  <div className="stat">
-                    <span className="stat-icon">⭐</span>
-                    <span>+25 XP</span>
-                  </div>
-                </div>
-              </div>
-              <button className="mission-button">Jugar Ahora</button>
-            </div>
-          </>
+          <div className="no-classes-message">No hay misiones asignadas por el momento.</div>
         )}
       </div>
 

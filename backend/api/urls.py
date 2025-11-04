@@ -6,6 +6,7 @@ from . import especializacion_views
 from . import evaluacion_views
 from . import notificacion_views
 from . import calificacion_views
+from . import mission_views
 from . import profesor_views
 from . import user_views
 from . import mobile_views
@@ -50,6 +51,12 @@ urlpatterns = [
     path('gallery/create/', views.gallery_create_view, name='gallery_create'),
     path('gallery/<int:pk>/update/', views.gallery_update_view, name='gallery_update'),
     path('gallery/<int:pk>/delete/', views.gallery_delete_view, name='gallery_delete'),
+
+    # Endpoints para misiones (enlaces externos administrables)
+    path('missions/available/', mission_views.missions_available_view, name='missions_available'),
+    path('missions/<str:mission_key>/link/', mission_views.mission_current_link_view, name='mission_current_link'),
+    path('missions/links/', mission_views.mission_links_list_create_view, name='mission_links_list_create'),
+    path('missions/links/<int:pk>/', mission_views.mission_link_detail_view, name='mission_link_detail'),
 
     # Endpoints para Clubs (CLB)
     # path('clubs/', views.clubs_list_view, name='clubs_list'),  # ❌ Comentado - Conflicto con endpoint móvil

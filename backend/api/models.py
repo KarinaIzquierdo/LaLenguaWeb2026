@@ -356,6 +356,64 @@ class Notificacion(models.Model):
         return f"{self.titulo} - {self.profesor.username}"
 
 
+class MissionExternalLink(models.Model):
+    """
+    Enlace externo administrable para misiones (Gimkit, Kahoot, Quizizz, etc.)
+    Permite manejar ventanas de vigencia y activar/desactivar sin tocar código.
+    """
+    PLATFORM_CHOICES = [
+        ('gimkit', 'Gimkit'),
+        ('kahoot', 'Kahoot'),
+        ('quizizz', 'Quizizz'),
+        ('custom', 'Custom'),
+    ]
+
+    # Identificador estable usado por el frontend: p.ej. 'comunicacion_magistral'
+    mission_key = models.SlugField(max_length=60, db_index=True)
+    platform = models.CharField(max_length=16, choices=PLATFORM_CHOICES, default='custom')
+    url = models.URLField()
+    start_at = models.DateTimeField(null=True, blank=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    notes = models.TextField(blank=True, null=True)
+
+    # Audiencia (segmentación)
+    AUDIENCE_CHOICES = [
+        ('global', 'Global'),
+        ('bloque', 'Por Bloque'),
+        ('student', 'Por Estudiante'),
+    ]
+    audience_type = models.CharField(max_length=10, choices=AUDIENCE_CHOICES, default='global')
+    audience_value = models.CharField(max_length=80, blank=True, null=True, help_text="Bloque (p.ej. B2_Mañana) cuando audience=bloque")
+    user = models.ForeignKey('CustomUser', on_delete=models.CASCADE, null=True, blank=True, help_text="Usuario específico cuando audience=student")
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['mission_key', '-created_at']
+        indexes = [
+            models.Index(fields=['mission_key', 'is_active']),
+            models.Index(fields=['mission_key', 'audience_type']),
+        ]
+        verbose_name = 'Enlace de Misión'
+        verbose_name_plural = 'Enlaces de Misiones'
+
+    def __str__(self):
+        return f"{self.mission_key} -> {self.platform}"
+
+    @property
+    def status(self):
+        from django.utils import timezone
+        now = timezone.now()
+        if not self.is_active:
+            return 'inactive'
+        if self.start_at and now < self.start_at:
+            return 'upcoming'
+        if self.expires_at and now > self.expires_at:
+            return 'expired'
+        return 'active'
+
 class Plan(models.Model):
     """
     Modelo para los planes de precios disponibles
