@@ -186,8 +186,9 @@ export default function GestionGaleria() {
     <div className="gestion-galeria">
       <div className="galeria-header">
         <h1>Gestión de Galería</h1>
+        <p className="header-description">Administra el contenido multimedia de la galería</p>
         <button 
-          className="btn-primary"
+          className="btn-primary btn-agregar"
           onClick={() => setShowForm(true)}
         >
           ➕ Agregar Contenido

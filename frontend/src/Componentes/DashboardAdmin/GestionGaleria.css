@@ -61,18 +61,46 @@
 }
 
 .galeria-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   margin-bottom: 2rem;
-  padding-bottom: 1rem;
-  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 2rem;
+  border-bottom: 3px solid #e2e8f0;
 }
 
 .galeria-header h1 {
-  color: #2d3748;
-  font-size: 2rem;
-  margin: 0;
+  color: #1a202c;
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem 0;
+}
+
+.header-description {
+  color: #718096;
+  font-size: 1.1rem;
+  margin: 0 0 2rem 0;
+}
+
+.btn-agregar {
+  padding: 1rem 2rem;
+  background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.btn-agregar:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+  background: linear-gradient(135deg, #2563eb 0%, #0891b2 100%);
 }
 
 .btn-primary {

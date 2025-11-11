@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ClaseService } from '../../services/claseService';
+import TomarAsistencia from './TomarAsistencia';
 import './MisClases.css';
 
 interface Clase {
@@ -18,7 +19,7 @@ interface Clase {
   tipoClase: 'individual' | 'grupal';
 }
 
-export default function MisClases({ profesorId }: { profesorId: number }) {
+export default function MisClases({ profesorId }: { profesorId?: number }) {
   const [clases, setClases] = useState<Clase[]>([]);
   const [clasesDelBloque, setClasesDelBloque] = useState<Clase[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -33,42 +34,96 @@ export default function MisClases({ profesorId }: { profesorId: number }) {
   const [filtroBloque, setFiltroBloque] = useState<string>('todos');
   const ITEMS_PER_PAGE = 10;
   const [modoModal, setModoModal] = useState<'ver' | 'editar'>('ver');
+  const [mostrarAsistencia, setMostrarAsistencia] = useState(false);
+  const [claseAsistencia, setClaseAsistencia] = useState<Clase | null>(null);
 
   useEffect(() => {
     const fetchClases = async () => {
       setIsLoading(true);
       try {
-        // Primero intentar obtener clases del backend
-        let data = await ClaseService.getClasesPorProfesor(profesorId);
-        console.log('Clases recibidas del backend:', data);
+        // Limpiar estados incorrectos en localStorage
+        console.log('🧹 Limpiando estados incorrectos en localStorage...');
+        const keysToRemove: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('clase_') && key.endsWith('_estado')) {
+            keysToRemove.push(key);
+          }
+        }
+        keysToRemove.forEach(key => {
+          console.log(`Eliminando: ${key}`);
+          localStorage.removeItem(key);
+        });
+        console.log(`✅ ${keysToRemove.length} estados eliminados de localStorage`);
         
-        // Separar clases del bloque de clases programadas
-        const clasesBloque = await ClaseService.generarClasesDesdeBloque(
-          localStorage.getItem('user_name') || 'Profesor'
-        );
-        setClasesDelBloque(clasesBloque);
-        console.log('Clases del bloque:', clasesBloque);
+        // Obtener el nombre completo del profesor desde localStorage
+        const userStr = localStorage.getItem('user');
+        let nombreCompleto = '';
         
-        // Si no hay clases del backend, usar array vacío
-        if (!data || data.length === 0) {
-          console.log('No hay clases programadas por el profesor');
-          data = [];
+        if (userStr) {
+          try {
+            const user = JSON.parse(userStr);
+            nombreCompleto = `${user.first_name || ''} ${user.last_name || ''}`.trim();
+            console.log('Usuario desde localStorage:', user);
+          } catch (e) {
+            console.error('Error parseando usuario:', e);
+          }
         }
         
-        data.forEach((clase: any) => {
-          console.log(`Clase ID ${clase.id}: meet_link = ${clase.meet_link}`);
+        console.log('=== CARGANDO CLASES DEL PROFESOR ===');
+        console.log('Nombre del profesor:', nombreCompleto);
+        
+        // Obtener TODAS las clases del backend
+        const todasLasClases = await ClaseService.getClases();
+        console.log(`Total de clases en el sistema: ${todasLasClases.length}`);
+        
+        // Mostrar todos los profesores únicos
+        const profesoresUnicos = [...new Set(todasLasClases.map((c: any) => c.profesor))];
+        console.log('Profesores en el sistema:', profesoresUnicos);
+        
+        // Filtrar clases donde el profesor coincida EXACTAMENTE
+        const clasesDelProfesor = todasLasClases.filter((clase: any) => {
+          // Comparación exacta e insensible a mayúsculas
+          const coincide = clase.profesor?.trim().toLowerCase() === nombreCompleto.toLowerCase();
+          
+          if (coincide) {
+            console.log(`✅ Clase ID ${clase.id}: "${clase.nombre}" - Fecha: ${clase.fecha}`);
+          }
+          return coincide;
         });
-        setClases(data);
+        
+        console.log(`✅ Total de clases para ${nombreCompleto}: ${clasesDelProfesor.length}`);
+        
+        if (clasesDelProfesor.length === 0) {
+          console.warn('⚠️ No se encontraron clases. Verifica que el nombre del profesor coincida exactamente.');
+        }
+        
+        // NO cargar clases del bloque
+        setClasesDelBloque([]);
+        setClases(clasesDelProfesor);
       } catch (err) {
-        console.error('Error al cargar clases:', err);
-        // En caso de error, mantener arrays vacíos
+        console.error('❌ Error al cargar clases:', err);
         setClases([]);
         setClasesDelBloque([]);
       }
       setIsLoading(false);
     };
     fetchClases();
-  }, [profesorId]);
+  }, []);
+
+  const abrirAsistencia = (clase: Clase) => {
+    setClaseAsistencia(clase);
+    setMostrarAsistencia(true);
+  };
+
+  const guardarAsistencia = (asistencias: { [key: string]: boolean }) => {
+    console.log('Asistencia guardada:', asistencias);
+    const presentes = Object.values(asistencias).filter(a => a).length;
+    const ausentes = Object.values(asistencias).filter(a => !a).length;
+    alert(`✅ Asistencia guardada:\n${presentes} presentes, ${ausentes} ausentes`);
+    setMostrarAsistencia(false);
+    setClaseAsistencia(null);
+  };
 
   const iniciarClase = async (claseId: number) => {
     console.log('=== INICIAR CLASE DEBUG ===');
@@ -78,8 +133,10 @@ export default function MisClases({ profesorId }: { profesorId: number }) {
     
     // Buscar la clase en ambos arrays
     let clase = clases.find(c => c.id === claseId);
+    let esClaseDelBloque = false;
     if (!clase) {
       clase = clasesDelBloque.find(c => c.id === claseId);
+      esClaseDelBloque = true;
       console.log('Clase encontrada en clasesDelBloque:', clase);
     } else {
       console.log('Clase encontrada en clases:', clase);
@@ -92,9 +149,20 @@ export default function MisClases({ profesorId }: { profesorId: number }) {
     }
 
     try {
-      // Para clases del bloque, no intentar cambiar estado en backend (no existen en BD)
-      // Solo cambiar estado local
       console.log('Cambiando estado de clase a activa...');
+
+      // Si es una clase del profesor (no del bloque), actualizar en el backend
+      if (!esClaseDelBloque) {
+        try {
+          console.log(`Intentando cambiar estado de clase ${claseId} a 'activa'`);
+          const response = await ClaseService.cambiarEstadoClase(claseId, 'activa');
+          console.log('Estado actualizado en el backend:', response);
+        } catch (error: any) {
+          console.error('Error actualizando estado en backend:', error);
+          console.error('Detalles del error:', error.response?.data);
+          // Continuar con la actualización local aunque falle el backend
+        }
+      }
 
       // Actualizar estado local en ambos arrays
       setClases(prev => prev.map(c => {
@@ -234,7 +302,8 @@ export default function MisClases({ profesorId }: { profesorId: number }) {
   };
 
   const formatearFecha = (fecha: string) => {
-    const date = new Date(fecha);
+    // Agregar tiempo para evitar problema de zona horaria
+    const date = new Date(fecha + 'T12:00:00');
     const opciones: Intl.DateTimeFormatOptions = { 
       weekday: 'long', 
       year: 'numeric', 
@@ -332,6 +401,9 @@ export default function MisClases({ profesorId }: { profesorId: number }) {
 
   // Filtrar clases por fecha
   const hoy = new Date().toISOString().split('T')[0];
+  console.log('Fecha de hoy:', hoy);
+  console.log('Clases cargadas:', clases.map(c => ({ id: c.id, fecha: c.fecha, tema: c.tema })));
+  
   const clasesVisibles = clasesDelBloque.filter(clase => {
     // Verificar estado en localStorage para persistencia
     const claseKey = `clase_${clase.tema.replace(/\s+/g, '_')}_estado`;
@@ -349,12 +421,23 @@ export default function MisClases({ profesorId }: { profesorId: number }) {
     const claseKey = `clase_${clase.tema.replace(/\s+/g, '_')}_estado`;
     const estadoGuardado = localStorage.getItem(claseKey);
     
+    console.log(`Filtrando clase ID ${clase.id}:`, {
+      fecha: clase.fecha,
+      hoy: hoy,
+      coincideFecha: clase.fecha === hoy,
+      estado: clase.estado,
+      estadoGuardado: estadoGuardado
+    });
+    
     // Si está completada en localStorage, no mostrar
     if (estadoGuardado === 'completada') {
+      console.log(`  ❌ Clase ${clase.id} filtrada: completada en localStorage`);
       return false;
     }
     
-    return clase.fecha === hoy && clase.estado !== 'completada';
+    const resultado = clase.fecha === hoy && clase.estado !== 'completada';
+    console.log(`  ${resultado ? '✅' : '❌'} Clase ${clase.id} ${resultado ? 'incluida' : 'excluida'} en clasesHoy`);
+    return resultado;
   });
   
   const clasesProximas = clases.filter(clase => {
@@ -371,11 +454,16 @@ export default function MisClases({ profesorId }: { profesorId: number }) {
   });
   
   const clasesCompletadas = clases.filter(clase => {
-    // Verificar estado en localStorage para incluir en historial
-    const claseKey = `clase_${clase.tema.replace(/\s+/g, '_')}_estado`;
-    const estadoGuardado = localStorage.getItem(claseKey);
+    // SOLO confiar en el estado del backend, ignorar localStorage
+    const esCompletada = clase.estado === 'completada';
     
-    return clase.estado === 'completada' || estadoGuardado === 'completada';
+    console.log(`Filtrando clase ID ${clase.id}:`, {
+      nombre: clase.nombre || clase.tema,
+      estado: clase.estado,
+      esCompletada: esCompletada
+    });
+    
+    return esCompletada;
   });
 
   const clasesDelBloqueFiltradas = filtrarClasesDelBloque();
@@ -522,6 +610,13 @@ export default function MisClases({ profesorId }: { profesorId: number }) {
                       </div>
                     </div>
                     <div className="clase-acciones">
+                      <button 
+                        className="btn-asistencia"
+                        onClick={() => abrirAsistencia(clase)}
+                        title="Tomar asistencia"
+                      >
+                        📋 Asistencia
+                      </button>
                       {clase.estado === 'programada' && (
                         <button 
                           className="btn-iniciar-clase"
@@ -874,6 +969,20 @@ export default function MisClases({ profesorId }: { profesorId: number }) {
         </div>
       )}
 
+      {/* Modal de Asistencia */}
+      {mostrarAsistencia && claseAsistencia && (
+        <TomarAsistencia
+          claseId={claseAsistencia.id}
+          estudiantesIds={claseAsistencia.estudiantes || []}
+          fecha={claseAsistencia.fecha}
+          tema={claseAsistencia.tema}
+          onGuardar={guardarAsistencia}
+          onCerrar={() => {
+            setMostrarAsistencia(false);
+            setClaseAsistencia(null);
+          }}
+        />
+      )}
     </div>
   );
 }

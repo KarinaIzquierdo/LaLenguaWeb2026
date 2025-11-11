@@ -1010,7 +1010,7 @@
 }
 
 .classes-table thead, .users-table thead {
-  background: var(--gradient-primary);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
 .classes-table th, .classes-table td, 
@@ -1023,8 +1023,8 @@
 .classes-table th, .users-table th {
   font-size: 0.85rem;
   text-transform: uppercase;
-  color: var(--white);
-  font-weight: 700;
+  color: white;
+  font-weight: 600;
   letter-spacing: 0.5px;
   border-bottom: none;
 }
@@ -1048,38 +1048,60 @@
 
 /* Botones de acción en tabla */
 .action-btn {
-  padding: 0.5rem 1rem;
+  padding: 0.625rem 1rem;
   border-radius: 8px;
   border: none;
-  font-size: 0.8rem;
-  font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
-  margin: 0 0.25rem;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-width: 42px;
+  min-height: 38px;
+}
+
+.action-btn svg {
+  width: 18px;
+  height: 18px;
+  fill: white !important;
+  color: white !important;
+  opacity: 1 !important;
 }
 
 .edit-btn {
-  background: var(--warning);
-  color: var(--white);
-  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+  background: #2563eb !important;
+  color: white !important;
+  opacity: 1 !important;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.4);
 }
 
 .edit-btn:hover {
-  transform: translateY(-1px) scale(1.05);
-  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+  background: #1d4ed8 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.5);
 }
 
 .delete-btn {
-  background: var(--danger);
-  color: var(--white);
-  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+  background: #dc2626 !important;
+  color: white !important;
+  opacity: 1 !important;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.4);
 }
 
 .delete-btn:hover {
-  transform: translateY(-1px) scale(1.05);
-  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+  background: #b91c1c !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.5);
+}
+
+.actions-cell {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  align-items: center;
 }
 
 .view-btn {

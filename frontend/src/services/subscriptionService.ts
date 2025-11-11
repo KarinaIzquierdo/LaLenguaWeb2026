@@ -28,11 +28,18 @@ export interface Suscripcion {
   id: number;
   estudiante_nombre: string;
   plan_nombre: string;
-  fecha_inicio_plan: string;
-  fecha_fin_plan: string;
-  precio_total: number;
+  fecha_inicio: string;
+  fecha_fin: string;
+  fecha_inicio_plan?: string;  // Mantener por compatibilidad
+  fecha_fin_plan?: string;      // Mantener por compatibilidad
+  precio_total?: number;
   estado: string;
-  metodo_pago: string;
+  metodo_pago?: string;
+  clases_totales?: number;
+  clases_tomadas?: number;
+  dias_restantes?: number;
+  clases_restantes?: number;
+  progreso_porcentaje?: number;
 }
 
 export interface AsignarPlanData {
@@ -60,7 +67,7 @@ export const subscriptionService = {
       const response = await axios.get(`${API_BASE_URL}/suscripciones/usuarios-sin-plan/`, {
         headers: getAuthHeaders()
       });
-      return response.data.usuarios;
+      return response.data.usuarios || response.data;
     } catch (error) {
       console.error('Error fetching usuarios sin plan:', error);
       throw error;
@@ -99,9 +106,24 @@ export const subscriptionService = {
       const response = await axios.get(`${API_BASE_URL}/planes/`, {
         headers: getAuthHeaders()
       });
-      return response.data;
+      // El backend devuelve { success: true, data: [...] }
+      return response.data.data || response.data;
     } catch (error) {
       console.error('Error fetching planes:', error);
+      throw error;
+    }
+  },
+
+  // Obtener todos los estudiantes
+  async getTodosLosEstudiantes(): Promise<Usuario[]> {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/users/`, {
+        headers: getAuthHeaders()
+      });
+      // Filtrar solo estudiantes
+      return response.data.filter((user: Usuario) => user.role === 'student' || user.role === 'estudiante');
+    } catch (error) {
+      console.error('Error fetching estudiantes:', error);
       throw error;
     }
   },
@@ -147,6 +169,19 @@ export const subscriptionService = {
       return response.data;
     } catch (error) {
       console.error('Error renovando plan:', error);
+      throw error;
+    }
+  },
+
+  // Cancelar plan
+  async cancelarPlan(suscripcionId: number): Promise<any> {
+    try {
+      const response = await axios.post(`${API_BASE_URL}/suscripciones/${suscripcionId}/cancelar/`, {}, {
+        headers: getAuthHeaders()
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error cancelando plan:', error);
       throw error;
     }
   }

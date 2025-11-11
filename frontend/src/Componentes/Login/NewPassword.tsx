@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { authService } from '../../services/authService';
+import './NewPassword.css';
 
 export default function NewPassword() {
   const params = useMemo(() => new URLSearchParams(window.location.search), []);
@@ -9,6 +10,16 @@ export default function NewPassword() {
   const [confirm, setConfirm] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [status, setStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  
+  // Password strength calculator
+  const getPasswordStrength = (pass: string) => {
+    if (pass.length === 0) return null;
+    if (pass.length < 8) return 'weak';
+    if (pass.length >= 8 && /[A-Z]/.test(pass) && /[0-9]/.test(pass)) return 'strong';
+    return 'medium';
+  };
+  
+  const passwordStrength = getPasswordStrength(password);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,57 +58,78 @@ export default function NewPassword() {
   };
 
   return (
-    <div style={{
-      minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', padding: 16
-    }}>
-      <div style={{ width: '100%', maxWidth: 420, background: '#fff', borderRadius: 16, boxShadow: '0 10px 25px rgba(0,0,0,0.15)', padding: 24 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h2 style={{ margin: 0 }}>Nueva contraseña</h2>
-          <div style={{ fontSize: 28 }}>🔒</div>
+    <div className="new-password-container">
+      <div className="new-password-card">
+        <div className="new-password-header">
+          <div className="lock-icon">🔒</div>
+          <h2>Nueva Contraseña</h2>
+          <p>Ingresa tu nueva contraseña para terminar el proceso de recuperación</p>
         </div>
-        <p style={{ color: '#555', marginTop: 8 }}>
-          Ingresa tu nueva contraseña para terminar el proceso.
-        </p>
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: 12 }}>
-            <label htmlFor="password" style={{ display: 'block', marginBottom: 6 }}>Nueva contraseña</label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Mínimo 8 caracteres"
-              style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #e5e7eb', outline: 'none' }}
-            />
+
+        <form onSubmit={handleSubmit} className="new-password-form">
+          <div className="form-group">
+            <label htmlFor="password">Nueva contraseña</label>
+            <div className="password-input-wrapper">
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Mínimo 8 caracteres"
+                autoComplete="new-password"
+              />
+            </div>
+            {password && (
+              <div className="password-strength">
+                <div className="strength-bar">
+                  <div className={`strength-fill strength-${passwordStrength}`}></div>
+                </div>
+                <span style={{ fontSize: '0.85rem', marginTop: '0.25rem', display: 'block' }}>
+                  {passwordStrength === 'weak' && '⚠️ Contraseña débil'}
+                  {passwordStrength === 'medium' && '⚡ Contraseña media'}
+                  {passwordStrength === 'strong' && '✅ Contraseña fuerte'}
+                </span>
+              </div>
+            )}
           </div>
-          <div style={{ marginBottom: 12 }}>
-            <label htmlFor="confirm" style={{ display: 'block', marginBottom: 6 }}>Confirmar contraseña</label>
+
+          <div className="form-group">
+            <label htmlFor="confirm">Confirmar contraseña</label>
             <input
               id="confirm"
               type="password"
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
               placeholder="Repite la contraseña"
-              style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #e5e7eb', outline: 'none' }}
+              autoComplete="new-password"
             />
           </div>
+
           {status && (
-            <div style={{
-              background: status.type === 'success' ? '#ecfdf5' : '#fef2f2',
-              color: status.type === 'success' ? '#065f46' : '#991b1b',
-              border: `1px solid ${status.type === 'success' ? '#a7f3d0' : '#fecaca'}`,
-              padding: 10, borderRadius: 8, marginBottom: 12
-            }}>
-              {status.message}
+            <div className={`status-message status-${status.type}`}>
+              <span className="status-message-icon">
+                {status.type === 'success' ? '✅' : '❌'}
+              </span>
+              <span>{status.message}</span>
             </div>
           )}
-          <button type="submit" disabled={isLoading} style={{ width: '100%', padding: '12px 16px', borderRadius: 10, border: 'none', color: '#fff', cursor: 'pointer', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
-            {isLoading ? 'Guardando…' : 'Guardar nueva contraseña'}
+
+          <button type="submit" disabled={isLoading} className="submit-button">
+            {isLoading ? '⏳ Guardando...' : '🔐 Guardar Nueva Contraseña'}
           </button>
         </form>
-        <div style={{ textAlign: 'center', marginTop: 12 }}>
-          <a href="/" style={{ color: '#667eea', textDecoration: 'none' }}>Volver al inicio</a>
+
+        <div className="security-tips">
+          <h4>🛡️ Consejos de Seguridad</h4>
+          <ul>
+            <li>Usa al menos 8 caracteres</li>
+            <li>Incluye mayúsculas y números</li>
+            <li>Evita usar información personal</li>
+          </ul>
+        </div>
+
+        <div className="back-link">
+          <a href="/">← Volver al inicio</a>
         </div>
       </div>
     </div>

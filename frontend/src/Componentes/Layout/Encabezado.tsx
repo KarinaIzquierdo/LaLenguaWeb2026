@@ -12,7 +12,21 @@ export default function Header({ onLoginClick }: HeaderProps) {
     <header className="header-home">
       {/* Logo */}
       <div className="logo">
-        The Tongue 😜    
+        <div className="logo-brand">
+          <img src="/Lengua-logo.png" alt="La Lengua" className="logo-image" />
+          <span 
+            className="logo-text" 
+            style={{ 
+              opacity: 1, 
+              visibility: 'visible', 
+              color: '#5a67d8',
+              fontSize: '1.1rem',
+              fontWeight: 900
+            }}
+          >
+            La Lengua
+          </span>
+        </div>
       </div>
 
       {/* Navegación */}
@@ -36,7 +50,7 @@ export default function Header({ onLoginClick }: HeaderProps) {
         }}>Contact</a>
         <Link to="/blog" className={location.pathname === '/blog' ? 'active blog-link' : 'blog-link'}>Blog</Link>
         <button onClick={onLoginClick} className="login-btn">
-          <span className="btn-text">The Language</span>
+          <span className="btn-text">La Lengua</span>
           <span className="btn-hover">Login</span>
         </button>
       </nav>

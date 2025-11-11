@@ -7,11 +7,12 @@ const GestionSuscripciones: React.FC = () => {
   const [planesPorVencer, setPlanesPorVencer] = useState<Suscripcion[]>([]);
   const [suscripcionesActivas, setSuscripcionesActivas] = useState<Suscripcion[]>([]);
   const [planes, setPlanes] = useState<Plan[]>([]);
+  const [todosLosEstudiantes, setTodosLosEstudiantes] = useState<Usuario[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
   // Estados para asignar plan
-  const [showAsignarModal, setShowAsignarModal] = useState(false);
+  const [vistaActual, setVistaActual] = useState<'dashboard' | 'seleccionar-estudiante' | 'asignar-plan'>('dashboard');
   const [selectedUser, setSelectedUser] = useState<Usuario | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<number | null>(null);
   const [metodoPago, setMetodoPago] = useState('efectivo');
@@ -25,17 +26,19 @@ const GestionSuscripciones: React.FC = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [usuariosData, planesVencerData, suscripcionesData, planesData] = await Promise.all([
+      const [usuariosData, planesVencerData, suscripcionesData, planesData, estudiantesData] = await Promise.all([
         subscriptionService.getUsuariosSinPlan(),
         subscriptionService.getPlanesPorVencer(7), // 7 días de aviso
         subscriptionService.getSuscripcionesActivas(),
-        subscriptionService.getPlanes()
+        subscriptionService.getPlanes(),
+        subscriptionService.getTodosLosEstudiantes()
       ]);
       
-      setUsuariosSinPlan(usuariosData);
-      setPlanesPorVencer(planesVencerData);
-      setSuscripcionesActivas(suscripcionesData);
-      setPlanes(planesData);
+      setUsuariosSinPlan(Array.isArray(usuariosData) ? usuariosData : []);
+      setPlanesPorVencer(Array.isArray(planesVencerData) ? planesVencerData : []);
+      setSuscripcionesActivas(Array.isArray(suscripcionesData) ? suscripcionesData : []);
+      setPlanes(Array.isArray(planesData) ? planesData : []);
+      setTodosLosEstudiantes(Array.isArray(estudiantesData) ? estudiantesData : []);
       setError(null);
     } catch (err) {
       console.error('Error loading data:', err);
@@ -57,8 +60,8 @@ const GestionSuscripciones: React.FC = () => {
         notas: notas
       });
       
-      // Resetear formulario
-      setShowAsignarModal(false);
+      // Resetear formulario y volver al dashboard
+      setVistaActual('dashboard');
       setSelectedUser(null);
       setSelectedPlan(null);
       setMetodoPago('efectivo');
@@ -96,12 +99,40 @@ const GestionSuscripciones: React.FC = () => {
     }
   };
 
-  const formatearFecha = (fecha: string) => {
-    return new Date(fecha).toLocaleDateString('es-ES', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
+  const handleCancelarPlan = async (suscripcion: Suscripcion) => {
+    const confirmar = window.confirm(
+      `¿Estás seguro de cancelar el plan de ${suscripcion.estudiante_nombre}?\n\nEsta acción marcará la suscripción como cancelada y ya no aparecerá en suscripciones activas.`
+    );
+    
+    if (!confirmar) return;
+    
+    try {
+      await subscriptionService.cancelarPlan(suscripcion.id);
+      
+      // Pequeño delay para asegurar que el backend actualice
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Recargar datos
+      await loadData();
+      
+      alert(`Plan cancelado exitosamente para ${suscripcion.estudiante_nombre}.`);
+    } catch (err) {
+      console.error('Error canceling plan:', err);
+      alert('Error al cancelar plan');
+    }
+  };
+
+  const formatearFecha = (fecha: string | undefined) => {
+    if (!fecha) return 'N/A';
+    try {
+      return new Date(fecha).toLocaleDateString('es-ES', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    } catch (error) {
+      return 'N/A';
+    }
   };
 
   const calcularDiasRestantes = (fechaFin: string) => {
@@ -135,23 +166,194 @@ const GestionSuscripciones: React.FC = () => {
     );
   }
 
+  // Renderizar vista de selección de estudiante
+  if (vistaActual === 'seleccionar-estudiante') {
+    return (
+      <div className="gestion-suscripciones-container">
+        <header className="page-header">
+          <div className="header-content">
+            <div>
+              <h2>Seleccionar Estudiante</h2>
+              <p>Elige el estudiante al que deseas asignar un plan</p>
+            </div>
+            <button 
+              className="btn-volver"
+              onClick={() => setVistaActual('dashboard')}
+            >
+              ← Volver
+            </button>
+          </div>
+        </header>
+
+        <div className="tabla-estudiantes-container">
+          {todosLosEstudiantes.length === 0 ? (
+            <p>No hay estudiantes disponibles</p>
+          ) : (
+            <table className="tabla-estudiantes">
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Email</th>
+                  <th>Fecha de Registro</th>
+                  <th>Acción</th>
+                </tr>
+              </thead>
+              <tbody>
+                {todosLosEstudiantes.map((estudiante) => (
+                  <tr key={estudiante.id}>
+                    <td>
+                      <div className="estudiante-nombre">
+                        {estudiante.first_name} {estudiante.last_name}
+                      </div>
+                    </td>
+                    <td>{estudiante.email}</td>
+                    <td>{formatearFecha(estudiante.date_joined)}</td>
+                    <td>
+                      <button
+                        className="btn-seleccionar-estudiante"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setSelectedUser(estudiante);
+                          setVistaActual('asignar-plan');
+                        }}
+                      >
+                        Seleccionar
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Renderizar vista de asignar plan
+  if (vistaActual === 'asignar-plan' && selectedUser) {
+    return (
+      <div className="gestion-suscripciones-container">
+        <header className="page-header">
+          <div className="header-content">
+            <div>
+              <h2>Asignar Plan a {selectedUser.first_name} {selectedUser.last_name}</h2>
+              <p>Completa la información del plan</p>
+            </div>
+            <button 
+              className="btn-volver"
+              onClick={() => setVistaActual('seleccionar-estudiante')}
+            >
+              ← Volver
+            </button>
+          </div>
+        </header>
+
+        <div className="formulario-asignar-plan">
+          <div className="form-group">
+            <label>Plan</label>
+            <select 
+              value={selectedPlan || ''} 
+              onChange={(e) => setSelectedPlan(Number(e.target.value))}
+              className="form-select"
+            >
+              <option value="">Seleccionar plan...</option>
+              {Array.isArray(planes) && planes.map((plan) => (
+                <option key={plan.id} value={plan.id}>
+                  {plan.nombre} - ${plan.precio_base.toLocaleString()} COP
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label>Método de Pago</label>
+            <select 
+              value={metodoPago} 
+              onChange={(e) => setMetodoPago(e.target.value)}
+              className="form-select"
+            >
+              <option value="efectivo">Efectivo</option>
+              <option value="transferencia">Transferencia</option>
+              <option value="tarjeta">Tarjeta</option>
+              <option value="paypal">PayPal</option>
+              <option value="otro">Otro</option>
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label>Descuento (COP)</label>
+            <input
+              type="number"
+              value={descuento}
+              onChange={(e) => setDescuento(Number(e.target.value))}
+              className="form-input"
+              min="0"
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Notas</label>
+            <textarea
+              value={notas}
+              onChange={(e) => setNotas(e.target.value)}
+              className="form-textarea"
+              rows={4}
+              placeholder="Notas adicionales..."
+            />
+          </div>
+
+          <div className="form-actions">
+            <button 
+              className="btn-cancelar"
+              onClick={() => {
+                setVistaActual('dashboard');
+                setSelectedUser(null);
+                setSelectedPlan(null);
+                setMetodoPago('efectivo');
+                setDescuento(0);
+                setNotas('');
+              }}
+            >
+              Cancelar
+            </button>
+            <button 
+              className="btn-confirmar"
+              onClick={handleAsignarPlan}
+              disabled={!selectedPlan}
+            >
+              Asignar Plan
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Vista principal del dashboard
   return (
     <div className="gestion-suscripciones-container">
       <header className="page-header">
-        <h2>👥 Gestión de Suscripciones</h2>
-        <p>Asigna planes, controla vencimientos y gestiona renovaciones</p>
+        <div className="header-content">
+          <div>
+            <h2>Gestión de Suscripciones</h2>
+            <p>Asigna planes, controla vencimientos y gestiona renovaciones</p>
+          </div>
+          <button 
+            className="btn-asignar-principal"
+            onClick={(e) => {
+              e.preventDefault();
+              setVistaActual('seleccionar-estudiante');
+            }}
+          >
+            + Asignar Plan a Estudiante
+          </button>
+        </div>
       </header>
 
       {/* Estadísticas Rápidas */}
       <section className="stats-section">
         <div className="stats-grid">
-          <div className="stat-card warning">
-            <div className="stat-icon">⚠️</div>
-            <div className="stat-content">
-              <h3>{usuariosSinPlan.length}</h3>
-              <p>Usuarios sin Plan</p>
-            </div>
-          </div>
           <div className="stat-card danger">
             <div className="stat-icon">⏰</div>
             <div className="stat-content">
@@ -167,43 +369,6 @@ const GestionSuscripciones: React.FC = () => {
             </div>
           </div>
         </div>
-      </section>
-
-      {/* Usuarios sin Plan */}
-      <section className="usuarios-sin-plan-section">
-        <div className="section-header">
-          <h3>👤 Usuarios sin Plan Activo</h3>
-          <span className="count">{usuariosSinPlan.length} usuarios</span>
-        </div>
-        
-        {usuariosSinPlan.length === 0 ? (
-          <div className="empty-state">
-            <p>🎉 ¡Todos los usuarios tienen planes activos!</p>
-          </div>
-        ) : (
-          <div className="usuarios-grid">
-            {usuariosSinPlan.map((usuario) => (
-              <div key={usuario.id} className="usuario-card">
-                <div className="usuario-info">
-                  <h4>{usuario.first_name} {usuario.last_name}</h4>
-                  <p>{usuario.email}</p>
-                  <span className="fecha-registro">
-                    Registrado: {formatearFecha(usuario.date_joined)}
-                  </span>
-                </div>
-                <button 
-                  className="btn-asignar"
-                  onClick={() => {
-                    setSelectedUser(usuario);
-                    setShowAsignarModal(true);
-                  }}
-                >
-                  📋 Asignar Plan
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
       </section>
 
       {/* Planes por Vencer */}
@@ -287,6 +452,7 @@ const GestionSuscripciones: React.FC = () => {
                 <th>Inicio</th>
                 <th>Vencimiento</th>
                 <th>Estado</th>
+                <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -294,10 +460,31 @@ const GestionSuscripciones: React.FC = () => {
                 <tr key={suscripcion.id}>
                   <td>{suscripcion.estudiante_nombre}</td>
                   <td>{suscripcion.plan_nombre}</td>
-                  <td>{formatearFecha(suscripcion.fecha_inicio_plan)}</td>
-                  <td>{formatearFecha(suscripcion.fecha_fin_plan)}</td>
+                  <td>{formatearFecha(suscripcion.fecha_inicio)}</td>
+                  <td>{formatearFecha(suscripcion.fecha_fin)}</td>
                   <td>
-                    <span className="estado-activo">Activo</span>
+                    <span className={`estado-badge ${
+                      suscripcion.estado === 'activa' ? 'estado-activo' : 
+                      suscripcion.estado === 'por_vencer' ? 'estado-por-vencer' : 
+                      suscripcion.estado === 'cancelada' ? 'estado-cancelado' : 
+                      'estado-vencido'
+                    }`}>
+                      {suscripcion.estado === 'activa' ? 'ACTIVO' : 
+                       suscripcion.estado === 'por_vencer' ? 'POR VENCER' : 
+                       suscripcion.estado === 'cancelada' ? 'CANCELADO' : 
+                       'VENCIDO'}
+                    </span>
+                  </td>
+                  <td>
+                    {(suscripcion.estado === 'activa' || suscripcion.estado === 'por_vencer') && (
+                      <button 
+                        onClick={() => handleCancelarPlan(suscripcion)}
+                        className="btn-cancelar-plan"
+                        title="Cancelar plan"
+                      >
+                        Cancelar
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -306,88 +493,6 @@ const GestionSuscripciones: React.FC = () => {
         </div>
       </section>
 
-      {/* Modal Asignar Plan */}
-      {showAsignarModal && selectedUser && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h3>📋 Asignar Plan a {selectedUser.first_name} {selectedUser.last_name}</h3>
-              <button 
-                className="close-button"
-                onClick={() => setShowAsignarModal(false)}
-              >
-                ✕
-              </button>
-            </div>
-            
-            <div className="modal-body">
-              <div className="form-group">
-                <label>Plan:</label>
-                <select 
-                  value={selectedPlan || ''} 
-                  onChange={(e) => setSelectedPlan(Number(e.target.value))}
-                >
-                  <option value="">Seleccionar plan...</option>
-                  {planes.map(plan => (
-                    <option key={plan.id} value={plan.id}>
-                      {plan.nombre} - ${plan.precio_base.toLocaleString()}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              
-              <div className="form-group">
-                <label>Método de Pago:</label>
-                <select 
-                  value={metodoPago} 
-                  onChange={(e) => setMetodoPago(e.target.value)}
-                >
-                  <option value="efectivo">Efectivo</option>
-                  <option value="tarjeta_credito">Tarjeta de Crédito</option>
-                  <option value="transferencia">Transferencia</option>
-                  <option value="otro">Otro</option>
-                </select>
-              </div>
-              
-              <div className="form-group">
-                <label>Descuento (COP):</label>
-                <input 
-                  type="number" 
-                  value={descuento}
-                  onChange={(e) => setDescuento(Number(e.target.value))}
-                  min="0"
-                />
-              </div>
-              
-              <div className="form-group">
-                <label>Notas:</label>
-                <textarea 
-                  value={notas}
-                  onChange={(e) => setNotas(e.target.value)}
-                  placeholder="Notas adicionales..."
-                  rows={3}
-                />
-              </div>
-            </div>
-            
-            <div className="modal-actions">
-              <button 
-                className="btn-cancel"
-                onClick={() => setShowAsignarModal(false)}
-              >
-                Cancelar
-              </button>
-              <button 
-                className="btn-confirm"
-                onClick={handleAsignarPlan}
-                disabled={!selectedPlan}
-              >
-                💾 Asignar Plan
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

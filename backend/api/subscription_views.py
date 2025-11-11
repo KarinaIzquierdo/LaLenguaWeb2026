@@ -5,8 +5,9 @@ from rest_framework import status
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from datetime import datetime, timedelta
-from .models import CustomUser, Plan, Venta, Notificacion
-from .serializers import VentaSerializer, UserSerializer
+from decimal import Decimal
+from .models import CustomUser, Plan, Venta, Notificacion, Suscripcion, Especializacion, NotificacionEstudiante
+from .serializers import VentaSerializer, UserSerializer, SuscripcionSerializer
 import json
 
 @api_view(['POST'])
@@ -16,12 +17,17 @@ def asignar_plan_usuario_view(request):
     Asigna un plan a un usuario específico
     """
     try:
+        print("=== INICIO ASIGNAR PLAN ===")
+        print(f"Request data: {request.data}")
+        
         user_id = request.data.get('user_id')
         plan_id = request.data.get('plan_id')
         especializacion_id = request.data.get('especializacion_id', None)
         metodo_pago = request.data.get('metodo_pago', 'efectivo')
         descuento = request.data.get('descuento', 0)
         notas = request.data.get('notas', '')
+        
+        print(f"user_id: {user_id}, plan_id: {plan_id}")
         
         # Validar datos requeridos
         if not user_id or not plan_id:
@@ -31,8 +37,10 @@ def asignar_plan_usuario_view(request):
             }, status=status.HTTP_400_BAD_REQUEST)
         
         # Obtener usuario y plan
+        print("Obteniendo usuario y plan...")
         usuario = get_object_or_404(CustomUser, id=user_id)
         plan = get_object_or_404(Plan, id=plan_id)
+        print(f"Usuario: {usuario.username}, Plan: {plan.nombre}")
         
         # Calcular fechas
         fecha_inicio = timezone.now().date()
@@ -40,55 +48,125 @@ def asignar_plan_usuario_view(request):
         
         # Calcular precios
         precio_plan = plan.precio_base
-        precio_especializacion = 0
+        precio_especializacion = Decimal('0')
         
         if especializacion_id:
             # Aquí puedes agregar lógica para especializaciones si las tienes
-            precio_especializacion = 50000  # Precio base de especialización
+            precio_especializacion = Decimal('50000')  # Precio base de especialización
         
-        precio_total = precio_plan + precio_especializacion - float(descuento)
+        # Convertir descuento a Decimal
+        descuento_decimal = Decimal(str(descuento))
+        precio_total = precio_plan + precio_especializacion - descuento_decimal
+        
+        # Extraer número de clases del plan según características
+        clases_totales = 9  # Default
+        if 'Plan Individual' in plan.nombre or 'Plan Dupla' in plan.nombre or 'Plan Trío' in plan.nombre or 'Plan Grupal' in plan.nombre:
+            clases_totales = 9
+        elif 'Cero a Héroe' in plan.nombre or 'Kids' in plan.nombre:
+            clases_totales = 8
+        
+        # Obtener especialización si existe
+        print("Verificando especialización...")
+        especializacion = None
+        if especializacion_id:
+            try:
+                especializacion = Especializacion.objects.get(id=especializacion_id)
+                print(f"Especialización encontrada: {especializacion}")
+            except Especializacion.DoesNotExist:
+                print("Especialización no encontrada")
+                pass
         
         # Crear la venta/asignación
-        venta = Venta.objects.create(
-            estudiante=usuario,
-            plan=plan,
-            especializacion_id=especializacion_id if especializacion_id else None,
-            precio_plan=precio_plan,
-            precio_especializacion=precio_especializacion,
-            descuento=descuento,
-            precio_total=precio_total,
-            metodo_pago=metodo_pago,
-            estado='pagado',  # Asumimos que está pagado cuando admin lo asigna
-            notas=notas,
-            vendido_por=request.user,
-            fecha_venta=timezone.now(),
-            fecha_pago=timezone.now(),
-            fecha_inicio_plan=fecha_inicio,
-            fecha_fin_plan=fecha_fin
-        )
+        print("Creando venta...")
+        print(f"Datos venta: estudiante={usuario.id}, plan={plan.id}, precio_total={precio_total}")
         
-        # Crear notificación para el usuario
-        Notificacion.objects.create(
-            usuario=usuario,
-            titulo=f'Plan {plan.nombre} Asignado',
-            mensaje=f'Te hemos asignado el plan {plan.nombre}. Válido desde {fecha_inicio} hasta {fecha_fin}. ¡Comienza tu aprendizaje!',
-            tipo='plan_asignado',
-            leida=False
-        )
+        try:
+            venta = Venta.objects.create(
+                estudiante=usuario,
+                plan=plan,
+                especializacion=especializacion,
+                precio_plan=precio_plan,
+                precio_especializacion=precio_especializacion,
+                descuento=descuento_decimal,
+                precio_total=precio_total,
+                metodo_pago=metodo_pago,
+                estado='pagado',
+                notas=notas,
+                vendido_por=request.user,
+                fecha_pago=timezone.now(),
+                fecha_inicio_plan=fecha_inicio,
+                fecha_fin_plan=fecha_fin
+            )
+            print(f"Venta creada exitosamente: ID {venta.id}")
+        except Exception as e:
+            print(f"ERROR al crear venta: {str(e)}")
+            print(f"Tipo de error: {type(e).__name__}")
+            import traceback
+            traceback.print_exc()
+            raise
+        
+        # Crear suscripción automáticamente
+        print("Creando suscripción...")
+        try:
+            suscripcion = Suscripcion.objects.create(
+                venta=venta,
+                estudiante=usuario,
+                plan=plan,
+                fecha_inicio=fecha_inicio,
+                fecha_fin=fecha_fin,
+                estado='activa',
+                clases_totales=clases_totales,
+                clases_tomadas=0
+            )
+            print(f"Suscripción creada exitosamente: ID {suscripcion.id}")
+        except Exception as e:
+            print(f"ERROR al crear suscripción: {str(e)}")
+            print(f"Tipo de error: {type(e).__name__}")
+            import traceback
+            traceback.print_exc()
+            raise
+        
+        # Crear notificación para el estudiante
+        print("Creando notificación para el estudiante...")
+        try:
+            NotificacionEstudiante.objects.create(
+                estudiante=usuario,
+                tipo='plan_vencimiento',
+                mensaje=f'¡Bienvenido! Se te ha asignado el plan {plan.nombre}. Tienes {clases_totales} clases disponibles hasta el {fecha_fin.strftime("%d/%m/%Y")}.',
+                datos_adicionales={
+                    'venta_id': venta.id,
+                    'suscripcion_id': suscripcion.id,
+                    'plan_nombre': plan.nombre,
+                    'fecha_inicio': str(fecha_inicio),
+                    'fecha_fin': str(fecha_fin),
+                    'clases_totales': clases_totales
+                }
+            )
+            print("Notificación creada exitosamente")
+        except Exception as e:
+            print(f"Error al crear notificación (no crítico): {str(e)}")
         
         return Response({
             'success': True,
             'message': f'Plan {plan.nombre} asignado exitosamente a {usuario.first_name} {usuario.last_name}',
             'venta_id': venta.id,
+            'suscripcion_id': suscripcion.id,
             'fecha_inicio': fecha_inicio,
             'fecha_fin': fecha_fin,
-            'precio_total': precio_total
+            'precio_total': precio_total,
+            'clases_totales': clases_totales
         }, status=status.HTTP_201_CREATED)
         
     except Exception as e:
+        print(f"=== ERROR GENERAL ===")
+        print(f"Error: {str(e)}")
+        print(f"Tipo: {type(e).__name__}")
+        import traceback
+        traceback.print_exc()
         return Response({
             'success': False,
-            'message': f'Error al asignar plan: {str(e)}'
+            'message': f'Error al asignar plan: {str(e)}',
+            'error_type': type(e).__name__
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['GET'])
@@ -98,13 +176,16 @@ def usuarios_sin_plan_view(request):
     Lista usuarios que no tienen un plan activo
     """
     try:
-        # Usuarios que no tienen ventas activas o cuyo plan ya venció
-        usuarios_sin_plan = CustomUser.objects.filter(
-            role='estudiante'
-        ).exclude(
-            ventas__fecha_fin_plan__gte=timezone.now().date(),
-            ventas__estado='pagado'
-        ).distinct()
+        # Obtener todos los estudiantes
+        todos_estudiantes = CustomUser.objects.filter(role='estudiante')
+        
+        # Obtener IDs de estudiantes con suscripciones activas o por vencer
+        estudiantes_con_plan = Suscripcion.objects.filter(
+            estado__in=['activa', 'por_vencer']
+        ).values_list('estudiante_id', flat=True).distinct()
+        
+        # Filtrar estudiantes sin plan activo
+        usuarios_sin_plan = todos_estudiantes.exclude(id__in=estudiantes_con_plan)
         
         serializer = UserSerializer(usuarios_sin_plan, many=True)
         return Response({
@@ -123,6 +204,7 @@ def usuarios_sin_plan_view(request):
 def planes_por_vencer_view(request):
     """
     Lista planes que están por vencer en los próximos días
+    También crea notificaciones automáticas para estudiantes
     """
     try:
         dias_aviso = int(request.GET.get('dias', 7))  # Por defecto 7 días
@@ -133,6 +215,29 @@ def planes_por_vencer_view(request):
             fecha_fin_plan__lte=fecha_limite,
             fecha_fin_plan__gte=timezone.now().date()
         ).select_related('estudiante', 'plan')
+        
+        # Crear notificaciones para estudiantes con planes por vencer
+        for venta in planes_por_vencer:
+            # Verificar si ya existe una notificación reciente (últimas 24 horas)
+            notificacion_existente = NotificacionEstudiante.objects.filter(
+                estudiante=venta.estudiante,
+                tipo='plan_vencimiento',
+                fecha_creacion__gte=timezone.now() - timedelta(hours=24)
+            ).exists()
+            
+            if not notificacion_existente:
+                dias_restantes = (venta.fecha_fin_plan - timezone.now().date()).days
+                NotificacionEstudiante.objects.create(
+                    estudiante=venta.estudiante,
+                    tipo='plan_vencimiento',
+                    mensaje=f'Tu plan {venta.plan.nombre} vence en {dias_restantes} días. Renueva pronto para continuar con tus clases.',
+                    datos_adicionales={
+                        'venta_id': venta.id,
+                        'plan_nombre': venta.plan.nombre,
+                        'fecha_fin': str(venta.fecha_fin_plan),
+                        'dias_restantes': dias_restantes
+                    }
+                )
         
         serializer = VentaSerializer(planes_por_vencer, many=True)
         return Response({
@@ -154,12 +259,17 @@ def suscripciones_activas_view(request):
     Lista todas las suscripciones activas con información detallada
     """
     try:
-        suscripciones_activas = Venta.objects.filter(
-            estado='pagado',
-            fecha_fin_plan__gte=timezone.now().date()
-        ).select_related('estudiante', 'plan').order_by('fecha_fin_plan')
+        # Actualizar estados solo de suscripciones que no están canceladas
+        suscripciones = Suscripcion.objects.exclude(estado='cancelada')
+        for suscripcion in suscripciones:
+            suscripcion.actualizar_estado()
         
-        serializer = VentaSerializer(suscripciones_activas, many=True)
+        # Filtrar suscripciones activas (excluyendo canceladas explícitamente)
+        suscripciones_activas = Suscripcion.objects.filter(
+            estado__in=['activa', 'por_vencer']
+        ).exclude(estado='cancelada').select_related('estudiante', 'plan', 'venta').order_by('fecha_fin')
+        
+        serializer = SuscripcionSerializer(suscripciones_activas, many=True)
         return Response({
             'success': True,
             'suscripciones': serializer.data,
@@ -273,4 +383,41 @@ def renovar_plan_view(request):
         return Response({
             'success': False,
             'message': f'Error al renovar plan: {str(e)}'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def cancelar_suscripcion_view(request, suscripcion_id):
+    """
+    Cancela una suscripción activa
+    """
+    try:
+        # Obtener la suscripción
+        suscripcion = get_object_or_404(Suscripcion, id=suscripcion_id)
+        
+        # Verificar que la suscripción esté activa
+        if suscripcion.estado == 'cancelada':
+            return Response({
+                'success': False,
+                'message': 'Esta suscripción ya está cancelada'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Cambiar estado a cancelada
+        suscripcion.estado = 'cancelada'
+        suscripcion.save()
+        
+        # Opcional: También cancelar la venta relacionada
+        if suscripcion.venta:
+            suscripcion.venta.estado = 'cancelado'
+            suscripcion.venta.save()
+        
+        return Response({
+            'success': True,
+            'message': f'Suscripción cancelada exitosamente para {suscripcion.estudiante.first_name} {suscripcion.estudiante.last_name}'
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response({
+            'success': False,
+            'message': f'Error al cancelar suscripción: {str(e)}'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

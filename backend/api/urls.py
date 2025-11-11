@@ -5,19 +5,24 @@ from .views import ClaseViewSet, MediaItemViewSet
 from . import especializacion_views
 from . import evaluacion_views
 from . import notificacion_views
+from . import notificacion_estudiante_views
 from . import calificacion_views
 from . import mission_views
 from . import profesor_views
 from . import user_views
 from . import mobile_views
 from . import bloque_views
+from . import registro_eliminacion_views
+from . import contact_views
+from . import asistencia_views
 from .plan_views import (
     planes_list_view, plan_create_view, plan_update_view, plan_delete_view, plan_toggle_view,
     ventas_list_view, venta_create_view, venta_update_view, estadisticas_financieras_view
 )
 from .subscription_views import (
     asignar_plan_usuario_view, usuarios_sin_plan_view, planes_por_vencer_view,
-    suscripciones_activas_view, enviar_recordatorio_pago_view, renovar_plan_view
+    suscripciones_activas_view, enviar_recordatorio_pago_view, renovar_plan_view,
+    cancelar_suscripcion_view
 )
 
 router = routers.DefaultRouter()
@@ -135,6 +140,7 @@ urlpatterns = [
     path('suscripciones/activas/', suscripciones_activas_view, name='suscripciones_activas'),
     path('suscripciones/recordatorio/', enviar_recordatorio_pago_view, name='recordatorio_pago'),
     path('suscripciones/renovar/', renovar_plan_view, name='renovar_plan'),
+    path('suscripciones/<int:suscripcion_id>/cancelar/', cancelar_suscripcion_view, name='cancelar_suscripcion'),
     
     # Endpoints específicos para móviles
     path('mobile/info/', mobile_views.api_info_view, name='mobile_api_info'),
@@ -148,6 +154,24 @@ urlpatterns = [
     path('students/', views.mobile_students_list_view, name='mobile_students_list'),  # Lista de estudiantes
     path('evaluations/', views.mobile_evaluations_view, name='mobile_evaluations'),  # Evaluaciones asignadas al usuario
     path('clubs/', views.mobile_clubs_view, name='mobile_clubs'),  # Clubs y materiales del usuario
+    
+    # Endpoints para registros de eliminación
+    path('registros-eliminacion/', registro_eliminacion_views.get_registros_eliminacion, name='registros_eliminacion'),
+    path('registros-eliminacion/estadisticas/', registro_eliminacion_views.get_estadisticas_eliminacion, name='estadisticas_eliminacion'),
+    
+    # Endpoint para formulario de contacto
+    path('contact/', contact_views.send_contact_email, name='send_contact_email'),
+    
+    # Endpoints para asistencias
+    path('asistencias/', asistencia_views.asistencias_list_create, name='asistencias_list_create'),
+    path('asistencias/<int:pk>/', asistencia_views.asistencia_detail, name='asistencia_detail'),
+    path('asistencias/estadisticas/<int:estudiante_id>/', asistencia_views.estadisticas_asistencia, name='estadisticas_asistencia'),
+    
+    # Endpoints para notificaciones de estudiantes
+    path('notificaciones/estudiante/', notificacion_estudiante_views.notificaciones_estudiante_view, name='notificaciones_estudiante'),
+    path('notificaciones/<int:notificacion_id>/marcar-leida/', notificacion_estudiante_views.marcar_notificacion_leida_view, name='marcar_notificacion_leida'),
+    path('notificaciones/marcar-todas-leidas/', notificacion_estudiante_views.marcar_todas_leidas_view, name='marcar_todas_leidas'),
+    path('notificaciones/contador-no-leidas/', notificacion_estudiante_views.contador_no_leidas_view, name='contador_no_leidas'),
 ]
 
 urlpatterns += router.urls

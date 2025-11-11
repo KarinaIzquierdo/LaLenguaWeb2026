@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import './ReportesProgreso.css';
 import DetalleEstudianteModal from './DetalleEstudianteModal';
 import { evaluacionService } from '../../services/evaluacionService';
+import { userService } from '../../services/userService';
+import { ClaseService } from '../../services/claseService';
 
 interface EstudianteProgreso {
   id: number;
@@ -40,14 +42,76 @@ export default function ReportesProgreso() {
     try {
       setLoading(true);
       setError(null);
-      const response = await evaluacionService.getReportesProgreso();
       
-      if (response.success) {
-        setEstudiantes(response.data.estudiantes);
-        setEstadisticas(response.data.estadisticas);
-      } else {
-        setError('Error al cargar reportes de progreso');
+      // Obtener el usuario actual (profesor) desde localStorage
+      const userStr = localStorage.getItem('user');
+      if (!userStr) {
+        setError('No se pudo obtener el usuario actual');
+        setLoading(false);
+        return;
       }
+      const currentUser = JSON.parse(userStr);
+      if (!currentUser || !currentUser.id) {
+        setError('Usuario inválido');
+        setLoading(false);
+        return;
+      }
+      
+      // Obtener las clases del profesor
+      const clasesDelProfesor = await ClaseService.getClasesPorProfesor(currentUser.id);
+      
+      // Obtener IDs únicos de estudiantes de todas las clases
+      const estudiantesIds = new Set<number>();
+      clasesDelProfesor.forEach((clase: any) => {
+        if (clase.estudiantes && Array.isArray(clase.estudiantes)) {
+          clase.estudiantes.forEach((estudianteId: number) => {
+            estudiantesIds.add(estudianteId);
+          });
+        }
+      });
+      
+      // Si no hay estudiantes, mostrar lista vacía
+      if (estudiantesIds.size === 0) {
+        setEstudiantes([]);
+        const stats: EstadisticasGenerales = {
+          total_estudiantes: 0,
+          progreso_promedio: 0,
+          calificacion_promedio: 0
+        };
+        setEstadisticas(stats);
+        setLoading(false);
+        return;
+      }
+      
+      // Cargar todos los usuarios
+      const usuarios = await userService.getAll();
+      
+      // Filtrar solo los estudiantes que están en las clases del profesor
+      const estudiantesData: EstudianteProgreso[] = usuarios
+        .filter(u => u.rol === 'student' && estudiantesIds.has(u.id))
+        .map(u => ({
+          id: u.id,
+          nombre: `${u.nombres} ${u.apellidos}`,
+          nivel: u.nivel || 'Sin nivel',
+          progreso: 0, // TODO: Calcular progreso real
+          clasesCompletadas: 0, // TODO: Calcular desde asistencias
+          clasesTotales: 10, // TODO: Obtener total de clases
+          ultimaClase: new Date().toISOString(),
+          fortalezas: [],
+          areasAMejorar: [],
+          calificacionPromedio: 0 // TODO: Calcular desde evaluaciones
+        }));
+      
+      setEstudiantes(estudiantesData);
+      
+      // Calcular estadísticas
+      const stats: EstadisticasGenerales = {
+        total_estudiantes: estudiantesData.length,
+        progreso_promedio: 0,
+        calificacion_promedio: 0
+      };
+      setEstadisticas(stats);
+      
     } catch (err) {
       setError('Error al cargar reportes de progreso');
       console.error('Error loading reportes:', err);
@@ -195,59 +259,74 @@ Generado el: ${new Date().toLocaleDateString('es-ES')}
         </div>
       )}
 
-      {/* Lista de estudiantes */}
+      {/* Tabla de estudiantes */}
       {!loading && !error && (
-        <div className="estudiantes-lista-container">
-          <div className="estudiantes-lista">
-          {estudiantesFiltrados.map(estudiante => (
-          <div key={estudiante.id} className="estudiante-card">
-            <div className="estudiante-header">
-              <div className="estudiante-info">
-                <h3>{estudiante.nombre}</h3>
-                <span className={`nivel-badge ${estudiante.nivel.toLowerCase()}`}>
-                  {estudiante.nivel}
-                </span>
-              </div>
-              <div className="estudiante-info-simple">
-                <span className="ultima-clase-header">
-                  Última clase: {new Date(estudiante.ultimaClase).toLocaleDateString('es-ES')}
-                </span>
-              </div>
-            </div>
-
-            <div className="progreso-barra">
-              <div className="progreso-fondo">
-                <div 
-                  className="progreso-relleno"
-                  style={{ width: `${estudiante.progreso}%` }}
-                ></div>
-              </div>
-              <span className="progreso-texto">
-                {estudiante.clasesCompletadas} de {estudiante.clasesTotales} clases
-              </span>
-            </div>
-
-
-
-            <div className="estudiante-footer">
-              <div className="acciones">
-                <button 
-                  className="btn-accion btn-ver-detalles"
-                  onClick={() => mostrarDetalles(estudiante)}
-                >
-                  👁️ Ver Detalles
-                </button>
-                <button 
-                  className="btn-accion btn-generar"
-                  onClick={() => generarReporte(estudiante)}
-                >
-                  📄 Generar reporte
-                </button>
-              </div>
-            </div>
+        <div className="reportes-table-container">
+          <div className="users-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Nivel</th>
+                  <th>Progreso</th>
+                  <th>Clases Completadas</th>
+                  <th>Calificación Promedio</th>
+                  <th>Última Clase</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {estudiantesFiltrados.map(estudiante => (
+                  <tr key={estudiante.id}>
+                    <td>{estudiante.nombre}</td>
+                    <td>
+                      <span className={`nivel-badge-table ${estudiante.nivel.toLowerCase()}`}>
+                        {estudiante.nivel}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="progreso-cell">
+                        <div className="progreso-barra-table">
+                          <div 
+                            className="progreso-relleno-table"
+                            style={{ width: `${estudiante.progreso}%` }}
+                          ></div>
+                        </div>
+                        <span className="progreso-porcentaje">{estudiante.progreso}%</span>
+                      </div>
+                    </td>
+                    <td className="text-center">
+                      {estudiante.clasesCompletadas} / {estudiante.clasesTotales}
+                    </td>
+                    <td className="text-center">
+                      <span className="calificacion-badge">
+                        {estudiante.calificacionPromedio.toFixed(1)}
+                      </span>
+                    </td>
+                    <td>{new Date(estudiante.ultimaClase).toLocaleDateString('es-ES')}</td>
+                    <td>
+                      <div className="acciones-table">
+                        <button 
+                          className="btn-accion-table btn-ver"
+                          onClick={() => mostrarDetalles(estudiante)}
+                          title="Ver Detalles"
+                        >
+                          👁️
+                        </button>
+                        <button 
+                          className="btn-accion-table btn-generar"
+                          onClick={() => generarReporte(estudiante)}
+                          title="Generar Reporte"
+                        >
+                          📄
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        ))}
-        </div>
         </div>
       )}
 

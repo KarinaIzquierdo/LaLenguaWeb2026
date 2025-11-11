@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import authenticate
-from .models import CustomUser, Clase, Evaluation, MediaItem, Club, ClubMaterial, Especializacion, Evaluacion, RespuestaEvaluacion, Notificacion, Plan, Venta, Bloque, MissionExternalLink
+from .models import CustomUser, Clase, Evaluation, MediaItem, Club, ClubMaterial, Especializacion, Evaluacion, RespuestaEvaluacion, Notificacion, NotificacionEstudiante, Plan, Venta, Bloque, MissionExternalLink, Suscripcion
 
 class UserSerializer(serializers.ModelSerializer):
     especializacion_nombre = serializers.SerializerMethodField()
@@ -26,7 +26,7 @@ class MobileUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
         fields = ('id', 'username', 'email', 'first_name', 'last_name', 'role', 
-                 'is_active', 'bloque_asignado', 'especializacion', 'date_joined')
+                 'is_active', 'bloque_asignado', 'especializacion', 'date_joined', 'correo_personal', 'english_level')
         read_only_fields = ('id', 'date_joined')
     
     def get_especializacion(self, obj):
@@ -135,8 +135,23 @@ class ClaseSerializer(serializers.ModelSerializer):
                  'created_at', 'updated_at']
     
     def create(self, validated_data):
+        # Debug: Ver qué datos están llegando
+        print("=" * 50)
+        print("📝 CREANDO CLASE - Datos validados:")
+        print(f"Estado recibido: {validated_data.get('estado', 'NO ESPECIFICADO')}")
+        print(f"Todos los datos: {validated_data}")
+        print("=" * 50)
+        
         estudiantes_ids = validated_data.pop('estudiantesSeleccionados', [])
+        
+        # Asegurar que el estado sea 'programada' si no se especifica
+        if 'estado' not in validated_data or not validated_data['estado']:
+            validated_data['estado'] = 'programada'
+            print("⚠️ Estado no especificado, usando default: 'programada'")
+        
         clase = super().create(validated_data)
+        
+        print(f"✅ Clase creada con estado: {clase.estado}")
         
         # Asignar estudiantes por ID
         if estudiantes_ids:
@@ -361,6 +376,13 @@ class NotificacionSerializer(serializers.ModelSerializer):
             return "hace unos segundos"
 
 
+class NotificacionEstudianteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = NotificacionEstudiante
+        fields = ['id', 'tipo', 'mensaje', 'leida', 'datos_adicionales', 'fecha_creacion']
+        read_only_fields = ['id', 'fecha_creacion']
+
+
 class EspecializacionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Especializacion
@@ -425,3 +447,25 @@ class BloqueSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(f'Ya existe un bloque {nivel} - {nombre}')
         
         return attrs
+
+
+class SuscripcionSerializer(serializers.ModelSerializer):
+    estudiante_nombre = serializers.SerializerMethodField()
+    plan_nombre = serializers.SerializerMethodField()
+    dias_restantes = serializers.ReadOnlyField()
+    clases_restantes = serializers.ReadOnlyField()
+    progreso_porcentaje = serializers.ReadOnlyField()
+    
+    class Meta:
+        model = Suscripcion
+        fields = ['id', 'venta', 'estudiante', 'estudiante_nombre', 'plan', 'plan_nombre',
+                 'fecha_inicio', 'fecha_fin', 'estado', 'clases_totales', 'clases_tomadas',
+                 'dias_restantes', 'clases_restantes', 'progreso_porcentaje',
+                 'recordatorio_enviado', 'fecha_recordatorio', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
+    
+    def get_estudiante_nombre(self, obj):
+        return f"{obj.estudiante.first_name} {obj.estudiante.last_name}"
+    
+    def get_plan_nombre(self, obj):
+        return obj.plan.nombre

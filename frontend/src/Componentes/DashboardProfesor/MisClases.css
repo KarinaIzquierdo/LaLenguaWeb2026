@@ -166,17 +166,34 @@
   flex-wrap: wrap;
 }
 
+.btn-asistencia {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.95rem;
+  min-width: 140px;
+}
+
+.btn-asistencia:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
 .btn-iniciar-clase {
   background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
   color: white;
   border: none;
-  padding: 12px 20px;
+  padding: 12px 24px;
   border-radius: 8px;
-  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
-  flex: 1;
+  transition: all 0.3s ease;
+  font-size: 0.95rem;
   min-width: 140px;
 }
 
@@ -299,23 +316,33 @@
 .btn-ver-detalles,
 .btn-editar {
   padding: 8px 12px;
-  border: 1px solid #d1d5db;
-  background: white;
-  color: #6b7280;
+  border: none;
   border-radius: 6px;
-  font-size: 12px;
+  font-size: 13px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+}
+
+.btn-ver-detalles {
+  background: #3b82f6;
+  color: white;
 }
 
 .btn-ver-detalles:hover {
-  background: #f3f4f6;
-  border-color: #9ca3af;
+  background: #2563eb;
+}
+
+.btn-editar {
+  background: #f59e0b;
+  color: white;
 }
 
 .btn-editar:hover {
-  background: #fbbf24;
-  border-color: #f59e0b;
+  background: #d97706;
 }
 
 .btn-cerrar-modal:hover {
@@ -326,15 +353,19 @@
   background: #f59e0b;
   color: white;
   border: none;
-  padding: 8px 16px;
+  padding: 10px 20px;
   border-radius: 6px;
-  cursor: pointer;
   font-size: 14px;
-  transition: background-color 0.2s;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .btn-editar-modal:hover {
   background: #d97706;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
 /* Estilos adicionales para mejor presentación */

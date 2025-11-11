@@ -11,6 +11,7 @@ import ProgramarClases from "../ProgramarClases";
 import GestionCursos from '../GestionCursos';
 import BloquesView from '../BloquesView';
 import Dashboard_Admin from '../Dashboard_Admin';
+import RegistrosEliminacion from '../RegistrosEliminacion';
 
 export const Rutas = () => {
     // Función de logout para pasar a AdminLayout
@@ -27,6 +28,7 @@ export const Rutas = () => {
                 <Route path="dashboard" element={<Dashboard_Admin />} />
                 <Route path="usuarios" element={<FormularioUsuarios />} />
                 <Route path="gestion-estudiantes" element={<GestionEstudiantes />} />
+                <Route path="registros-eliminacion" element={<RegistrosEliminacion />} />
                 <Route path="programar-clases" element={<ProgramarClases />} />
                 <Route path="gestion-cursos" element={<GestionCursos />} />
                 <Route path="bloques" element={<BloquesView />} />

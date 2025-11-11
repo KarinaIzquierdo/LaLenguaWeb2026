@@ -1,4 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { userService } from '../../services/userService';
+import { ClaseService } from '../../services/claseService';
+import { authService } from '../../services/authService';
+import { asistenciaService } from '../../services/asistenciaService';
 import './EstudiantesView.css';
 
 interface Estudiante {
@@ -27,61 +31,154 @@ interface ResultadoEvaluacion {
 }
 
 export default function EstudiantesView() {
-  const [estudiantes] = useState<Estudiante[]>([
-    {
-      id: '1',
-      nombre: 'Ana García',
-      email: 'ana@email.com',
-      nivel: 'Intermedio',
-      fechaRegistro: '2025-07-15',
-      clasesCompletadas: 12,
-      evaluacionesRealizadas: 8,
-      promedioGeneral: 87,
-      ultimaActividad: '2025-09-01',
-      estado: 'activo'
-    },
-    {
-      id: '2',
-      nombre: 'Carlos López',
-      email: 'carlos@email.com',
-      nivel: 'Básico',
-      fechaRegistro: '2025-08-01',
-      clasesCompletadas: 6,
-      evaluacionesRealizadas: 4,
-      promedioGeneral: 75,
-      ultimaActividad: '2025-08-30',
-      estado: 'activo'
-    },
-    {
-      id: '3',
-      nombre: 'María Rodríguez',
-      email: 'maria@email.com',
-      nivel: 'Avanzado',
-      fechaRegistro: '2025-06-20',
-      clasesCompletadas: 18,
-      evaluacionesRealizadas: 12,
-      promedioGeneral: 94,
-      ultimaActividad: '2025-09-01',
-      estado: 'activo'
-    },
-    {
-      id: '4',
-      nombre: 'Pedro Martín',
-      email: 'pedro@email.com',
-      nivel: 'Intermedio',
-      fechaRegistro: '2025-07-28',
-      clasesCompletadas: 8,
-      evaluacionesRealizadas: 5,
-      promedioGeneral: 82,
-      ultimaActividad: '2025-08-28',
-      estado: 'inactivo'
-    }
-  ]);
-
+  const [estudiantes, setEstudiantes] = useState<Estudiante[]>([]);
   const [estudianteSeleccionado, setEstudianteSeleccionado] = useState<Estudiante | null>(null);
   const [mostrarDetalles, setMostrarDetalles] = useState(false);
   const [filtroNivel, setFiltroNivel] = useState('todos');
   const [filtroEstado, setFiltroEstado] = useState('todos');
+  const [cargando, setCargando] = useState(true);
+  const [asistenciasEstudiante, setAsistenciasEstudiante] = useState<any[]>([]);
+  const [estadisticasAsistencia, setEstadisticasAsistencia] = useState<{[key: string]: any}>({});
+  const [guardandoAsistencia, setGuardandoAsistencia] = useState<{[key: string]: boolean}>({});
+  const [clasesDelProfesor, setClasesDelProfesor] = useState<any[]>([]);
+  const [claseSeleccionada, setClaseSeleccionada] = useState<any>(null);
+  const [asistenciasClaseActual, setAsistenciasClaseActual] = useState<{[key: string]: string}>({});
+  const [asistenciasTemporal, setAsistenciasTemporal] = useState<{[key: string]: string}>({});
+  const [guardandoTodasAsistencias, setGuardandoTodasAsistencias] = useState(false);
+
+  // Cargar estudiantes reales del backend
+  useEffect(() => {
+    cargarEstudiantes();
+  }, []);
+
+  const cargarEstudiantes = async () => {
+    try {
+      setCargando(true);
+      
+      // Obtener el usuario actual (profesor) desde localStorage
+      const userStr = localStorage.getItem('user');
+      if (!userStr) {
+        console.error('No se pudo obtener el usuario actual');
+        setCargando(false);
+        return;
+      }
+      const currentUser = JSON.parse(userStr);
+      if (!currentUser || !currentUser.id) {
+        console.error('Usuario inválido');
+        setCargando(false);
+        return;
+      }
+      
+      // Obtener las clases del profesor
+      const todasLasClases = await ClaseService.getClasesPorProfesor(currentUser.id);
+      
+      // Filtrar solo clases programadas o en curso (no completadas ni canceladas)
+      const clasesActivas = todasLasClases.filter((c: any) => 
+        c.estado === 'programada' || c.estado === 'en_curso'
+      );
+      
+      // Ordenar por fecha (más recientes primero)
+      clasesActivas.sort((a: any, b: any) => {
+        return new Date(b.fecha).getTime() - new Date(a.fecha).getTime();
+      });
+      
+      setClasesDelProfesor(clasesActivas);
+      
+      // Seleccionar automáticamente la clase de hoy si existe
+      const hoy = new Date().toISOString().split('T')[0];
+      const claseHoy = clasesActivas.find((c: any) => c.fecha === hoy);
+      if (claseHoy) {
+        setClaseSeleccionada(claseHoy);
+        await cargarAsistenciasClase(claseHoy.id);
+      }
+      
+      // Obtener IDs únicos de estudiantes de TODAS las clases (no solo activas)
+      const estudiantesIds = new Set<number>();
+      todasLasClases.forEach((clase: any) => {
+        if (clase.estudiantes && Array.isArray(clase.estudiantes)) {
+          clase.estudiantes.forEach((estudianteId: number) => {
+            estudiantesIds.add(estudianteId);
+          });
+        }
+      });
+      
+      // Si no hay estudiantes, mostrar lista vacía
+      if (estudiantesIds.size === 0) {
+        setEstudiantes([]);
+        setCargando(false);
+        return;
+      }
+      
+      // Obtener todos los usuarios
+      const usuarios = await userService.getAll();
+      
+      // Filtrar solo los estudiantes que están en las clases del profesor
+      const estudiantesData: Estudiante[] = await Promise.all(
+        usuarios
+          .filter(u => u.rol === 'student' && estudiantesIds.has(u.id))
+          .map(async u => {
+            // Obtener estadísticas de asistencia
+            const stats = await asistenciaService.getEstadisticasAsistencia(u.id);
+            
+            return {
+              id: u.id.toString(),
+              nombre: `${u.nombres} ${u.apellidos}`,
+              email: u.correo_personal || u.correo,
+              nivel: u.nivel || 'Sin nivel',
+              fechaRegistro: u.date_joined || new Date().toISOString(),
+              clasesCompletadas: stats.presentes, // Clases donde asistió
+              evaluacionesRealizadas: 0, // TODO: Calcular desde evaluaciones
+              promedioGeneral: 0, // TODO: Calcular desde evaluaciones
+              ultimaActividad: new Date().toISOString(),
+              estado: (u.is_active ? 'activo' : 'inactivo') as 'activo' | 'inactivo'
+            };
+          })
+      );
+      
+      setEstudiantes(estudiantesData);
+      
+      // Cargar estadísticas de asistencia para cada estudiante
+      const stats: {[key: string]: any} = {};
+      for (const estudiante of estudiantesData) {
+        const estadisticas = await asistenciaService.getEstadisticasAsistencia(Number(estudiante.id));
+        stats[estudiante.id] = estadisticas;
+      }
+      setEstadisticasAsistencia(stats);
+    } catch (error) {
+      console.error('Error cargando estudiantes:', error);
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  // Cargar asistencias de una clase específica
+  const cargarAsistenciasClase = async (claseId: number) => {
+    try {
+      const asistencias = await asistenciaService.getAsistenciasPorClase(claseId);
+      const asistenciasMap: {[key: string]: string} = {};
+      
+      asistencias.forEach((asistencia: any) => {
+        asistenciasMap[asistencia.estudiante_id.toString()] = asistencia.estado;
+      });
+      
+      setAsistenciasClaseActual(asistenciasMap);
+      setAsistenciasTemporal(asistenciasMap); // Inicializar temporal con guardadas
+    } catch (error) {
+      console.error('Error cargando asistencias de clase:', error);
+    }
+  };
+
+  // Manejar cambio de clase seleccionada
+  const handleClaseChange = async (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const claseId = Number(event.target.value);
+    const clase = clasesDelProfesor.find(c => c.id === claseId);
+    
+    if (clase) {
+      setClaseSeleccionada(clase);
+      setAsistenciasTemporal({}); // Limpiar temporal
+      await cargarAsistenciasClase(clase.id);
+    }
+  };
 
   // Datos mock de evaluaciones del estudiante seleccionado
   const [resultadosEvaluaciones] = useState<ResultadoEvaluacion[]>([
@@ -126,14 +223,122 @@ export default function EstudiantesView() {
     return cumpleFiltroNivel && cumpleFiltroEstado;
   });
 
-  const verDetallesEstudiante = (estudiante: Estudiante) => {
+  const verDetallesEstudiante = async (estudiante: Estudiante) => {
     setEstudianteSeleccionado(estudiante);
     setMostrarDetalles(true);
+    
+    // Cargar historial de asistencia del estudiante
+    await cargarAsistenciasEstudiante(estudiante.id);
+  };
+
+  const cargarAsistenciasEstudiante = async (estudianteId: string) => {
+    try {
+      // Obtener todas las clases
+      const todasLasClases = await ClaseService.getClases();
+      
+      // Filtrar clases donde el estudiante está asignado
+      const clasesDelEstudiante = todasLasClases.filter((clase: any) => {
+        return clase.estudiantes && clase.estudiantes.includes(parseInt(estudianteId));
+      });
+      
+      // Cargar asistencia de cada clase
+      const asistencias = clasesDelEstudiante.map((clase: any) => {
+        const asistenciaKey = `asistencia_clase_${clase.id}`;
+        const asistenciaGuardada = localStorage.getItem(asistenciaKey);
+        let asistio = null;
+        
+        if (asistenciaGuardada) {
+          const asistencias = JSON.parse(asistenciaGuardada);
+          asistio = asistencias[estudianteId];
+        }
+        
+        return {
+          claseId: clase.id,
+          tema: clase.tema || clase.nombre,
+          fecha: clase.fecha,
+          profesor: clase.profesor,
+          asistio: asistio
+        };
+      });
+      
+      setAsistenciasEstudiante(asistencias);
+      console.log('Asistencias del estudiante:', asistencias);
+    } catch (error) {
+      console.error('Error cargando asistencias:', error);
+    }
   };
 
   const cerrarDetalles = () => {
     setMostrarDetalles(false);
     setEstudianteSeleccionado(null);
+  };
+
+  // Manejar cambio de asistencia (solo actualiza estado temporal)
+  const handleAsistenciaChange = (estudianteId: string, estado: 'presente' | 'ausente') => {
+    if (!claseSeleccionada) {
+      alert('Por favor selecciona una clase antes de marcar asistencia');
+      return;
+    }
+    
+    setAsistenciasTemporal(prev => ({
+      ...prev,
+      [estudianteId]: estado
+    }));
+  };
+
+  // Guardar todas las asistencias de la clase
+  const guardarTodasAsistencias = async () => {
+    try {
+      if (!claseSeleccionada) {
+        alert('Por favor selecciona una clase');
+        return;
+      }
+
+      // Validar que haya al menos una asistencia marcada
+      if (Object.keys(asistenciasTemporal).length === 0) {
+        alert('Por favor marca al menos una asistencia antes de guardar');
+        return;
+      }
+
+      setGuardandoTodasAsistencias(true);
+
+      // Guardar cada asistencia
+      const promesas = Object.entries(asistenciasTemporal).map(([estudianteId, estado]) => 
+        asistenciaService.registrarAsistencia({
+          estudiante_id: Number(estudianteId),
+          clase_id: claseSeleccionada.id,
+          fecha: claseSeleccionada.fecha,
+          estado: estado as 'presente' | 'ausente'
+        })
+      );
+
+      await Promise.all(promesas);
+
+      // Actualizar asistencias guardadas
+      setAsistenciasClaseActual(asistenciasTemporal);
+
+      // Recargar estadísticas de todos los estudiantes
+      const stats: {[key: string]: any} = {};
+      for (const estudiante of estudiantes) {
+        const estadisticas = await asistenciaService.getEstadisticasAsistencia(Number(estudiante.id));
+        stats[estudiante.id] = estadisticas;
+      }
+      setEstadisticasAsistencia(stats);
+
+      // Actualizar contadores en la tabla
+      setEstudiantes(prev => prev.map(est => ({
+        ...est,
+        clasesCompletadas: stats[est.id]?.presentes || 0
+      })));
+
+      alert('✅ Asistencia guardada correctamente');
+      console.log(`Asistencias guardadas para clase: ${claseSeleccionada.nombre} (${claseSeleccionada.fecha})`);
+    } catch (error) {
+      console.error('Error guardando asistencias:', error);
+      alert('❌ Error al guardar las asistencias. Por favor intenta de nuevo.');
+    } finally {
+      setGuardandoTodasAsistencias(false);
+    }
   };
 
   const getPromedioColor = (promedio: number) => {
@@ -153,7 +358,7 @@ export default function EstudiantesView() {
   };
 
   const formatFecha = (fecha: string) => {
-    return new Date(fecha).toLocaleDateString('es-ES', {
+    return new Date(fecha + 'T12:00:00').toLocaleDateString('es-ES', {
       day: 'numeric',
       month: 'short',
       year: 'numeric'
@@ -169,6 +374,19 @@ export default function EstudiantesView() {
         </div>
         
         <div className="header-filters">
+          <select 
+            value={claseSeleccionada?.id || ''} 
+            onChange={handleClaseChange}
+            className="filter-select clase-selector"
+          >
+            <option value="">Selecciona una clase</option>
+            {clasesDelProfesor.map((clase: any) => (
+              <option key={clase.id} value={clase.id}>
+                {clase.nombre} - {new Date(clase.fecha + 'T12:00:00').toLocaleDateString('es-ES')} - {clase.hora}
+              </option>
+            ))}
+          </select>
+          
           <select 
             value={filtroNivel} 
             onChange={(e) => setFiltroNivel(e.target.value)}
@@ -189,75 +407,113 @@ export default function EstudiantesView() {
             <option value="activo">Activos</option>
             <option value="inactivo">Inactivos</option>
           </select>
+          
+          <button 
+            className="btn-guardar-asistencia"
+            onClick={guardarTodasAsistencias}
+            disabled={!claseSeleccionada || guardandoTodasAsistencias || Object.keys(asistenciasTemporal).length === 0}
+          >
+            {guardandoTodasAsistencias ? '⏳ Guardando...' : '💾 Guardar Asistencia'}
+          </button>
         </div>
       </div>
 
-      <div className="estudiantes-grid">
-        {estudiantesFiltrados.map((estudiante) => (
-          <div key={estudiante.id} className={`estudiante-card ${estudiante.estado}`}>
-            <div className="estudiante-header">
-              <div className="estudiante-avatar">
-                {estudiante.nombre.split(' ').map(n => n[0]).join('')}
-              </div>
-              <div className="estudiante-info">
-                <h3 className="nombre">{estudiante.nombre}</h3>
-                <p className="email">{estudiante.email}</p>
-                <div 
-                  className="nivel-badge"
-                  style={{ backgroundColor: getNivelColor(estudiante.nivel) }}
-                >
-                  {estudiante.nivel}
-                </div>
-              </div>
-              <div className={`estado-indicator ${estudiante.estado}`}>
-                {estudiante.estado === 'activo' ? '🟢' : '🔴'}
-              </div>
-            </div>
-
-            <div className="estudiante-stats">
-              <div className="stat-row">
-                <div className="stat-item">
-                  <span className="stat-label">Clases</span>
-                  <span className="stat-value">{estudiante.clasesCompletadas}</span>
-                </div>
-                <div className="stat-item">
-                  <span className="stat-label">Evaluaciones</span>
-                  <span className="stat-value">{estudiante.evaluacionesRealizadas}</span>
-                </div>
-              </div>
-              
-              <div className="promedio-section">
-                <span className="promedio-label">Promedio General</span>
-                <span 
-                  className="promedio-valor"
-                  style={{ color: getPromedioColor(estudiante.promedioGeneral) }}
-                >
-                  {estudiante.promedioGeneral}%
-                </span>
-              </div>
-              
-              <div className="ultima-actividad">
-                <span className="actividad-label">Última actividad:</span>
-                <span className="actividad-fecha">{formatFecha(estudiante.ultimaActividad)}</span>
-              </div>
-            </div>
-
-            <div className="estudiante-actions">
-              <button 
-                className="action-btn details"
-                onClick={() => verDetallesEstudiante(estudiante)}
-              >
-                👁️ Ver Detalles
-              </button>
-              <button className="action-btn message">
-                💬 Mensaje
-              </button>
-            </div>
+      {cargando ? (
+        <div className="cargando-estudiantes">
+          <div className="spinner"></div>
+          <p>Cargando estudiantes...</p>
+        </div>
+      ) : (
+        <div className="estudiantes-table-container">
+          <div className="users-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Apellido</th>
+                  <th>Correo</th>
+                  <th>Nivel</th>
+                  <th>Clases Asistidas</th>
+                  <th>Evaluaciones</th>
+                  <th>Promedio</th>
+                  <th>Estado</th>
+                  <th>Asistencia</th>
+                </tr>
+              </thead>
+              <tbody>
+                {estudiantesFiltrados.map((estudiante) => {
+                  const [nombre, ...apellidos] = estudiante.nombre.split(' ');
+                  const apellido = apellidos.join(' ');
+                  return (
+                    <tr key={estudiante.id}>
+                      <td>{nombre}</td>
+                      <td>{apellido}</td>
+                      <td>{estudiante.email}</td>
+                      <td>
+                        <span 
+                          className="nivel-badge-table"
+                          style={{ backgroundColor: getNivelColor(estudiante.nivel) }}
+                        >
+                          {estudiante.nivel}
+                        </span>
+                      </td>
+                      <td className="text-center">{estudiante.clasesCompletadas}</td>
+                      <td className="text-center">{estudiante.evaluacionesRealizadas}</td>
+                      <td className="text-center">
+                        <span 
+                          className="promedio-badge"
+                          style={{ color: getPromedioColor(estudiante.promedioGeneral) }}
+                        >
+                          {estudiante.promedioGeneral}%
+                        </span>
+                      </td>
+                      <td className="text-center">
+                        <span className={`estado-badge ${estudiante.estado}`}>
+                          {estudiante.estado === 'activo' ? '🟢 Activo' : '🔴 Inactivo'}
+                        </span>
+                      </td>
+                      <td className="text-center">
+                        <div className="asistencia-controls">
+                          <label className="asistencia-option">
+                            <input 
+                              type="radio" 
+                              name={`asistencia-${estudiante.id}`}
+                              value="presente"
+                              checked={asistenciasTemporal[estudiante.id] === 'presente'}
+                              onChange={() => handleAsistenciaChange(estudiante.id, 'presente')}
+                              disabled={guardandoTodasAsistencias || !claseSeleccionada}
+                            />
+                            <span className="asistencia-label presente">
+                              ✓ Presente
+                              {asistenciasClaseActual[estudiante.id] === 'presente' && asistenciasTemporal[estudiante.id] === 'presente' && ' ✅'}
+                            </span>
+                          </label>
+                          <label className="asistencia-option">
+                            <input 
+                              type="radio" 
+                              name={`asistencia-${estudiante.id}`}
+                              value="ausente"
+                              checked={asistenciasTemporal[estudiante.id] === 'ausente'}
+                              onChange={() => handleAsistenciaChange(estudiante.id, 'ausente')}
+                              disabled={guardandoTodasAsistencias || !claseSeleccionada}
+                            />
+                            <span className="asistencia-label ausente">
+                              ✗ Ausente
+                              {asistenciasClaseActual[estudiante.id] === 'ausente' && asistenciasTemporal[estudiante.id] === 'ausente' && ' ✅'}
+                            </span>
+                          </label>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-        ))}
-      </div>
+        </div>
+      )}
 
-      {estudiantesFiltrados.length === 0 && (
+      {!cargando && estudiantesFiltrados.length === 0 && (
         <div className="empty-state">
           <div className="empty-icon">👥</div>
           <h3>No hay estudiantes</h3>
@@ -303,6 +559,38 @@ export default function EstudiantesView() {
                     <span className="resumen-label">Promedio</span>
                   </div>
                 </div>
+              </div>
+
+              {/* Historial de Asistencias */}
+              <div className="asistencias-detalle">
+                <h3>📋 Historial de Asistencias</h3>
+                {asistenciasEstudiante.length === 0 ? (
+                  <div className="sin-asistencias">
+                    <p>No hay registros de asistencia para este estudiante</p>
+                  </div>
+                ) : (
+                  <div className="asistencias-lista">
+                    {asistenciasEstudiante.map((asistencia, index) => (
+                      <div key={index} className="asistencia-item">
+                        <div className="asistencia-header">
+                          <h4>{asistencia.tema}</h4>
+                          <span className="asistencia-fecha">{formatFecha(asistencia.fecha)}</span>
+                        </div>
+                        <div className="asistencia-info">
+                          <span className="asistencia-profesor">Profesor: {asistencia.profesor}</span>
+                          <span className={`asistencia-estado ${
+                            asistencia.asistio === true ? 'presente' : 
+                            asistencia.asistio === false ? 'ausente' : 'sin-marcar'
+                          }`}>
+                            {asistencia.asistio === true ? '✅ Presente' : 
+                             asistencia.asistio === false ? '❌ Ausente' : 
+                             '⏳ Sin marcar'}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="evaluaciones-detalle">

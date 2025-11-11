@@ -13,11 +13,10 @@ function PiePagina() {
         {/* Logo y descripción */}
         <div className="footer-brand">
           <div className="footer-logo">
-            <span className="logo-text">The Language</span>
-            <span className="logo-emoji">🦩</span>
+            <span className="logo-text">La Lengua</span>
           </div>
           <p className="footer-description">
-            Acompaña a Lingo en su aventura migratoria mientras aprendes inglés de manera divertida e interactiva.
+            Acompaña a La Lengua en su aventura  mientras aprendes inglés de manera divertida e interactiva.
           </p>
         </div>
 

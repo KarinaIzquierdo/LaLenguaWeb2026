@@ -203,10 +203,24 @@ export default function ProgramarClase() {
     e.preventDefault();
     
     try {
+      // Obtener el nombre del profesor desde localStorage
+      const userStr = localStorage.getItem('user');
+      let nombreProfesor = 'Profesor';
+      
+      if (userStr) {
+        try {
+          const user = JSON.parse(userStr);
+          nombreProfesor = `${user.first_name || ''} ${user.last_name || ''}`.trim();
+          console.log('Profesor que crea la clase:', nombreProfesor);
+        } catch (e) {
+          console.error('Error parseando usuario:', e);
+        }
+      }
+      
       // Preparar datos para enviar al backend
       const claseData = {
         nombre: formulario.tema,
-        profesor: 'Profesor Actual', // TODO: Obtener del contexto de usuario autenticado
+        profesor: nombreProfesor,
         fecha: formulario.fecha,
         hora: formulario.hora,
         duracion: formulario.duracion,

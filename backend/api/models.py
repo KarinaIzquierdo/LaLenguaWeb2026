@@ -356,6 +356,37 @@ class Notificacion(models.Model):
         return f"{self.titulo} - {self.profesor.username}"
 
 
+class NotificacionEstudiante(models.Model):
+    """
+    Modelo para notificaciones dirigidas a estudiantes
+    """
+    TIPO_CHOICES = [
+        ('plan_vencimiento', 'Plan por Vencer'),
+        ('plan_vencido', 'Plan Vencido'),
+        ('clase_programada', 'Clase Programada'),
+        ('evaluacion_disponible', 'Evaluación Disponible'),
+        ('logro_desbloqueado', 'Logro Desbloqueado'),
+        ('mensaje_profesor', 'Mensaje del Profesor'),
+        ('recordatorio_pago', 'Recordatorio de Pago'),
+    ]
+    
+    estudiante = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='notificaciones_estudiante')
+    tipo = models.CharField(max_length=30, choices=TIPO_CHOICES)
+    mensaje = models.TextField()
+    leida = models.BooleanField(default=False)
+    datos_adicionales = models.JSONField(null=True, blank=True)  # Para datos extra como IDs, enlaces, etc.
+    
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-fecha_creacion']
+        verbose_name = 'Notificación de Estudiante'
+        verbose_name_plural = 'Notificaciones de Estudiantes'
+    
+    def __str__(self):
+        return f"{self.tipo} - {self.estudiante.username}"
+
+
 class MissionExternalLink(models.Model):
     """
     Enlace externo administrable para misiones (Gimkit, Kahoot, Quizizz, etc.)
@@ -510,3 +541,205 @@ class Venta(models.Model):
             from datetime import date
             return (self.fecha_fin_plan - date.today()).days
         return None
+
+
+class Suscripcion(models.Model):
+    """
+    Modelo para gestionar las suscripciones activas de los estudiantes
+    Se crea automáticamente cuando una venta es marcada como 'pagado'
+    """
+    ESTADO_CHOICES = [
+        ('activa', 'Activa'),
+        ('por_vencer', 'Por Vencer'),
+        ('vencida', 'Vencida'),
+        ('cancelada', 'Cancelada'),
+    ]
+    
+    # Relación con venta y usuario
+    venta = models.OneToOneField(Venta, on_delete=models.CASCADE, related_name='suscripcion')
+    estudiante = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='suscripciones')
+    plan = models.ForeignKey(Plan, on_delete=models.CASCADE, related_name='suscripciones')
+    
+    # Fechas de vigencia
+    fecha_inicio = models.DateField()
+    fecha_fin = models.DateField()
+    
+    # Estado
+    estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='activa')
+    
+    # Información adicional
+    clases_totales = models.IntegerField(default=0, help_text="Total de clases incluidas en el plan")
+    clases_tomadas = models.IntegerField(default=0, help_text="Clases ya tomadas")
+    
+    # Recordatorios
+    recordatorio_enviado = models.BooleanField(default=False)
+    fecha_recordatorio = models.DateTimeField(null=True, blank=True)
+    
+    # Fechas de control
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-fecha_inicio']
+        verbose_name = 'Suscripción'
+        verbose_name_plural = 'Suscripciones'
+    
+    def __str__(self):
+        return f"{self.estudiante.username} - {self.plan.nombre} ({self.estado})"
+    
+    @property
+    def dias_restantes(self):
+        """Calcula los días restantes de la suscripción"""
+        from datetime import date
+        if self.fecha_fin:
+            dias = (self.fecha_fin - date.today()).days
+            return max(0, dias)
+        return 0
+    
+    @property
+    def clases_restantes(self):
+        """Calcula las clases restantes"""
+        return max(0, self.clases_totales - self.clases_tomadas)
+    
+    @property
+    def progreso_porcentaje(self):
+        """Calcula el porcentaje de progreso"""
+        if self.clases_totales > 0:
+            return round((self.clases_tomadas / self.clases_totales) * 100, 1)
+        return 0
+    
+    def actualizar_estado(self):
+        """Actualiza el estado de la suscripción basado en la fecha"""
+        from datetime import date, timedelta
+        hoy = date.today()
+        
+        if self.fecha_fin < hoy:
+            self.estado = 'vencida'
+        elif self.fecha_fin <= hoy + timedelta(days=7):
+            self.estado = 'por_vencer'
+        else:
+            self.estado = 'activa'
+        
+        self.save()
+        return self.estado
+
+
+class RegistroEliminacion(models.Model):
+    """
+    Modelo para registrar estudiantes eliminados del sistema
+    Guarda información histórica y razón de eliminación
+    """
+    RAZON_CHOICES = [
+        ('termino_clases', 'Terminó sus clases'),
+        ('no_pago', 'No realizó el pago'),
+        ('abandono', 'Abandonó el curso'),
+        ('solicitud_propia', 'Solicitud del estudiante'),
+        ('comportamiento', 'Problemas de comportamiento'),
+        ('cambio_horario', 'No se adaptó al horario'),
+        ('otro', 'Otra razón'),
+    ]
+    
+    # Información del estudiante eliminado
+    username = models.CharField(max_length=150, help_text="Nombre de usuario")
+    email = models.EmailField(help_text="Correo electrónico")
+    first_name = models.CharField(max_length=30, blank=True, null=True)
+    last_name = models.CharField(max_length=30, blank=True, null=True)
+    phone = models.CharField(max_length=20, blank=True, null=True)
+    cedula = models.CharField(max_length=20, blank=True, null=True)
+    
+    # Información académica
+    nivel = models.CharField(max_length=20, blank=True, null=True, help_text="Nivel en el que estaba")
+    bloque_asignado = models.CharField(max_length=50, blank=True, null=True)
+    especializacion = models.CharField(max_length=100, blank=True, null=True)
+    
+    # Fechas y duración
+    fecha_registro = models.DateTimeField(help_text="Fecha en que se registró originalmente")
+    fecha_eliminacion = models.DateTimeField(auto_now_add=True, help_text="Fecha de eliminación")
+    dias_registrado = models.IntegerField(default=0, help_text="Días que estuvo registrado")
+    
+    # Razón de eliminación
+    razon = models.CharField(max_length=50, choices=RAZON_CHOICES, default='otro')
+    descripcion_adicional = models.TextField(blank=True, null=True, help_text="Detalles adicionales")
+    
+    # Información financiera
+    plan_activo = models.CharField(max_length=100, blank=True, null=True)
+    deuda_pendiente = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    
+    # Quién realizó la eliminación
+    eliminado_por = models.ForeignKey(
+        CustomUser, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        related_name='eliminaciones_realizadas',
+        help_text="Administrador que realizó la eliminación"
+    )
+    
+    # Metadata
+    notas = models.TextField(blank=True, null=True, help_text="Notas adicionales del administrador")
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-fecha_eliminacion']
+        verbose_name = 'Registro de Eliminación'
+        verbose_name_plural = 'Registros de Eliminación'
+    
+    def __str__(self):
+        return f"{self.first_name} {self.last_name} - {self.get_razon_display()} ({self.fecha_eliminacion.strftime('%Y-%m-%d')})"
+    
+    @property
+    def tiempo_registrado_str(self):
+        """Retorna el tiempo registrado en formato legible"""
+        if self.dias_registrado < 30:
+            return f"{self.dias_registrado} días"
+        elif self.dias_registrado < 365:
+            meses = self.dias_registrado // 30
+            return f"{meses} {'mes' if meses == 1 else 'meses'}"
+        else:
+            años = self.dias_registrado // 365
+            meses = (self.dias_registrado % 365) // 30
+            return f"{años} {'año' if años == 1 else 'años'} y {meses} {'mes' if meses == 1 else 'meses'}"
+
+
+class Asistencia(models.Model):
+    """
+    Modelo para registrar la asistencia de estudiantes a clases
+    """
+    ESTADO_CHOICES = [
+        ('presente', 'Presente'),
+        ('ausente', 'Ausente'),
+        ('tardanza', 'Tardanza'),
+        ('justificado', 'Justificado'),
+    ]
+    
+    estudiante = models.ForeignKey(
+        CustomUser, 
+        on_delete=models.CASCADE, 
+        related_name='asistencias',
+        limit_choices_to={'role': 'student'}
+    )
+    clase = models.ForeignKey(
+        'Clase', 
+        on_delete=models.CASCADE, 
+        related_name='asistencias',
+        null=True,
+        blank=True
+    )
+    fecha = models.DateField(help_text="Fecha de la asistencia")
+    estado = models.CharField(
+        max_length=20, 
+        choices=ESTADO_CHOICES, 
+        default='ausente'
+    )
+    observaciones = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-fecha', 'estudiante']
+        verbose_name = 'Asistencia'
+        verbose_name_plural = 'Asistencias'
+        # Un estudiante solo puede tener una asistencia por fecha
+        unique_together = ['estudiante', 'fecha']
+    
+    def __str__(self):
+        return f"{self.estudiante.username} - {self.fecha} - {self.estado}"

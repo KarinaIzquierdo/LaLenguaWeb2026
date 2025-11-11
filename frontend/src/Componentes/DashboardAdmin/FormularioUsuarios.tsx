@@ -32,6 +32,7 @@ interface Usuario {
   activo: boolean;
   bloque_asignado?: string;
   especializacion_id?: number;
+  especializacion?: string;
 }
 
 interface FormErrors {
@@ -420,10 +421,7 @@ export default function FormularioUsuarios() {
                       </td>
                       <td>
                         <span className="especializacion-badge">
-                          {user.especializacion_id 
-                            ? especializaciones.find(esp => esp.id === user.especializacion_id)?.nombre || 'Sin asignar'
-                            : 'Sin asignar'
-                          }
+                          {user.especializacion || 'Sin asignar'}
                         </span>
                       </td>
                       <td>

@@ -61,11 +61,11 @@ export default function NavProfesor({ profesorData, activeView, setActiveView, o
     { id: 'dashboard', label: 'Dashboard', icon: '🏠' },
     { id: 'clases', label: 'Mis Clases', icon: '📚' },
     { id: 'programar-clase', label: 'Programar Clase', icon: '➕' },
-    { id: 'crear-evaluacion', label: 'Evaluaciones', icon: '📝' },
-    { id: 'calificar-evaluaciones', label: 'Calificar Evaluaciones', icon: '📊' },
+    { id: 'drive-evaluaciones', label: 'Evaluaciones (Drive)', icon: '📁' },
     { id: 'reportes', label: 'Reportes de Progreso', icon: '📋' },
     { id: 'notificaciones', label: 'Notificaciones', icon: '🔔', badge: noLeidasCount > 0 ? noLeidasCount : undefined },
     { id: 'estudiantes', label: 'Estudiantes', icon: '👥' },
+    { id: 'historial-asistencias', label: 'Historial Asistencias', icon: '📝' },
     { id: 'mis-clubs', label: 'Mis Clubs', icon: '🏷️' },
     { id: 'gestion-clb', label: 'Gestión CLB', icon: '📂' }
   ];

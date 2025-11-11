@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import './LoginModal.css';
-import { sendPasswordResetEmail } from '../../services/emailService';
 import { authService } from '../../services/authService';
 
 interface LoginModalProps {
@@ -84,19 +83,14 @@ export default function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps
         // No bloquear el flujo: si falla, seguiremos con fallback dentro de emailService
       }
 
-      // Si no obtuvimos token/enlace, no enviar email (evita llevar a /reset-password)
+      // Si no obtuvimos token/enlace, mostrar error
       if (!resetLink) {
         setResetStatus({ type: 'error', message: 'No encontramos este correo o no pudimos generar el enlace. Verifica el email e inténtalo nuevamente.' });
         return;
       }
 
-      // 2) Enviar email con EmailJS con el enlace directo a nueva contraseña
-      const res = await sendPasswordResetEmail(email, { appName: 'La Lengua', resetLink });
-      if (res.success) {
-        setResetStatus({ type: 'success', message: res.message });
-      } else {
-        setResetStatus({ type: 'error', message: res.message });
-      }
+      // El backend ya envió el email automáticamente
+      setResetStatus({ type: 'success', message: 'Hemos enviado un correo con instrucciones para recuperar tu contraseña.' });
     } catch (e) {
       setResetStatus({ type: 'error', message: 'No pudimos enviar el correo de recuperación.' });
     }
@@ -123,8 +117,10 @@ export default function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps
 
         <div className="login-modal-body">
           <div className="login-welcome">
-            <div className="flamingo-icon">🦩</div>
-            <p>¡Bienvenido de vuelta! Continúa tu aventura con Lingo</p>
+            <div className="flamingo-icon">
+              <img src="/Lengua-logo.png" alt="La Lengua" style={{ width: '80px', height: 'auto' }} />
+            </div>
+            <p>¡Bienvenido de vuelta! Aprende inglés de forma dinámica y divertida</p>
           </div>
 
           <form onSubmit={handleSubmit} className="login-form">

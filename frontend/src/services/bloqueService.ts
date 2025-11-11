@@ -119,7 +119,6 @@ class BloqueService {
     fechasClases: string[];
   } {
     const bloque = this.getUserAssignedBloque(userId);
-    console.log(`[BloqueService] getUserBloqueInfo para usuario ${userId}:`, bloque);
     return {
       bloque,
       clases: bloque ? bloque.clases : [],

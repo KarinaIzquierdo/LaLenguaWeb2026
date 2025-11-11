@@ -97,6 +97,11 @@ export default function ProgramarClases() {
   const [cargandoEstudiantes, setCargandoEstudiantes] = useState<boolean>(true);
 
   /**
+   * @state {Array} profesoresDisponibles - Lista de profesores disponibles.
+   */
+  const [profesoresDisponibles, setProfesoresDisponibles] = useState<any[]>([]);
+
+  /**
    * @state {string} filtroNivel - Filtro por nivel/bloque.
    */
   const [filtroNivel, setFiltroNivel] = useState<string>('todos');
@@ -124,9 +129,9 @@ export default function ProgramarClases() {
   /**
    * @function handleChange
    * @brief Maneja los cambios en los campos del formulario y actualiza el estado.
-   * @param {React.ChangeEvent<HTMLInputElement>} e - El evento del cambio.
+   * @param {React.ChangeEvent<HTMLInputElement | HTMLSelectElement>} e - El evento del cambio.
    */
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     if (formErrors[name as keyof FormErrors]) {
@@ -284,7 +289,8 @@ export default function ProgramarClases() {
       // Generar enlace de Meet automáticamente si no existe
       const dataToSend = {
         ...formData,
-        meet_link: formData.meet_link || generateMeetLink()
+        meet_link: formData.meet_link || generateMeetLink(),
+        estado: 'programada' // Asegurar que las clases nuevas se creen como programadas
       };
       
       if (editingClass) {
@@ -319,6 +325,8 @@ export default function ProgramarClases() {
       setCargandoEstudiantes(true);
       try {
         const usuarios = await userService.getAll();
+        
+        // Filtrar estudiantes
         const estudiantes = usuarios
           .filter(usuario => usuario.rol === 'student' && usuario.activo)
           .map(usuario => {
@@ -337,9 +345,20 @@ export default function ProgramarClases() {
             };
           });
         
+        // Filtrar profesores
+        const profesores = usuarios
+          .filter(usuario => usuario.rol === 'profesor' && usuario.activo)
+          .map(usuario => ({
+            id: usuario.id.toString(),
+            nombre: `${usuario.nombres} ${usuario.apellidos}`,
+            email: usuario.correo
+          }));
+        
         setEstudiantesDisponibles(estudiantes);
+        setProfesoresDisponibles(profesores);
+        console.log('Profesores cargados:', profesores);
       } catch (error) {
-        console.error('Error cargando estudiantes:', error);
+        console.error('Error cargando estudiantes y profesores:', error);
       } finally {
         setCargandoEstudiantes(false);
       }
@@ -401,15 +420,21 @@ export default function ProgramarClases() {
 
             <div className={`form-group ${formErrors.profesor ? 'error' : ''}`}>
               <label htmlFor="profesor">Nombre del Profesor *</label>
-              <input
-                type="text"
+              <select
                 id="profesor"
                 name="profesor"
                 value={formData.profesor}
                 onChange={handleChange}
-                placeholder="Ej: Juan Pérez"
                 required
-              />
+                className="form-select"
+              >
+                <option value="">Selecciona un profesor</option>
+                {profesoresDisponibles.map(profesor => (
+                  <option key={profesor.id} value={profesor.nombre}>
+                    {profesor.nombre}
+                  </option>
+                ))}
+              </select>
               {formErrors.profesor && <span className="error-message">{formErrors.profesor}</span>}
             </div>
 

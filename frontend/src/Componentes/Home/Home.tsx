@@ -217,9 +217,9 @@ and live without limits."
           </div>
           <div className="hero-image">
             <img
-              src="/Image/Chicasentada.jpg"
-              alt="Chica sentada"
-              className="character-img"
+              src="/Lengua-logo.png"
+              alt="La Lengua"
+              className="character-img hero-lengua-logo"
             />
           </div>
         </div>

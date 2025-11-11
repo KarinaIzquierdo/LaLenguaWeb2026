@@ -25,6 +25,7 @@ import PlanesPrecios from './Componentes/DashboardAdmin/PlanesPrecios';
 import RegistroVentas from './Componentes/DashboardAdmin/RegistroVentas';
 import GestionSuscripciones from './Componentes/DashboardAdmin/GestionSuscripciones';
 import MisionesAdmin from './Componentes/DashboardAdmin/MisionesAdmin';
+import RegistrosEliminacion from './Componentes/DashboardAdmin/RegistrosEliminacion';
 
 function App() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
@@ -215,6 +216,7 @@ function App() {
               <Route path="dashboard" element={<Dashboard_Admin />} />
               <Route path="usuarios" element={<FormularioUsuarios />} />
               <Route path="gestion-estudiantes" element={<GestionEstudiantes />} />
+              <Route path="registros-eliminacion" element={<RegistrosEliminacion />} />
               <Route path="programar-clases" element={<ProgramarClases />} />
               {/** Gestión de cursos movida al Dashboard del Profesor como "Gestión CLB" **/}
               <Route path="bloques" element={<BloquesView />} />

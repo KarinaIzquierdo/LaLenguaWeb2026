@@ -3,14 +3,14 @@ import './Dashboard_Profesor.css';
 import Nav_Profesor from './Nav_Profesor';
 import MisClases from './MisClases';
 import ProgramarClase from './ProgramarClase';
-import SubirEvaluaciones from './SubirEvaluaciones';
-import CalificarEvaluaciones from './CalificarEvaluaciones';
+import DriveEvaluaciones from './DriveEvaluaciones';
 import { userService } from '../../services/userService';
 import GestionCLB from './GestionCLB';
 import MisClubs from './MisClubs';
 import ReportesProgreso from './ReportesProgreso';
 import NotificacionesProfesor from './NotificacionesProfesor';
 import EstudiantesView from './EstudiantesView';
+import HistorialAsistencias from './HistorialAsistencias';
 
 interface DashboardProfesorProps {
   onLogout?: () => void;
@@ -101,13 +101,13 @@ export default function DashboardProfesor({ onLogout }: DashboardProfesorProps =
         <div className="main-content">
           {activeView === 'clases' && <MisClases profesorId={1} />}            
           {activeView === 'programar-clase' && <ProgramarClase />}
-          {activeView === 'crear-evaluacion' && <SubirEvaluaciones />}
+          {activeView === 'drive-evaluaciones' && <DriveEvaluaciones />}
           {activeView === 'gestion-clb' && <GestionCLB profesorId={1} />}
           {activeView === 'mis-clubs' && <MisClubs />}
           {activeView === 'estudiantes' && <EstudiantesView />}
           {activeView === 'reportes' && <ReportesProgreso />}
+          {activeView === 'historial-asistencias' && <HistorialAsistencias />}
           {activeView === 'notificaciones' && <NotificacionesProfesor />}
-          {activeView === 'calificar-evaluaciones' && <CalificarEvaluaciones />}
         </div>
       </div>
     </div>

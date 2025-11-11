@@ -25,7 +25,7 @@
 
 /* Modal Container */
 .login-modal {
-  background: white;
+  background: #ffffff;
   border-radius: 20px;
   width: 90%;
   max-width: 450px;
@@ -94,6 +94,7 @@
   /* Habilitar scroll interno cuando el contenido es alto */
   overflow-y: auto;
   max-height: calc(90vh - 85px);
+  background: #ffffff;
 }
 
 /* Welcome Section */
@@ -154,7 +155,7 @@
   border-radius: 12px;
   font-size: 1rem;
   transition: all 0.3s ease;
-  background: #fafbfc;
+  background: #ffffff;
 }
 
 .login-input:focus {

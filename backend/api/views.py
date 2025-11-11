@@ -11,7 +11,7 @@ from django.contrib.auth import authenticate
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
-from .models import CustomUser, Profesor, Clase, Evaluation, MediaItem, Club, ClubMaterial, Especializacion, Evaluacion, Notificacion, RespuestaEvaluacion
+from .models import CustomUser, Profesor, Clase, Evaluation, MediaItem, Club, ClubMaterial, Especializacion, Evaluacion, Notificacion, NotificacionEstudiante, RespuestaEvaluacion
 from .serializers import (
     UserSerializer, LoginSerializer, ChangePasswordSerializer, ClaseSerializer,
     UserRegisterSerializer, EvaluationSerializer, MediaItemSerializer,
@@ -1179,6 +1179,33 @@ class ClaseViewSet(viewsets.ModelViewSet):
         if usuario_id:
             return Clase.objects.filter(estudiantes__id=usuario_id)
         return super().get_queryset().order_by('-created_at')
+    
+    def create(self, request, *args, **kwargs):
+        """
+        Sobrescribir create para enviar notificaciones a los estudiantes
+        """
+        response = super().create(request, *args, **kwargs)
+        
+        # Si la creación fue exitosa, enviar notificaciones
+        if response.status_code == 201:
+            clase = Clase.objects.get(id=response.data['id'])
+            
+            # Crear notificación para cada estudiante asignado
+            for estudiante in clase.estudiantes.all():
+                NotificacionEstudiante.objects.create(
+                    estudiante=estudiante,
+                    tipo='clase_programada',
+                    mensaje=f'Nueva clase programada: {clase.tema} el {clase.fecha} a las {clase.hora}',
+                    datos_adicionales={
+                        'clase_id': clase.id,
+                        'tema': clase.tema,
+                        'fecha': str(clase.fecha),
+                        'hora': clase.hora,
+                        'meet_link': clase.meet_link
+                    }
+                )
+        
+        return response
     
     @action(detail=True, methods=['patch'])
     def cambiar_estado(self, request, pk=None):

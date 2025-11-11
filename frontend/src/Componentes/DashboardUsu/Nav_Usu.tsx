@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import "./Nav_Usu.css";
 import ProfileModal from "../Profile/ProfileModal";
 // @ts-ignore
 import SettingsModal from "../Settings/SettingsModal";
+import { notificationService, type Notificacion } from "../../services/notificationService";
 
 interface NavUsuProps {
   candies: number;
@@ -14,13 +15,77 @@ export default function NavUsu({ candies, experience, onLogout }: NavUsuProps) {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  // Cargar notificaciones
+  useEffect(() => {
+    loadNotifications();
+    // Recargar cada 30 segundos
+    const interval = setInterval(loadNotifications, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const loadNotifications = async () => {
+    try {
+      const [notifs, count] = await Promise.all([
+        notificationService.getNotificaciones(),
+        notificationService.getContadorNoLeidas()
+      ]);
+      setNotificaciones(notifs);
+      setUnreadCount(count);
+    } catch (error) {
+      console.error('Error loading notifications:', error);
+    }
+  };
+
+  const handleMarkAsRead = async (notificationId: number) => {
+    try {
+      await notificationService.marcarComoLeida(notificationId);
+      await loadNotifications();
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      await notificationService.marcarTodasComoLeidas();
+      await loadNotifications();
+    } catch (error) {
+      console.error('Error marking all as read:', error);
+    }
+  };
+
+  const formatFecha = (fecha: string) => {
+    const date = new Date(fecha);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+
+    if (minutes < 1) return 'Ahora';
+    if (minutes < 60) return `Hace ${minutes}m`;
+    if (hours < 24) return `Hace ${hours}h`;
+    if (days < 7) return `Hace ${days}d`;
+    return date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+  };
 
   return (
     <>
       {/* Header de navegación */}
       <div className="nav-header">
         <div className="nav-header-inner">
-          <h1>The Tongue 😜</h1>
+          <div className="nav-logo">
+            <img
+              src="/Lengua-logo.png"
+              alt="La Lengua"
+              className="logo-img"
+            />
+            <span className="logo-text">La Lengua</span>
+          </div>
           <div className="nav-actions">
             {/* Sistema de Dulces y Experiencia */}
             <div className="rewards-section">
@@ -32,6 +97,53 @@ export default function NavUsu({ candies, experience, onLogout }: NavUsuProps) {
                 <span className="xp-icon">⭐</span>
                 <span className="xp-count">{experience} XP</span>
               </div>
+            </div>
+
+            {/* Campanita de Notificaciones */}
+            <div className="notifications-container">
+              <div className="notification-bell" onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                {unreadCount > 0 && (
+                  <span className="notification-badge">{unreadCount > 9 ? '9+' : unreadCount}</span>
+                )}
+              </div>
+
+              {isNotificationsOpen && (
+                <div className="notifications-dropdown">
+                  <div className="notifications-header">
+                    <h4>Notificaciones</h4>
+                    {unreadCount > 0 && (
+                      <button className="mark-all-read" onClick={handleMarkAllAsRead}>
+                        Marcar todas como leídas
+                      </button>
+                    )}
+                  </div>
+                  <div className="notifications-list">
+                    {notificaciones.length === 0 ? (
+                      <div className="no-notifications">
+                        <p>No tienes notificaciones</p>
+                      </div>
+                    ) : (
+                      notificaciones.map((notif) => (
+                        <div 
+                          key={notif.id} 
+                          className={`notification-item ${!notif.leida ? 'unread' : ''}`}
+                          onClick={() => !notif.leida && handleMarkAsRead(notif.id)}
+                        >
+                          <div className="notification-content">
+                            <p className="notification-message">{notif.mensaje}</p>
+                            <span className="notification-time">{formatFecha(notif.fecha_creacion)}</span>
+                          </div>
+                          {!notif.leida && <div className="unread-dot"></div>}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
             
             <div className="profile-dropdown-container">

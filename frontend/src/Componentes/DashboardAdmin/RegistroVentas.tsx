@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { financialService, type Venta, type EstadisticasFinancieras } from '../../services/financialService';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import './RegistroVentas.css';
 
 const RegistroVentas: React.FC = () => {
@@ -17,21 +19,36 @@ const RegistroVentas: React.FC = () => {
 
   useEffect(() => {
     loadData();
-  }, []);
-
-  useEffect(() => {
-    if (filtros.estado !== 'todos' || filtros.metodo_pago !== 'todos' || filtros.fecha_desde || filtros.fecha_hasta) {
-      loadData();
-    }
   }, [filtros]);
 
   const loadData = async () => {
     try {
       setLoading(true);
+      
+      // Preparar filtros para enviar al backend
+      const filtrosParaEnviar: any = {};
+      
+      if (filtros.estado !== 'todos') {
+        filtrosParaEnviar.estado = filtros.estado;
+      }
+      
+      if (filtros.metodo_pago !== 'todos') {
+        filtrosParaEnviar.metodo_pago = filtros.metodo_pago;
+      }
+      
+      if (filtros.fecha_desde) {
+        filtrosParaEnviar.fecha_desde = filtros.fecha_desde;
+      }
+      
+      if (filtros.fecha_hasta) {
+        filtrosParaEnviar.fecha_hasta = filtros.fecha_hasta;
+      }
+      
       const [ventasData, estadisticasData] = await Promise.all([
-        financialService.getVentas(filtros.estado !== 'todos' || filtros.metodo_pago !== 'todos' || filtros.fecha_desde || filtros.fecha_hasta ? filtros : undefined),
+        financialService.getVentas(Object.keys(filtrosParaEnviar).length > 0 ? filtrosParaEnviar : undefined),
         financialService.getEstadisticasFinancieras()
       ]);
+      
       setVentas(ventasData);
       setEstadisticas(estadisticasData);
       setError(null);
@@ -65,6 +82,56 @@ const RegistroVentas: React.FC = () => {
       style: 'currency',
       currency: 'COP'
     }).format(precio);
+  };
+
+  const generarPDF = () => {
+    const doc = new jsPDF();
+    
+    // Título
+    doc.setFontSize(18);
+    doc.setTextColor(102, 126, 234);
+    doc.text('Registro de Ventas - The Language', 14, 20);
+    
+    // Fecha de generación
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`Generado: ${new Date().toLocaleDateString('es-ES')}`, 14, 28);
+    
+    // Estadísticas
+    if (estadisticas) {
+      doc.setFontSize(12);
+      doc.setTextColor(0);
+      doc.text('Resumen:', 14, 38);
+      doc.setFontSize(10);
+      doc.text(`Total Ventas: ${estadisticas.total_ventas}`, 14, 45);
+      doc.text(`Ingresos Totales: ${formatearPrecio(estadisticas.ingresos_totales)}`, 14, 52);
+      doc.text(`Ingresos del Mes: ${formatearPrecio(estadisticas.ingresos_mes)}`, 14, 59);
+    }
+    
+    // Tabla de ventas
+    const tableData = ventas.map(venta => [
+      `#${venta.id}`,
+      venta.estudiante_nombre,
+      venta.plan_nombre,
+      venta.especializacion_nombre || 'Sin especialización',
+      formatearPrecio(venta.precio_total),
+      venta.metodo_pago,
+      venta.estado,
+      new Date(venta.fecha_venta).toLocaleDateString('es-ES')
+    ]);
+    
+    autoTable(doc, {
+      startY: estadisticas ? 68 : 38,
+      head: [['ID', 'Estudiante', 'Plan', 'Especialización', 'Total', 'Método Pago', 'Estado', 'Fecha Venta']],
+      body: tableData,
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [102, 126, 234], textColor: 255 },
+      alternateRowStyles: { fillColor: [245, 247, 250] },
+      margin: { top: 10 }
+    });
+    
+    // Guardar PDF
+    doc.save(`registro-ventas-${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   const getEstadoBadge = (estado: string) => {
@@ -121,8 +188,13 @@ const RegistroVentas: React.FC = () => {
   return (
     <div className="registro-ventas-container">
       <header className="page-header">
-        <h2>Registro de Ventas</h2>
-        <p>Gestiona y visualiza todas las transacciones del sistema</p>
+        <div>
+          <h2>Registro de Ventas</h2>
+          <p>Gestiona y visualiza todas las transacciones del sistema</p>
+        </div>
+        <button onClick={generarPDF} className="btn-generar-pdf">
+          📄 Generar PDF
+        </button>
       </header>
 
       {/* Estadísticas */}

@@ -165,7 +165,7 @@ export default function Blog() {
         {/* Hero Section */}
         <section className="blog-hero">
           <div className="hero-content">
-            <h1 className="hero-title">Galería de The Language</h1>
+            <h1 className="hero-title">Galería de La Lengua</h1>
             <p className="hero-subtitle">
               Videos educativos, infografías y contenido visual para mejorar tu inglés
             </p>

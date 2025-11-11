@@ -28,6 +28,11 @@ export const Sidebar = ({ onLogout }: { onLogout: () => void }) => {
             </NavLink>
           </li>
           <li>
+            <NavLink to="/admin/registros-eliminacion" className={({ isActive }) => isActive ? 'active' : ''}>
+              📋 Registros de Eliminación
+            </NavLink>
+          </li>
+          <li>
             <NavLink to="/admin/bloques" className={({ isActive }) => isActive ? 'active' : ''}>
               Bloques
             </NavLink>

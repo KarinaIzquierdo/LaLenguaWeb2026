@@ -33,6 +33,26 @@
   box-sizing: border-box;
 }
 
+.form-container .form-select {
+  padding: 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 1rem;
+  background-color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.form-container .form-select:hover {
+  border-color: #9ca3af;
+}
+
+.form-container .form-select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
 .form-container .button-group {
   display: flex;
   gap: 1rem;

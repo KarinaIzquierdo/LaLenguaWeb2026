@@ -64,8 +64,12 @@ export const userService = {
         correo_personal: user.correo_personal,
         rol: user.role,
         activo: user.is_active,
+        is_active: user.is_active,
         bloque_asignado: user.bloque_asignado,
         especializacion_id: user.especializacion,
+        especializacion: user.especializacion,
+        date_joined: user.date_joined,
+        nivel: user.english_level || null,
       }));
     } catch (error) {
       return [];
@@ -81,6 +85,23 @@ export const userService = {
           'Content-Type': 'application/json',
           'Authorization': token ? `Bearer ${token}` : '',
         },
+      });
+      return await response.json();
+    } catch (error) {
+      return { success: false, message: 'Error de conexión' };
+    }
+  },
+
+  async update(userId: number, data: Partial<any>): Promise<any> {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/users/${userId}/`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : '',
+        },
+        body: JSON.stringify(data),
       });
       return await response.json();
     } catch (error) {

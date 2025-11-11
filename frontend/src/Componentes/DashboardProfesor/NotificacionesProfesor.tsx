@@ -11,6 +11,13 @@ export default function NotificacionesProfesor() {
   const [noLeidasCount, setNoLeidasCount] = useState(0);
 
   useEffect(() => {
+    // Solo cargar notificaciones si hay un token de autenticación
+    const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+
     cargarNotificaciones();
     // Actualizar notificaciones cada 30 segundos
     const interval = setInterval(cargarNotificaciones, 30000);
@@ -18,6 +25,12 @@ export default function NotificacionesProfesor() {
   }, []);
 
   const cargarNotificaciones = async () => {
+    // Verificar que haya token antes de hacer la petición
+    const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+    if (!token) {
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);

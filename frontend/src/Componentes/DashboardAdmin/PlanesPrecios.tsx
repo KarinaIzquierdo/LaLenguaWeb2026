@@ -155,12 +155,13 @@ const PlanesPrecios: React.FC = () => {
 
                 <div className="plan-stats">
                   <div className="stat">
-                    <span className="stat-label">Duración:</span>
-                    <span className="stat-value">{plan.duracion_meses} mes(es)</span>
+                    <span className="stat-label">DURACIÓN:</span>
+                    <span className="stat-value-large">{plan.duracion_meses}</span>
+                    <span className="stat-unit">mes{plan.duracion_meses > 1 ? 'es' : ''}</span>
                   </div>
                   <div className="stat">
-                    <span className="stat-label">Estado:</span>
-                    <span className={`stat-value ${plan.activo ? 'active' : 'inactive'}`}>
+                    <span className="stat-label">ESTADO:</span>
+                    <span className={`stat-badge ${plan.activo ? 'active' : 'inactive'}`}>
                       {plan.activo ? 'Activo' : 'Inactivo'}
                     </span>
                   </div>
@@ -172,7 +173,7 @@ const PlanesPrecios: React.FC = () => {
                   className="btn-edit-plan"
                   onClick={() => handleEditPlan(plan)}
                 >
-                  ✏️ Editar Plan
+                  Editar Plan
                 </button>
                 <button 
                   className={`btn-toggle-plan ${plan.activo ? 'deactivate' : 'activate'}`}
