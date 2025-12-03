@@ -1,14 +1,12 @@
 import { useState, useEffect } from 'react';
 import './ProgramarClase.css';
 import { userService } from '../../services/userService';
-import { bloqueService } from '../../services/bloqueService';
 
 interface EstudianteDisponible {
   id: string;
   nombre: string;
   nivel: string;
   email: string;
-  bloque?: string;
 }
 
 interface FormularioClase {
@@ -61,58 +59,44 @@ export default function ProgramarClase() {
     const cargarEstudiantes = async () => {
       setCargandoEstudiantes(true);
       try {
-        console.log('Cargando estudiantes desde el backend...');
         const usuarios = await userService.getAll();
-        console.log('Usuarios recibidos del backend:', usuarios);
-        
         const estudiantes = usuarios
           .filter(usuario => {
-            console.log(`Usuario: ${usuario.nombres} - Rol: ${usuario.rol} - Activo: ${usuario.activo}`);
             return usuario.rol === 'student' && usuario.activo;
           })
           .map(usuario => {
-            // Obtener información del bloque asignado
-            const bloqueInfo = bloqueService.getUserBloqueInfo(usuario.id.toString());
-            const bloqueTexto = bloqueInfo.bloque 
-              ? `${bloqueInfo.bloque.nivel} ${bloqueInfo.bloque.turno}`
-              : 'Sin bloque';
-            
+            const nivel = usuario.nivel || 'Sin nivel';
+
             return {
               id: usuario.id.toString(),
               nombre: `${usuario.nombres} ${usuario.apellidos}`,
-              nivel: bloqueInfo.bloque?.nivel || 'Sin nivel',
-              email: usuario.correo,
-              bloque: bloqueTexto
+              nivel,
+              email: usuario.correo || usuario.correo_personal || ''
             };
           });
         
-        console.log('Estudiantes filtrados:', estudiantes);
         setEstudiantesDisponibles(estudiantes);
         
         // Si no hay estudiantes, crear algunos de prueba
         if (estudiantes.length === 0) {
-          console.log('No hay estudiantes en la BD, creando datos de prueba...');
           const estudiantesPrueba = [
             {
               id: '1',
               nombre: 'Camila Rodriguez',
               nivel: 'A1',
-              email: 'camila@thelanguage.co',
-              bloque: 'A1 Mañana'
+              email: 'camila@thelanguage.co'
             },
             {
               id: '2',
               nombre: 'Luisa Flores',
               nivel: 'B2',
-              email: 'luisa@thelanguage.co',
-              bloque: 'B2 Tarde'
+              email: 'luisa@thelanguage.co'
             },
             {
               id: '3',
               nombre: 'Stiven Ramirez',
               nivel: 'A2',
-              email: 'stiven@thelanguage.co',
-              bloque: 'A2 Noche'
+              email: 'stiven@thelanguage.co'
             }
           ];
           setEstudiantesDisponibles(estudiantesPrueba);
@@ -125,22 +109,19 @@ export default function ProgramarClase() {
             id: '1',
             nombre: 'Camila Rodriguez',
             nivel: 'A1',
-            email: 'camila@thelanguage.co',
-            bloque: 'A1 Mañana'
+            email: 'camila@thelanguage.co'
           },
           {
             id: '2',
             nombre: 'Luisa Flores',
             nivel: 'B2',
-            email: 'luisa@thelanguage.co',
-            bloque: 'B2 Tarde'
+            email: 'luisa@thelanguage.co'
           },
           {
             id: '3',
             nombre: 'Stiven Ramirez',
             nivel: 'A2',
-            email: 'stiven@thelanguage.co',
-            bloque: 'A2 Noche'
+            email: 'stiven@thelanguage.co'
           }
         ];
         setEstudiantesDisponibles(estudiantesPrueba);
@@ -211,7 +192,6 @@ export default function ProgramarClase() {
         try {
           const user = JSON.parse(userStr);
           nombreProfesor = `${user.first_name || ''} ${user.last_name || ''}`.trim();
-          console.log('Profesor que crea la clase:', nombreProfesor);
         } catch (e) {
           console.error('Error parseando usuario:', e);
         }
@@ -232,14 +212,11 @@ export default function ProgramarClase() {
         estudiantesSeleccionados: formulario.estudiantesSeleccionados
       };
 
-      console.log('Enviando clase al backend:', claseData);
-      console.log('Meet Link específico:', formulario.meetLink);
       
       // Enviar al backend usando ClaseService
       const { ClaseService } = await import('../../services/claseService');
       const claseCreada = await ClaseService.createClase(claseData);
       
-      console.log('Clase creada exitosamente:', claseCreada);
       alert('¡Clase programada exitosamente!');
       
       // Resetear formulario
@@ -525,7 +502,7 @@ export default function ProgramarClase() {
                         >
                           <div className="estudiante-info">
                             <span className="estudiante-nombre">{estudiante.nombre}</span>
-                            <span className="estudiante-nivel">{estudiante.bloque}</span>
+                            <span className="estudiante-nivel">{estudiante.nivel}</span>
                             <span className="estudiante-email">{estudiante.email}</span>
                           </div>
                           <div className="checkbox">

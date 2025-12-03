@@ -1,87 +1,630 @@
+import React, { useState, useEffect } from 'react';
 import './DriveEvaluaciones.css';
+import { evaluacionProfesorService, type Estudiante } from '../../services/evaluacionProfesorService';
+
+interface Evaluacion {
+  id: number;
+  titulo: string;
+  nivel: string;
+  unidad: string;
+  clase: string;
+  enlace: string;
+  fecha_creacion: string;
+  activa: boolean;
+  tipo?: string;
+  estudiantes_asignados?: number[];
+}
 
 export default function DriveEvaluaciones() {
-  // URL del Google Drive - puedes cambiarla según necesites
-  const driveUrl = 'https://drive.google.com/drive/folders/YOUR_FOLDER_ID';
+  const [evaluaciones, setEvaluaciones] = useState<Evaluacion[]>([]);
+  const [showModal, setShowModal] = useState(false);
+  const [currentView, setCurrentView] = useState<'list' | 'assign'>('list');
+  const [editingEvaluacion, setEditingEvaluacion] = useState<Evaluacion | null>(null);
+  const [assigningEvaluacion, setAssigningEvaluacion] = useState<Evaluacion | null>(null);
+  const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
+  const [formData, setFormData] = useState({
+    titulo: '',
+    nivel: '',
+    unidad: '',
+    clase: '',
+    enlace: '',
+    tipo: 'quiz',
+    archivo: null as File | null,
+  });
 
-  const handleOpenDrive = () => {
-    window.open(driveUrl, '_blank');
+  // Lista de estudiantes (cargada desde el backend)
+  const [estudiantes, setEstudiantes] = useState<Estudiante[]>([]);
+  const [loadingStudents, setLoadingStudents] = useState(false);
+
+  // Cargar evaluaciones existentes
+  useEffect(() => {
+    cargarEvaluaciones();
+  }, []);
+
+  const cargarEvaluaciones = async () => {
+    try {
+      const evaluacionesData = await evaluacionProfesorService.getEvaluaciones();
+      // Asegurarse de que sea un array
+      if (Array.isArray(evaluacionesData)) {
+        // Parsear cada evaluación del backend
+        const evaluacionesParsed = evaluacionesData.map((evalBackend: any) => {
+          const descripcion = evalBackend.descripcion || '';
+          
+          const parseDescripcion = (desc: string) => {
+            const nivel = desc.match(/Nivel: ([^|]+)/)?.[1]?.trim() || 'A1';
+            const unidad = desc.match(/Unidad: ([^|]+)/)?.[1]?.trim() || 'Unit 1';
+            const clase = desc.match(/Clase: ([^|]+)/)?.[1]?.trim() || 'Class 1';
+            const enlace = desc.match(/Enlace: (.+)/)?.[1]?.trim() || '';
+            return { nivel, unidad, clase, enlace };
+          };
+          
+          const { nivel, unidad, clase, enlace } = parseDescripcion(descripcion);
+          
+          return {
+            id: evalBackend.id,
+            titulo: evalBackend.titulo,
+            nivel,
+            unidad,
+            clase,
+            enlace,
+            fecha_creacion: evalBackend.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
+            activa: evalBackend.estado === 'publicada',
+            tipo: evalBackend.tipo || 'quiz',
+            estudiantes_asignados: evalBackend.estudiantes_asignados || []
+          };
+        });
+        
+        setEvaluaciones(evaluacionesParsed);
+      } else {
+        console.warn('getEvaluaciones no devolvió un array:', evaluacionesData);
+        setEvaluaciones([]);
+      }
+    } catch (error) {
+      console.error('Error cargando evaluaciones:', error);
+      setEvaluaciones([]);
+    }
   };
 
+  const cargarEstudiantes = async () => {
+    try {
+      setLoadingStudents(true);
+      const estudiantesData = await evaluacionProfesorService.getEstudiantes();
+      setEstudiantes(estudiantesData);
+    } catch (error) {
+      console.error('Error cargando estudiantes:', error);
+      setEstudiantes([]);
+    } finally {
+      setLoadingStudents(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    try {
+      // Validar que haya al menos un enlace o un archivo adjunto
+      if (!formData.enlace && !formData.archivo) {
+        alert('Debes ingresar un enlace de evaluación o adjuntar un archivo (PDF, Word, etc.).');
+        return;
+      }
+
+      if (editingEvaluacion) {
+        // Actualizar evaluación existente en el backend
+        const result = await evaluacionProfesorService.actualizarEvaluacion(editingEvaluacion.id, formData);
+        
+        if (result.success) {
+          // Actualizar en el estado local
+          setEvaluaciones(prev => 
+            prev.map(ev => ev.id === editingEvaluacion.id ? { ...ev, ...formData } : ev)
+          );
+          alert('Evaluación actualizada correctamente');
+        } else {
+          alert(result.message || 'Error al actualizar evaluación');
+          return;
+        }
+      } else {
+        // Crear nueva evaluación en el backend
+        const result = await evaluacionProfesorService.crearEvaluacion(formData);
+        
+        if (result.success && result.data) {
+          // Parsear la descripción para extraer nivel, unidad, clase, enlace
+          const descripcion = result.data.descripcion || '';
+          const parseDescripcion = (desc: string) => {
+            const nivel = desc.match(/Nivel: ([^|]+)/)?.[1]?.trim() || formData.nivel;
+            const unidad = desc.match(/Unidad: ([^|]+)/)?.[1]?.trim() || formData.unidad;
+            const clase = desc.match(/Clase: ([^|]+)/)?.[1]?.trim() || formData.clase;
+            const enlace = desc.match(/Enlace: (.+)/)?.[1]?.trim() || formData.enlace;
+            return { nivel, unidad, clase, enlace };
+          };
+          
+          const { nivel, unidad, clase, enlace } = parseDescripcion(descripcion);
+          
+          // Agregar al estado local con los datos del backend
+          const nuevaEvaluacion: Evaluacion = {
+            id: result.data.id,
+            titulo: result.data.titulo,
+            nivel,
+            unidad,
+            clase,
+            enlace,
+            fecha_creacion: result.data.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
+            activa: result.data.estado === 'publicada'
+          };
+          
+          setEvaluaciones(prev => [...prev, nuevaEvaluacion]);
+          alert('Evaluación creada correctamente');
+        } else {
+          alert(result.message || 'Error al crear evaluación');
+          return;
+        }
+      }
+      
+      // Resetear formulario solo si todo salió bien
+      setFormData({ titulo: '', nivel: '', unidad: '', clase: '', enlace: '', tipo: 'quiz', archivo: null });
+      setShowModal(false);
+      setEditingEvaluacion(null);
+      
+    } catch (error) {
+      console.error('Error guardando evaluación:', error);
+      alert('Error al guardar la evaluación');
+    }
+  };
+
+  const handleEdit = (evaluacion: Evaluacion) => {
+    setEditingEvaluacion(evaluacion);
+    setFormData({
+      titulo: evaluacion.titulo,
+      nivel: evaluacion.nivel,
+      unidad: evaluacion.unidad,
+      clase: evaluacion.clase,
+      enlace: evaluacion.enlace,
+      tipo: evaluacion.tipo || 'quiz',
+      archivo: null,
+    });
+    setShowModal(true);
+  };
+
+  const handleDelete = async (id: number) => {
+    if (window.confirm('¿Estás seguro de eliminar esta evaluación?')) {
+      try {
+        const result = await evaluacionProfesorService.eliminarEvaluacion(id);
+        
+        if (result.success) {
+          setEvaluaciones(prev => prev.filter(ev => ev.id !== id));
+          alert(result.message || 'Evaluación eliminada correctamente');
+        } else {
+          alert(result.message || 'Error al eliminar evaluación');
+        }
+      } catch (error) {
+        console.error('Error eliminando evaluación:', error);
+        alert('Error al eliminar evaluación');
+      }
+    }
+  };
+
+  const toggleActiva = async (id: number) => {
+    try {
+      const result = await evaluacionProfesorService.toggleActiva(id);
+      
+      if (result.success) {
+        setEvaluaciones(prev => 
+          prev.map(ev => 
+            ev.id === id ? { ...ev, activa: !ev.activa } : ev
+          )
+        );
+        alert(result.message || 'Estado actualizado correctamente');
+      } else {
+        alert(result.message || 'Error al cambiar estado');
+      }
+    } catch (error) {
+      console.error('Error cambiando estado:', error);
+      alert('Error al cambiar estado');
+    }
+  };
+
+  const openModal = () => {
+    setFormData({ titulo: '', nivel: '', unidad: '', clase: '', enlace: '', tipo: 'quiz', archivo: null });
+    setEditingEvaluacion(null);
+    setShowModal(true);
+  };
+
+  const openAssignView = (evaluacion: Evaluacion) => {
+    setAssigningEvaluacion(evaluacion);
+    setSelectedStudents([]);
+    setCurrentView('assign');
+    // Cargar estudiantes cuando se abre la vista de asignación
+    cargarEstudiantes();
+  };
+
+  const handleStudentToggle = (studentId: string) => {
+    setSelectedStudents(prev => 
+      prev.includes(studentId) 
+        ? prev.filter(id => id !== studentId)
+        : [...prev, studentId]
+    );
+  };
+
+  const handleAssignEvaluacion = async () => {
+    if (!assigningEvaluacion || selectedStudents.length === 0) {
+      alert('Selecciona al menos un estudiante');
+      return;
+    }
+
+    try {
+      const result = await evaluacionProfesorService.asignarEvaluacion(
+        assigningEvaluacion.id, 
+        selectedStudents
+      );
+      
+      if (result.success) {
+        alert(result.message || `Evaluación "${assigningEvaluacion.titulo}" asignada a ${selectedStudents.length} estudiante(s)`);
+        
+        // Recargar evaluaciones para actualizar el contador
+        await cargarEvaluaciones();
+        
+        setCurrentView('list');
+        setAssigningEvaluacion(null);
+        setSelectedStudents([]);
+      } else {
+        alert(result.message || 'Error al asignar evaluación');
+      }
+    } catch (error) {
+      console.error('Error asignando evaluación:', error);
+      alert('Error al asignar evaluación');
+    }
+  };
+
+  const getStudentsByLevel = (nivel: string) => {
+    return estudiantes.filter(estudiante => estudiante.nivel === nivel);
+  };
+
+  // Función para volver a la lista
+  const backToList = () => {
+    setCurrentView('list');
+    setAssigningEvaluacion(null);
+    setSelectedStudents([]);
+  };
+
+  // Vista de asignación
+  if (currentView === 'assign' && assigningEvaluacion) {
+    return (
+      <div className="drive-evaluaciones-container">
+        <div className="assign-header">
+          <button className="btn-back" onClick={backToList}>
+            ← Volver a Evaluaciones
+          </button>
+          <h1>Asignar Evaluación: {assigningEvaluacion.titulo}</h1>
+        </div>
+
+        <div className="assign-content-page">
+          <div className="evaluacion-info-summary">
+            <div className="info-row">
+              <span>🎯 Nivel: <strong>{assigningEvaluacion.nivel}</strong></span>
+              <span>📚 Unidad: <strong>{assigningEvaluacion.unidad}</strong></span>
+              <span>📖 Clase: <strong>{assigningEvaluacion.clase}</strong></span>
+            </div>
+          </div>
+
+          <div className="students-section">
+            <h3>Seleccionar Estudiantes</h3>
+            
+            {loadingStudents ? (
+              <div className="loading-students">
+                <div className="spinner"></div>
+                <p>Cargando estudiantes...</p>
+              </div>
+            ) : estudiantes.length === 0 ? (
+              <div className="no-students">
+                <p>No se encontraron estudiantes registrados.</p>
+              </div>
+            ) : (
+              <>
+                {/* Estudiantes del mismo nivel (recomendados) */}
+                {getStudentsByLevel(assigningEvaluacion.nivel).length > 0 && (
+                  <div className="students-group">
+                    <h4>🎯 Estudiantes de nivel {assigningEvaluacion.nivel} (Recomendado)</h4>
+                    <div className="students-list">
+                      {getStudentsByLevel(assigningEvaluacion.nivel).map(estudiante => (
+                        <label key={estudiante.id} className="student-item recommended">
+                          <input
+                            type="checkbox"
+                            checked={selectedStudents.includes(estudiante.id)}
+                            onChange={() => handleStudentToggle(estudiante.id)}
+                          />
+                          <div className="student-info">
+                            <span className="student-name">{estudiante.nombre}</span>
+                            <span className="student-email">{estudiante.email}</span>
+                            <span className="student-level">{estudiante.nivel}</span>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Otros estudiantes */}
+                <div className="students-group">
+                  <h4>👥 Otros Estudiantes</h4>
+                  <div className="students-list">
+                    {estudiantes.filter(e => e.nivel !== assigningEvaluacion.nivel).map(estudiante => (
+                      <label key={estudiante.id} className="student-item">
+                        <input
+                          type="checkbox"
+                          checked={selectedStudents.includes(estudiante.id)}
+                          onChange={() => handleStudentToggle(estudiante.id)}
+                        />
+                        <div className="student-info">
+                          <span className="student-name">{estudiante.nombre}</span>
+                          <span className="student-email">{estudiante.email}</span>
+                          <span className="student-level">{estudiante.nivel}</span>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="selected-count">
+                  {selectedStudents.length > 0 && (
+                    <p>✅ {selectedStudents.length} estudiante(s) seleccionado(s)</p>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="assign-actions">
+            <button 
+              type="button" 
+              className="btn-cancel" 
+              onClick={backToList}
+            >
+              Cancelar
+            </button>
+            <button 
+              type="button" 
+              className="btn-save" 
+              onClick={handleAssignEvaluacion}
+              disabled={selectedStudents.length === 0}
+            >
+              Asignar a {selectedStudents.length} estudiante(s)
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Vista principal de lista de evaluaciones
   return (
     <div className="drive-evaluaciones-container">
-      <div className="drive-header">
-        <h1>📁 Evaluaciones y Calificaciones</h1>
-        <p>Accede a Google Drive para gestionar evaluaciones, quizzes y calificaciones</p>
+      <div className="evaluaciones-header">
+        <h1>📝 Gestión de Evaluaciones</h1>
+        <p>Crea y gestiona evaluaciones organizadas por unidad y clase</p>
+        <div className="flujo-info">
+          <p><strong>📋 Flujo:</strong> 1️⃣ Crear → 2️⃣ Asignar estudiantes → 3️⃣ Publicar (para que aparezca a los estudiantes)</p>
+        </div>
+        <button className="btn-nueva-evaluacion" onClick={openModal}>
+          + Nueva Evaluación
+        </button>
       </div>
 
-      <div className="drive-card">
-        <div className="drive-icon">
-          <svg viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg">
-            <path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/>
-            <path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z" fill="#00ac47"/>
-            <path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.502l5.852 11.5z" fill="#ea4335"/>
-            <path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/>
-            <path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc"/>
-            <path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/>
-          </svg>
-        </div>
+      <div className="evaluaciones-grid">
+        {Array.isArray(evaluaciones) && evaluaciones.map((evaluacion) => (
+          <div key={evaluacion.id} className={`evaluacion-card ${evaluacion.tipo || 'quiz'} ${!evaluacion.activa ? 'inactiva' : ''}`}>
+            <div className="evaluacion-header">
+              <h3>{evaluacion.titulo}</h3>
+              <div className="evaluacion-status">
+                <span className={`status-badge ${evaluacion.activa ? 'activa' : 'inactiva'}`}>
+                  {evaluacion.activa ? 'PUBLICADA' : 'BORRADOR'}
+                </span>
+              </div>
+            </div>
+            
+            <div className="evaluacion-info">
+              <div className="info-item">
+                <span className="label">🎯 Nivel:</span>
+                <span className={`value nivel-badge ${evaluacion.nivel}`}>{evaluacion.nivel}</span>
+              </div>
+              <div className="info-item">
+                <span className="label">📚 Unidad:</span>
+                <span className="value">{evaluacion.unidad}</span>
+              </div>
+              <div className="info-item">
+                <span className="label">📖 Clase:</span>
+                <span className="value">{evaluacion.clase}</span>
+              </div>
+              <div className="info-item">
+                <span className="label">📅 Creada:</span>
+                <span className="value">{new Date(evaluacion.fecha_creacion).toLocaleDateString()}</span>
+              </div>
+              <div className="info-item">
+                <span className="label">👥 Estudiantes:</span>
+                <span className="value estudiantes-count">
+                  {evaluacion.estudiantes_asignados?.length || 0} asignado(s)
+                </span>
+              </div>
+            </div>
 
-        <div className="drive-content">
-          <h2>Google Drive - Evaluaciones</h2>
-          <p>
-            Todas las evaluaciones, quizzes y calificaciones se gestionan en Google Drive.
-            Haz clic en el botón para acceder a la carpeta compartida.
-          </p>
+            <div className="evaluacion-enlace">
+              <a 
+                href={evaluacion.enlace} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="enlace-evaluacion"
+              >
+                🔗 Abrir Evaluación
+              </a>
+            </div>
 
-          <div className="drive-features">
-            <div className="feature-item">
-              <span className="feature-icon">📝</span>
-              <span>Crear y editar evaluaciones</span>
-            </div>
-            <div className="feature-item">
-              <span className="feature-icon">✅</span>
-              <span>Calificar trabajos de estudiantes</span>
-            </div>
-            <div className="feature-item">
-              <span className="feature-icon">📊</span>
-              <span>Ver estadísticas y reportes</span>
-            </div>
-            <div className="feature-item">
-              <span className="feature-icon">💾</span>
-              <span>Almacenamiento organizado</span>
+            <div className="evaluacion-actions">
+              <button 
+                className="btn-assign"
+                onClick={() => openAssignView(evaluacion)}
+              >
+                👥 Asignar
+              </button>
+              <button 
+                className="btn-toggle"
+                onClick={() => toggleActiva(evaluacion.id)}
+              >
+                {evaluacion.activa ? '📤 Despublicar' : '📢 Publicar'}
+              </button>
+              <button 
+                className="btn-edit"
+                onClick={() => handleEdit(evaluacion)}
+              >
+                ✏️ Editar
+              </button>
+              <button 
+                className="btn-delete"
+                onClick={() => handleDelete(evaluacion.id)}
+              >
+                🗑️ Eliminar
+              </button>
             </div>
           </div>
+        ))}
 
-          <button className="btn-open-drive" onClick={handleOpenDrive}>
-            <svg width="24" height="24" viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg">
-              <path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/>
-              <path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z" fill="#00ac47"/>
-              <path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.502l5.852 11.5z" fill="#ea4335"/>
-              <path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/>
-              <path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc"/>
-              <path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/>
-            </svg>
-            Abrir Google Drive
-          </button>
+        {(!Array.isArray(evaluaciones) || evaluaciones.length === 0) && (
+          <div className="no-evaluaciones">
+            <p>No hay evaluaciones creadas aún.</p>
+            <button className="btn-crear-primera" onClick={openModal}>
+              Crear Primera Evaluación
+            </button>
+          </div>
+        )}
+      </div>
 
-          <div className="drive-note">
-            <strong>Nota:</strong> Asegúrate de tener acceso a la carpeta compartida de Google Drive.
-            Si no puedes acceder, contacta al administrador.
+      {/* Modal para crear/editar evaluación */}
+      {showModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h2>{editingEvaluacion ? 'Editar Evaluación' : 'Nueva Evaluación'}</h2>
+              <button className="btn-close" onClick={() => setShowModal(false)}>×</button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="evaluacion-form">
+              <div className="form-group">
+                <label htmlFor="titulo">Título de la Evaluación *</label>
+                <input
+                  type="text"
+                  id="titulo"
+                  value={formData.titulo}
+                  onChange={(e) => setFormData(prev => ({ ...prev, titulo: e.target.value }))}
+                  placeholder="Ej: Tarea Unit 1 - Verbos en presente"
+                  required
+                />
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="tipo">Tipo *</label>
+                  <select
+                    id="tipo"
+                    value={formData.tipo}
+                    onChange={(e) => setFormData(prev => ({ ...prev, tipo: e.target.value }))}
+                    className="form-select"
+                    required
+                  >
+                    <option value="quiz">Quiz</option>
+                    <option value="examen">Examen</option>
+                    <option value="tarea">Tarea</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="nivel">Nivel de Inglés *</label>
+                  <select
+                    id="nivel"
+                    value={formData.nivel}
+                    onChange={(e) => setFormData(prev => ({ ...prev, nivel: e.target.value }))}
+                    className="form-select"
+                    required
+                  >
+                    <option value="">Selecciona el nivel</option>
+                    <option value="A1">A1</option>
+                    <option value="A1+">A1+</option>
+                    <option value="A2">A2</option>
+                    <option value="A2+">A2+</option>
+                    <option value="B1">B1</option>
+                    <option value="B1+">B1+</option>
+                    <option value="B2">B2</option>
+                    <option value="B2+">B2+</option>
+                    <option value="C1">C1</option>
+                    <option value="C1+">C1+</option>
+                    <option value="C2">C2</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="unidad">Unidad *</label>
+                  <input
+                    type="text"
+                    id="unidad"
+                    value={formData.unidad}
+                    onChange={(e) => setFormData(prev => ({ ...prev, unidad: e.target.value }))}
+                    placeholder="Ej: Unit 1, Unit 2..."
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="clase">Clase *</label>
+                <input
+                  type="text"
+                  id="clase"
+                  value={formData.clase}
+                  onChange={(e) => setFormData(prev => ({ ...prev, clase: e.target.value }))}
+                  placeholder="Ej: Class 1, Class 2..."
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="enlace">Enlace de la Evaluación</label>
+                <input
+                  type="url"
+                  id="enlace"
+                  value={formData.enlace}
+                  onChange={(e) => setFormData(prev => ({ ...prev, enlace: e.target.value }))}
+                  placeholder="https://docs.google.com/forms/d/..."
+                />
+                <small>Pega aquí el enlace de Google Forms, Docs, o cualquier plataforma de evaluación (opcional si adjuntas archivo)</small>
+              </div>
+
+              {!editingEvaluacion && (
+                <div className="form-group">
+                  <label htmlFor="archivo">Archivo de la Evaluación (PDF, Word, etc.)</label>
+                  <input
+                    type="file"
+                    id="archivo"
+                    accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.odt,.odp,.ods,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    onChange={(e) => {
+                      const file = e.currentTarget.files && e.currentTarget.files[0] ? e.currentTarget.files[0] : null;
+                      setFormData(prev => ({ ...prev, archivo: file }));
+                    }}
+                  />
+                  <small>Puedes subir un archivo en lugar de un enlace. Los estudiantes podrán descargarlo desde su panel.</small>
+                </div>
+              )}
+
+              <div className="form-actions">
+                <button type="button" className="btn-cancel" onClick={() => setShowModal(false)}>
+                  Cancelar
+                </button>
+                <button type="submit" className="btn-save">
+                  {editingEvaluacion ? 'Actualizar' : 'Crear'} Evaluación
+                </button>
+              </div>
+            </form>
           </div>
         </div>
-      </div>
+      )}
 
-      <div className="drive-instructions">
-        <h3>📌 Instrucciones</h3>
-        <ol>
-          <li>Haz clic en "Abrir Google Drive" para acceder a la carpeta</li>
-          <li>Busca la carpeta de tu bloque o nivel</li>
-          <li>Crea o edita las evaluaciones según necesites</li>
-          <li>Califica los trabajos de los estudiantes directamente en Drive</li>
-          <li>Los estudiantes podrán ver sus calificaciones desde su dashboard</li>
-        </ol>
-      </div>
     </div>
   );
 }

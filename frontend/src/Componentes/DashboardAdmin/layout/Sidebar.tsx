@@ -33,11 +33,6 @@ export const Sidebar = ({ onLogout }: { onLogout: () => void }) => {
             </NavLink>
           </li>
           <li>
-            <NavLink to="/admin/bloques" className={({ isActive }) => isActive ? 'active' : ''}>
-              Bloques
-            </NavLink>
-          </li>
-          <li>
             <NavLink to="/admin/galeria" className={({ isActive }) => isActive ? 'active' : ''}>
               Gestión de Galería
             </NavLink>
@@ -65,6 +60,11 @@ export const Sidebar = ({ onLogout }: { onLogout: () => void }) => {
           <li>
             <NavLink to="/admin/misiones" className={({ isActive }) => isActive ? 'active' : ''}>
               🎯 Misiones
+            </NavLink>
+          </li>
+          <li>
+            <NavLink to="/admin/retos-diarios" className={({ isActive }) => isActive ? 'active' : ''}>
+              🔥 Retos Diarios
             </NavLink>
           </li>
         </ul>

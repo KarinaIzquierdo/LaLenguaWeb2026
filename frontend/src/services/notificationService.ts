@@ -1,6 +1,5 @@
 import axios from 'axios';
-
-const API_BASE_URL = 'http://localhost:8000/api';
+import { API_BASE_URL } from '../config/api';
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem('token');
@@ -36,7 +35,7 @@ export const notificationService = {
   // Marcar notificación como leída
   async marcarComoLeida(notificacionId: number): Promise<void> {
     try {
-      await axios.post(`${API_BASE_URL}/notificaciones/${notificacionId}/marcar-leida/`, {}, {
+      await axios.post(`${API_BASE_URL}/notificaciones/estudiante/${notificacionId}/marcar-leida/`, {}, {
         headers: getAuthHeaders()
       });
     } catch (error) {
@@ -48,7 +47,7 @@ export const notificationService = {
   // Marcar todas como leídas
   async marcarTodasComoLeidas(): Promise<void> {
     try {
-      await axios.post(`${API_BASE_URL}/notificaciones/marcar-todas-leidas/`, {}, {
+      await axios.post(`${API_BASE_URL}/notificaciones/estudiante/marcar-todas-leidas/`, {}, {
         headers: getAuthHeaders()
       });
     } catch (error) {
@@ -60,7 +59,7 @@ export const notificationService = {
   // Obtener contador de no leídas
   async getContadorNoLeidas(): Promise<number> {
     try {
-      const response = await axios.get(`${API_BASE_URL}/notificaciones/contador-no-leidas/`, {
+      const response = await axios.get(`${API_BASE_URL}/notificaciones/estudiante/contador-no-leidas/`, {
         headers: getAuthHeaders()
       });
       return response.data.count || 0;

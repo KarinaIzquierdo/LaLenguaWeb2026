@@ -62,6 +62,7 @@ export default function NavProfesor({ profesorData, activeView, setActiveView, o
     { id: 'clases', label: 'Mis Clases', icon: '📚' },
     { id: 'programar-clase', label: 'Programar Clase', icon: '➕' },
     { id: 'drive-evaluaciones', label: 'Evaluaciones (Drive)', icon: '📁' },
+    { id: 'calificar-evaluaciones', label: 'Calificar Evaluaciones', icon: '✅' },
     { id: 'reportes', label: 'Reportes de Progreso', icon: '📋' },
     { id: 'notificaciones', label: 'Notificaciones', icon: '🔔', badge: noLeidasCount > 0 ? noLeidasCount : undefined },
     { id: 'estudiantes', label: 'Estudiantes', icon: '👥' },

@@ -108,6 +108,129 @@
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
+/* Tabla de registros */
+.registros-table-container {
+  margin-top: 1.5rem;
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  overflow-x: auto;
+}
+
+.registros-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.registros-table thead tr {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.registros-table th {
+  padding: 0.75rem 1rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  text-align: left;
+}
+
+.registros-table th:first-child {
+  border-top-left-radius: 12px;
+}
+
+.registros-table th:last-child {
+  border-top-right-radius: 12px;
+}
+
+.registros-table tbody tr:nth-child(even) {
+  background: #f9fafb;
+}
+
+.registros-table td {
+  padding: 0.75rem 1rem;
+  font-size: 0.9rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.registros-table tbody tr:last-child td:first-child {
+  border-bottom-left-radius: 12px;
+}
+
+.registros-table tbody tr:last-child td:last-child {
+  border-bottom-right-radius: 12px;
+}
+
+.btn-detalle-registro {
+  padding: 0.4rem 0.9rem;
+  border-radius: 9999px;
+  border: none;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-detalle-registro:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(102, 126, 234, 0.4);
+}
+
+/* Paginación */
+.paginacion-registros {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.paginacion-info {
+  font-size: 0.85rem;
+  color: #718096;
+}
+
+.paginacion-botones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.paginacion-botones button {
+  min-width: 34px;
+  padding: 0.3rem 0.7rem;
+  border-radius: 9999px;
+  border: 1px solid #e2e8f0;
+  background: white;
+  font-size: 0.8rem;
+  cursor: pointer;
+  color: #4a5568;
+  transition: all 0.2s ease;
+}
+
+.paginacion-botones button:hover:not(:disabled) {
+  background: #edf2ff;
+  border-color: #667eea;
+  color: #3730a3;
+}
+
+.paginacion-botones button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.paginacion-botones .pagina-activa {
+  background: #667eea;
+  color: white;
+  border-color: #667eea;
+}
+
 /* Lista de registros */
 .registros-lista {
   display: grid;

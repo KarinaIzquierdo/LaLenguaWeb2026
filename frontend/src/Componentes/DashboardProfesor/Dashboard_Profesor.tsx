@@ -5,12 +5,14 @@ import MisClases from './MisClases';
 import ProgramarClase from './ProgramarClase';
 import DriveEvaluaciones from './DriveEvaluaciones';
 import { userService } from '../../services/userService';
+import { authService } from '../../services/authService';
 import GestionCLB from './GestionCLB';
 import MisClubs from './MisClubs';
 import ReportesProgreso from './ReportesProgreso';
 import NotificacionesProfesor from './NotificacionesProfesor';
 import EstudiantesView from './EstudiantesView';
 import HistorialAsistencias from './HistorialAsistencias';
+import CalificarEvaluaciones from './CalificarEvaluaciones';
 
 interface DashboardProfesorProps {
   onLogout?: () => void;
@@ -31,12 +33,36 @@ export default function DashboardProfesor({ onLogout }: DashboardProfesorProps =
   useEffect(() => {
     const loadProfessorData = async () => {
       try {
+        // 1) Intentar leer directamente del usuario guardado en el login (localStorage)
+        const savedUser = authService.getUser?.();
+        if (savedUser) {
+          const firstName = savedUser.first_name || '';
+          const lastName = savedUser.last_name || '';
+          const username = savedUser.username || '';
+
+          const fullNameRaw = `${firstName} ${lastName}`.trim();
+          const fullName = fullNameRaw || username || savedUser.email || 'Profesor';
+
+          const initials = (
+            (firstName?.charAt(0) || username?.charAt(0) || 'P') +
+            (lastName?.charAt(0) || '')
+          ).toUpperCase();
+
+          setProfessorData(prev => ({
+            ...prev,
+            nombre: `Prof. ${fullName}`,
+            initials,
+          }));
+          return;
+        }
+
+        // 2) Fallback: intentar obtener el perfil desde el backend si el endpoint existe
         const response = await userService.getCurrentUser();
         if (response.success && response.user) {
           setProfessorData(prev => ({
             ...prev,
             nombre: `Prof. ${response.user.full_name}`,
-            initials: response.user.initials
+            initials: response.user.initials,
           }));
         }
       } catch (error) {
@@ -107,6 +133,7 @@ export default function DashboardProfesor({ onLogout }: DashboardProfesorProps =
           {activeView === 'estudiantes' && <EstudiantesView />}
           {activeView === 'reportes' && <ReportesProgreso />}
           {activeView === 'historial-asistencias' && <HistorialAsistencias />}
+          {activeView === 'calificar-evaluaciones' && <CalificarEvaluaciones />}
           {activeView === 'notificaciones' && <NotificacionesProfesor />}
         </div>
       </div>

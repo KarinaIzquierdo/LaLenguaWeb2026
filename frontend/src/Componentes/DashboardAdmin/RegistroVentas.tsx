@@ -4,6 +4,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import './RegistroVentas.css';
 
+const ITEMS_PER_PAGE = 20;
 const RegistroVentas: React.FC = () => {
   const [ventas, setVentas] = useState<Venta[]>([]);
   const [estadisticas, setEstadisticas] = useState<EstadisticasFinancieras | null>(null);
@@ -16,6 +17,7 @@ const RegistroVentas: React.FC = () => {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [paginaActual, setPaginaActual] = useState(1);
 
   useEffect(() => {
     loadData();
@@ -50,6 +52,7 @@ const RegistroVentas: React.FC = () => {
       ]);
       
       setVentas(ventasData);
+      setPaginaActual(1);
       setEstadisticas(estadisticasData);
       setError(null);
     } catch (err) {
@@ -160,6 +163,23 @@ const RegistroVentas: React.FC = () => {
     };
     return iconos[metodo as keyof typeof iconos] || iconos.otro;
   };
+
+  const totalVentas = ventas.length;
+  const totalPaginas = Math.max(1, Math.ceil(totalVentas / ITEMS_PER_PAGE));
+  const paginaActualSegura = Math.min(paginaActual, totalPaginas);
+  const indiceInicio = (paginaActualSegura - 1) * ITEMS_PER_PAGE;
+  const ventasPagina = ventas.slice(indiceInicio, indiceInicio + ITEMS_PER_PAGE);
+  const pageNumbers = Array.from({ length: totalPaginas }, (_, i) => i + 1);
+
+  const irAPagina = (pagina: number) => {
+    const nuevaPagina = Math.max(1, Math.min(pagina, totalPaginas));
+    setPaginaActual(nuevaPagina);
+  };
+
+  const irPrimera = () => irAPagina(1);
+  const irUltima = () => irAPagina(totalPaginas);
+  const irAnterior = () => irAPagina(paginaActualSegura - 1);
+  const irSiguiente = () => irAPagina(paginaActualSegura + 1);
 
   if (loading) {
     return (
@@ -318,7 +338,7 @@ const RegistroVentas: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {ventas.map((venta) => (
+                {ventasPagina.map((venta) => (
                   <tr key={venta.id}>
                     <td>#{venta.id}</td>
                     <td>
@@ -373,6 +393,37 @@ const RegistroVentas: React.FC = () => {
                 ))}
               </tbody>
             </table>
+            {totalVentas > 0 && (
+              <div className="paginacion-registros">
+                <span className="paginacion-info">
+                  Mostrando {indiceInicio + 1}
+                  –{Math.min(indiceInicio + ITEMS_PER_PAGE, totalVentas)} de {totalVentas}
+                </span>
+                <div className="paginacion-botones">
+                  <button onClick={irPrimera} disabled={paginaActualSegura === 1}>
+                    « Primero
+                  </button>
+                  <button onClick={irAnterior} disabled={paginaActualSegura === 1}>
+                    ‹ Anterior
+                  </button>
+                  {pageNumbers.map((num) => (
+                    <button
+                      key={num}
+                      onClick={() => irAPagina(num)}
+                      className={num === paginaActualSegura ? 'pagina-activa' : ''}
+                    >
+                      {num}
+                    </button>
+                  ))}
+                  <button onClick={irSiguiente} disabled={paginaActualSegura === totalPaginas}>
+                    Siguiente ›
+                  </button>
+                  <button onClick={irUltima} disabled={paginaActualSegura === totalPaginas}>
+                    Último »
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </section>

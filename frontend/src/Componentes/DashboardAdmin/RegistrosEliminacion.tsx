@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import './RegistrosEliminacion.css';
 
+const ITEMS_PER_PAGE = 20;
 interface RegistroEliminacion {
   id: number;
   nombre_completo: string;
@@ -39,6 +40,7 @@ export default function RegistrosEliminacion() {
   const [filtroRazon, setFiltroRazon] = useState('');
   const [busqueda, setBusqueda] = useState('');
   const [registroSeleccionado, setRegistroSeleccionado] = useState<RegistroEliminacion | null>(null);
+  const [paginaActual, setPaginaActual] = useState(1);
 
   useEffect(() => {
     cargarDatos();
@@ -50,7 +52,7 @@ export default function RegistrosEliminacion() {
       const token = localStorage.getItem('token');
       
       // Construir URL con filtros
-      let url = 'http://127.0.0.1:8000/api/registros-eliminacion/';
+      let url = 'https://lalenguacolombia.co/api/index.php/registros-eliminacion/';
       const params = new URLSearchParams();
       if (filtroRazon) params.append('razon', filtroRazon);
       if (busqueda) params.append('search', busqueda);
@@ -60,7 +62,7 @@ export default function RegistrosEliminacion() {
         fetch(url, {
           headers: { 'Authorization': `Bearer ${token}` }
         }),
-        fetch('http://127.0.0.1:8000/api/registros-eliminacion/estadisticas/', {
+        fetch('https://lalenguacolombia.co/api/index.php/registros-eliminacion/estadisticas/', {
           headers: { 'Authorization': `Bearer ${token}` }
         })
       ]);
@@ -70,6 +72,7 @@ export default function RegistrosEliminacion() {
 
       if (registrosData.success) {
         setRegistros(registrosData.registros);
+        setPaginaActual(1);
       }
 
       if (estadisticasData.success) {
@@ -91,6 +94,23 @@ export default function RegistrosEliminacion() {
       minute: '2-digit'
     });
   };
+
+  const totalRegistros = registros.length;
+  const totalPaginas = Math.max(1, Math.ceil(totalRegistros / ITEMS_PER_PAGE));
+  const paginaActualSegura = Math.min(paginaActual, totalPaginas);
+  const indiceInicio = (paginaActualSegura - 1) * ITEMS_PER_PAGE;
+  const registrosPagina = registros.slice(indiceInicio, indiceInicio + ITEMS_PER_PAGE);
+  const pageNumbers = Array.from({ length: totalPaginas }, (_, i) => i + 1);
+
+  const irAPagina = (pagina: number) => {
+    const nuevaPagina = Math.max(1, Math.min(pagina, totalPaginas));
+    setPaginaActual(nuevaPagina);
+  };
+
+  const irPrimera = () => irAPagina(1);
+  const irUltima = () => irAPagina(totalPaginas);
+  const irAnterior = () => irAPagina(paginaActualSegura - 1);
+  const irSiguiente = () => irAPagina(paginaActualSegura + 1);
 
   if (loading) {
     return (
@@ -166,47 +186,96 @@ export default function RegistrosEliminacion() {
         </div>
       </div>
 
-      {/* Lista de registros */}
-      <div className="registros-lista">
+      {/* Lista de registros en tabla con paginación */}
+      <div className="registros-table-container">
         {registros.length === 0 ? (
           <div className="no-registros">
             <p>📭 No hay registros de eliminación</p>
           </div>
         ) : (
-          registros.map(registro => (
-            <div key={registro.id} className="registro-card" onClick={() => setRegistroSeleccionado(registro)}>
-              <div className="registro-header-card">
-                <div className="registro-info">
-                  <h3>{registro.nombre_completo}</h3>
-                  <p className="registro-email">{registro.email}</p>
-                </div>
-                <div className={`razon-badge razon-${registro.razon}`}>
-                  {registro.razon_display}
-                </div>
-              </div>
+          <>
+            <table className="registros-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Nombre completo</th>
+                  <th>Email</th>
+                  <th>Nivel</th>
+                  <th>Bloque</th>
+                  <th>Fecha registro</th>
+                  <th>Fecha eliminación</th>
+                  <th>Tiempo registrado</th>
+                  <th>Razón</th>
+                  <th>Deuda</th>
+                  <th>Eliminado por</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {registrosPagina.map((registro) => (
+                  <tr key={registro.id}>
+                    <td>{registro.id}</td>
+                    <td>{registro.nombre_completo}</td>
+                    <td>{registro.email}</td>
+                    <td>{registro.nivel || 'N/A'}</td>
+                    <td>{registro.bloque_asignado || 'N/A'}</td>
+                    <td>{formatearFecha(registro.fecha_registro)}</td>
+                    <td>{formatearFecha(registro.fecha_eliminacion)}</td>
+                    <td>{registro.tiempo_registrado_str}</td>
+                    <td>
+                      <span className={`razon-badge razon-${registro.razon}`}>
+                        {registro.razon_display}
+                      </span>
+                    </td>
+                    <td>
+                      {registro.deuda_pendiente !== '0.00'
+                        ? <span className="detalle-value deuda">${registro.deuda_pendiente}</span>
+                        : '—'}
+                    </td>
+                    <td>{registro.eliminado_por?.nombre || '—'}</td>
+                    <td>
+                      <button
+                        className="btn-detalle-registro"
+                        onClick={() => setRegistroSeleccionado(registro)}
+                      >
+                        Ver detalles
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
 
-              <div className="registro-detalles">
-                <div className="detalle-item">
-                  <span className="detalle-label">Nivel:</span>
-                  <span className="detalle-value">{registro.nivel || 'N/A'}</span>
-                </div>
-                <div className="detalle-item">
-                  <span className="detalle-label">Tiempo registrado:</span>
-                  <span className="detalle-value">{registro.tiempo_registrado_str}</span>
-                </div>
-                <div className="detalle-item">
-                  <span className="detalle-label">Fecha eliminación:</span>
-                  <span className="detalle-value">{formatearFecha(registro.fecha_eliminacion)}</span>
-                </div>
-                {registro.deuda_pendiente !== '0.00' && (
-                  <div className="detalle-item">
-                    <span className="detalle-label">Deuda:</span>
-                    <span className="detalle-value deuda">${registro.deuda_pendiente}</span>
-                  </div>
-                )}
+            <div className="paginacion-registros">
+              <span className="paginacion-info">
+                Mostrando {indiceInicio + 1}
+                –{Math.min(indiceInicio + ITEMS_PER_PAGE, totalRegistros)} de {totalRegistros}
+              </span>
+              <div className="paginacion-botones">
+                <button onClick={irPrimera} disabled={paginaActualSegura === 1}>
+                  « Primero
+                </button>
+                <button onClick={irAnterior} disabled={paginaActualSegura === 1}>
+                  ‹ Anterior
+                </button>
+                {pageNumbers.map((num) => (
+                  <button
+                    key={num}
+                    onClick={() => irAPagina(num)}
+                    className={num === paginaActualSegura ? 'pagina-activa' : ''}
+                  >
+                    {num}
+                  </button>
+                ))}
+                <button onClick={irSiguiente} disabled={paginaActualSegura === totalPaginas}>
+                  Siguiente ›
+                </button>
+                <button onClick={irUltima} disabled={paginaActualSegura === totalPaginas}>
+                  Último »
+                </button>
               </div>
             </div>
-          ))
+          </>
         )}
       </div>
 

@@ -79,15 +79,15 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-# Configuración para MySQL
+# Configuración para MySQL (desarrollo y producción)
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'the_language',
-        'USER': 'root',
-        'PASSWORD': 'Sena2025',
-        'HOST': '127.0.0.1',
-        'PORT': '3306',
+        'NAME': config('DB_NAME', default='the_language'),
+        'USER': config('DB_USER', default='root'),
+        'PASSWORD': config('DB_PASSWORD', default='Sena2025'),
+        'HOST': config('DB_HOST', default='127.0.0.1'),
+        'PORT': config('DB_PORT', default='3306'),
         'OPTIONS': {
             'charset': 'utf8mb4',
             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
@@ -138,7 +138,8 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Media files (uploads)
 MEDIA_URL = '/media/'
@@ -170,15 +171,13 @@ SIMPLE_JWT = {
 }
 
 # CORS Configuration
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-]
+CORS_ALLOWED_ORIGINS = config(
+    'CORS_ALLOWED_ORIGINS', 
+    default='http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173'
+).split(',')
 
-# Para desarrollo con Android
-CORS_ALLOW_ALL_ORIGINS = True  # Solo para desarrollo
+# Para desarrollo con Android (solo en desarrollo)
+CORS_ALLOW_ALL_ORIGINS = config('DEBUG', default=True, cast=bool)  # Solo en desarrollo
 CORS_ALLOW_CREDENTIALS = True
 
 # Headers permitidos para Android
@@ -194,8 +193,8 @@ CORS_ALLOW_HEADERS = [
     'x-requested-with',
 ]
 
-# Allow all hosts for development
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '10.0.2.2', '10.6.247.110', '172.20.10.3', '0.0.0.0']
+# Allow hosts for development and production
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,10.0.2.2').split(',')
 
 # Email Configuration
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'

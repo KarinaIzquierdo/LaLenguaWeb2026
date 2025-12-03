@@ -1,5 +1,8 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import './NotesModal.css';
+import { authService } from '../../services/authService';
+import { evaluacionService } from '../../services/evaluacionService';
+import { asistenciaService } from '../../services/asistenciaService';
 
 interface EvaluationNote {
   id: string;
@@ -13,61 +16,89 @@ interface EvaluationNote {
   status: 'completed' | 'in_progress';
 }
 
+interface AsistenciaStats {
+  total: number;
+  presentes: number;
+  ausentes: number;
+  tardanzas: number;
+  justificados: number;
+  porcentaje: number;
+}
+
 interface NotesModalProps {
   isVisible: boolean;
   onClose: () => void;
 }
 
 const NotesModal: React.FC<NotesModalProps> = ({ isVisible, onClose }) => {
-  if (!isVisible) return null;
+  const [evaluationNotes, setEvaluationNotes] = useState<EvaluationNote[]>([]);
+  const [asistenciaStats, setAsistenciaStats] = useState<AsistenciaStats | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock data for evaluation notes
-  const evaluationNotes: EvaluationNote[] = [
-    {
-      id: '1',
-      type: 'vocabulary',
-      title: 'Quiz de Vocabulario',
-      date: '2024-01-15',
-      score: 85,
-      totalQuestions: 10,
-      correctAnswers: 8,
-      timeSpent: '12:34',
-      status: 'completed'
-    },
-    {
-      id: '2',
-      type: 'grammar',
-      title: 'Evaluación de Gramática',
-      date: '2024-01-12',
-      score: 92,
-      totalQuestions: 15,
-      correctAnswers: 14,
-      timeSpent: '18:45',
-      status: 'completed'
-    },
-    {
-      id: '3',
-      type: 'comprehension',
-      title: 'Comprensión Auditiva',
-      date: '2024-01-10',
-      score: 78,
-      totalQuestions: 8,
-      correctAnswers: 6,
-      timeSpent: '15:20',
-      status: 'completed'
-    },
-    {
-      id: '4',
-      type: 'vocabulary',
-      title: 'Quiz de Vocabulario',
-      date: '2024-01-08',
-      score: 70,
-      totalQuestions: 10,
-      correctAnswers: 7,
-      timeSpent: '14:12',
-      status: 'completed'
-    }
-  ];
+  useEffect(() => {
+    if (!isVisible) return;
+
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const profile = await authService.getUserProfile();
+        const userId = profile.id;
+
+        const [respuestasResp, asistenciasData] = await Promise.all([
+          evaluacionService.getStudentRespuestas(),
+          asistenciaService.getAsistenciasPorEstudiante(userId),
+        ]);
+
+        let respuestasList: any[] = [];
+        if (Array.isArray(respuestasResp)) {
+          respuestasList = respuestasResp;
+        } else if (respuestasResp && Array.isArray(respuestasResp.data)) {
+          respuestasList = respuestasResp.data;
+        }
+
+        const notas: EvaluationNote[] = respuestasList.map((resp: any) => {
+          const calificacion = resp.calificacion != null ? Number(resp.calificacion) : 0;
+          const fechaBase = resp.fecha_calificacion || resp.fecha_envio || new Date().toISOString();
+
+          return {
+            id: String(resp.id),
+            type: resp.evaluacion_tipo || 'evaluacion',
+            title: resp.evaluacion_titulo || 'Evaluación',
+            date: fechaBase,
+            score: Math.round(calificacion),
+            totalQuestions: 0,
+            correctAnswers: 0,
+            timeSpent: resp.tiempo_gastado ? `${Math.round(resp.tiempo_gastado / 60)} min` : '--',
+            status: resp.completado ? (resp.calificacion != null ? 'completed' : 'in_progress') : 'in_progress',
+          };
+        });
+
+        setEvaluationNotes(notas);
+
+        const asistenciasList = Array.isArray(asistenciasData) ? asistenciasData : [];
+        const total = asistenciasList.length;
+        const presentes = asistenciasList.filter((a: any) => a.estado === 'presente').length;
+        const ausentes = asistenciasList.filter((a: any) => a.estado === 'ausente').length;
+        const tardanzas = asistenciasList.filter((a: any) => a.estado === 'tardanza').length;
+        const justificados = asistenciasList.filter((a: any) => a.estado === 'justificado').length;
+        const porcentaje = total > 0 ? Math.round((presentes / total) * 100) : 0;
+
+        setAsistenciaStats({ total, presentes, ausentes, tardanzas, justificados, porcentaje });
+      } catch (err) {
+        console.error('Error cargando notas y asistencia:', err);
+        setError('No se pudieron cargar tus notas y tu asistencia. Intenta más tarde.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, [isVisible]);
+
+  if (!isVisible) return null;
 
   const getScoreColor = (score: number) => {
     if (score >= 80) return '#10b981';
@@ -93,9 +124,16 @@ const NotesModal: React.FC<NotesModalProps> = ({ isVisible, onClose }) => {
     });
   };
 
-  const averageScore = Math.round(
-    evaluationNotes.reduce((sum, note) => sum + note.score, 0) / evaluationNotes.length
-  );
+  const averageScore = evaluationNotes.length
+    ? Math.round(
+        evaluationNotes.reduce((sum, note) => sum + (note.score || 0), 0) /
+          evaluationNotes.length
+      )
+    : 0;
+
+  const bestScore = evaluationNotes.length
+    ? Math.max(...evaluationNotes.map((note) => note.score || 0))
+    : 0;
 
   return (
     <div className="notes-modal-overlay">
@@ -126,58 +164,71 @@ const NotesModal: React.FC<NotesModalProps> = ({ isVisible, onClose }) => {
             </div>
           </div>
           <div className="summary-card">
-            <div className="summary-icon">🏆</div>
+            <div className="summary-icon">📚</div>
             <div className="summary-content">
-              <span className="summary-number">92%</span>
-              <span className="summary-label">Mejor Nota</span>
+              <span className="summary-number">
+                {asistenciaStats ? `${asistenciaStats.porcentaje}%` : '--'}
+              </span>
+              <span className="summary-label">Asistencia</span>
             </div>
           </div>
         </div>
 
         <div className="notes-content">
           <h3>Historial de Evaluaciones</h3>
-          <div className="notes-list">
-            {evaluationNotes.map((note) => (
-              <div key={note.id} className="note-item">
-                <div className="note-header">
-                  <div className="note-title-section">
-                    <span className="note-icon">{getTypeIcon(note.type)}</span>
-                    <div className="note-title-info">
-                      <h4>{note.title}</h4>
-                      <span className="note-date">{formatDate(note.date)}</span>
+          {loading && (
+            <p>Cargando tus notas...</p>
+          )}
+          {!loading && error && (
+            <p>{error}</p>
+          )}
+          {!loading && !error && evaluationNotes.length === 0 && (
+            <p>Aún no tienes evaluaciones registradas.</p>
+          )}
+          {!loading && !error && evaluationNotes.length > 0 && (
+            <div className="notes-list">
+              {evaluationNotes.map((note) => (
+                <div key={note.id} className="note-item">
+                  <div className="note-header">
+                    <div className="note-title-section">
+                      <span className="note-icon">{getTypeIcon(note.type)}</span>
+                      <div className="note-title-info">
+                        <h4>{note.title}</h4>
+                        <span className="note-date">{formatDate(note.date)}</span>
+                      </div>
+                    </div>
+                    <div
+                      className="note-score"
+                      style={{ color: getScoreColor(note.score) }}
+                    >
+                      {note.score ? `${note.score}%` : 'Sin nota'}
                     </div>
                   </div>
-                  <div className="note-score" style={{ color: getScoreColor(note.score) }}>
-                    {note.score}%
+
+                  <div className="note-details">
+                    <div className="note-stat">
+                      <span className="stat-label">Estado:</span>
+                      <span className={`stat-badge ${note.status}`}>
+                        {note.status === 'completed' ? 'Completado' : 'En Progreso'}
+                      </span>
+                    </div>
                   </div>
                 </div>
-                
-                <div className="note-details">
-                  <div className="note-stat">
-                    <span className="stat-label">Correctas:</span>
-                    <span className="stat-value">{note.correctAnswers}/{note.totalQuestions}</span>
-                  </div>
-                  <div className="note-stat">
-                    <span className="stat-label">Tiempo:</span>
-                    <span className="stat-value">{note.timeSpent}</span>
-                  </div>
-                  <div className="note-stat">
-                    <span className="stat-label">Estado:</span>
-                    <span className={`stat-badge ${note.status}`}>
-                      {note.status === 'completed' ? 'Completado' : 'En Progreso'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
+
+          {asistenciaStats && (
+            <div style={{ marginTop: '32px' }}>
+              <h3>Asistencia a Clases</h3>
+              <p>
+                Has asistido a {asistenciaStats.presentes} de {asistenciaStats.total} clases
+                ({asistenciaStats.porcentaje}%).
+              </p>
+            </div>
+          )}
         </div>
 
-        <div className="notes-actions">
-          <button className="action-button primary" onClick={onClose}>
-            Cerrar
-          </button>
-        </div>
       </div>
     </div>
   );

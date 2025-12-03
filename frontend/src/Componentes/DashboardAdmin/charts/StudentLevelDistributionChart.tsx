@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Pie } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -6,20 +7,62 @@ import {
   Legend,
 } from 'chart.js';
 import { useTheme } from '../../../hooks/useTheme';
+import { API_BASE_URL as DJANGO_API_BASE_URL } from '../../../config/api';
+import { authService } from '../../../services/authService';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
+
+interface LevelDistributionData {
+  labels: string[];
+  counts: number[];
+}
+
+const DEFAULT_LEVEL_DISTRIBUTION: LevelDistributionData = {
+  labels: ['Básico', 'Intermedio', 'Avanzado', 'Conversación'],
+  counts: [200, 250, 150, 100],
+};
 
 const StudentLevelDistributionChart = () => {
   const { theme } = useTheme();
 
   const textColor = theme === 'dark' ? '#e5e7eb' : '#374151';
 
+  const [dist, setDist] = useState<LevelDistributionData>(DEFAULT_LEVEL_DISTRIBUTION);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const token = authService.getToken?.() || localStorage.getItem('token');
+        if (!token) return;
+
+        const res = await fetch(`${DJANGO_API_BASE_URL}/admin/dashboard-charts/`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data.success === false) return;
+
+        const ld = data.data?.level_distribution;
+        if (ld && Array.isArray(ld.labels) && Array.isArray(ld.counts)) {
+          setDist({ labels: ld.labels, counts: ld.counts });
+        }
+      } catch (e) {
+        console.error('Error cargando StudentLevelDistributionChart:', e);
+      }
+    };
+
+    loadData();
+  }, []);
+
   const data = {
-    labels: ['Básico', 'Intermedio', 'Avanzado', 'Conversación'],
+    labels: dist.labels,
     datasets: [
       {
         label: 'Número de Estudiantes',
-        data: [200, 250, 150, 100],
+        data: dist.counts,
         backgroundColor: [
           'rgba(255, 99, 132, 0.6)',
           'rgba(54, 162, 235, 0.6)',

@@ -6,12 +6,17 @@ import './EvaluacionesEstudiante.css';
 interface EvaluacionEstudiante {
   id: string;
   titulo: string;
+  nivel: string;
+  unidad: string;
+  clase: string;
+  enlace: string;
   descripcion?: string;
   tipo: 'quiz' | 'examen' | 'tarea';
   fecha_limite?: string;
   created_at: string;
   profesor_nombre?: string;
   archivo_url?: string;
+  activa: boolean;
 }
 
 export default function EvaluacionesEstudiante() {
@@ -27,9 +32,45 @@ export default function EvaluacionesEstudiante() {
   const loadEvaluaciones = async () => {
     try {
       setLoading(true);
+      // Obtener evaluaciones reales del backend
       const response = await evaluacionService.getStudentEvaluaciones();
-      if (response.success) {
-        setEvaluaciones(response.data);
+      
+      if (response.success && Array.isArray(response.data)) {
+        // Mapear las evaluaciones del backend al formato del frontend
+        const evaluacionesMapeadas = response.data.map((evalBackend: any) => {
+          const descripcion = evalBackend.descripcion || '';
+          
+          // Parsear la descripción para extraer nivel, unidad, clase y enlace
+          const parseDescripcion = (desc: string) => {
+            const nivel = desc.match(/Nivel: ([^|]+)/)?.[1]?.trim() || 'A1';
+            const unidad = desc.match(/Unidad: ([^|]+)/)?.[1]?.trim() || 'Unit 1';
+            const clase = desc.match(/Clase: ([^|]+)/)?.[1]?.trim() || 'Class 1';
+            const enlace = desc.match(/Enlace: (.+)/)?.[1]?.trim() || '';
+            return { nivel, unidad, clase, enlace };
+          };
+          
+          const { nivel, unidad, clase, enlace } = parseDescripcion(descripcion);
+          
+          return {
+            id: evalBackend.id.toString(),
+            titulo: evalBackend.titulo,
+            nivel,
+            unidad,
+            clase,
+            enlace,
+            tipo: evalBackend.tipo || 'quiz',
+            fecha_limite: evalBackend.fecha_limite || undefined,
+            created_at: evalBackend.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
+            profesor_nombre: evalBackend.profesor_nombre || 'Profesor',
+            archivo_url: evalBackend.archivo || undefined,
+            activa: evalBackend.estado === 'publicada'
+          };
+        });
+        
+        setEvaluaciones(evaluacionesMapeadas);
+      } else {
+        console.warn('No se pudieron cargar las evaluaciones:', response);
+        setEvaluaciones([]);
       }
     } catch (err) {
       setError('Error al cargar evaluaciones');
@@ -81,14 +122,14 @@ export default function EvaluacionesEstudiante() {
   const subirRespuesta = async (evaluacion: EvaluacionEstudiante) => {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = '.pdf,.doc,.docx,.txt';
+    input.accept = '.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.odt,.ods,.odp';
     input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (file) {
         try {
           setSubiendoRespuesta(evaluacion.id);
           const response = await evaluacionService.uploadRespuesta(evaluacion.id, {
-            archivo: file,
+            archivo_respuesta: file,
             comentarios: ''
           });
           if (response.success) {
@@ -113,127 +154,10 @@ export default function EvaluacionesEstudiante() {
     return new Date(fechaLimite) < new Date();
   };
 
-  if (loading) {
-    return (
-      <div className="evaluaciones-estudiante-container">
-        <div className="loading-state">
-          <div className="spinner"></div>
-          <p>Cargando evaluaciones...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="evaluaciones-estudiante-container">
-        <div className="evaluaciones-header">
-          <h2>📋 Mis Evaluaciones</h2>
-          <p>Evaluaciones asignadas por tus profesores</p>
-        </div>
-
-        {loading && (
-          <div className="loading-state">
-            <div className="loading-spinner"></div>
-            <p>Cargando evaluaciones...</p>
-          </div>
-        )}
-
-        {error && (
-          <div className="error-state">
-            <div className="error-icon">⚠️</div>
-            <h3>Error al cargar evaluaciones</h3>
-            <p>{error}</p>
-            <button onClick={loadEvaluaciones} className="retry-btn">
-              🔄 Reintentar
-            </button>
-          </div>
-        )}
-
-        {!loading && !error && evaluaciones.length === 0 && (
-          <div className="empty-state">
-            <div className="empty-icon">📚</div>
-            <h3>No tienes evaluaciones asignadas</h3>
-            <p>Cuando tus profesores publiquen evaluaciones, aparecerán aquí</p>
-          </div>
-        )}
-
-        {!loading && !error && evaluaciones.length > 0 && (
-          <div className="evaluaciones-grid">
-            {evaluaciones.map((evaluacion) => {
-              const overdue = isOverdue(evaluacion.fecha_limite);
-              
-              return (
-                <div key={evaluacion.id} className={`evaluacion-card ${overdue ? 'overdue' : ''}`}>
-                  <div className="evaluacion-header">
-                    <h3>{evaluacion.titulo}</h3>
-                    <span className={`tipo-badge ${evaluacion.tipo}`}>
-                      {evaluacion.tipo === 'quiz' && '🎯 Quiz'}
-                      {evaluacion.tipo === 'examen' && '📋 Examen'}
-                      {evaluacion.tipo === 'tarea' && '📚 Tarea'}
-                    </span>
-                  </div>
-
-                  {evaluacion.descripcion && (
-                    <div className="evaluacion-descripcion">
-                      <p>{evaluacion.descripcion}</p>
-                    </div>
-                  )}
-
-                  <div className="evaluacion-info">
-                    <div className="info-grid">
-                      <div className="info-item">
-                        <span className="label">Profesor:</span>
-                        <span className="value">{evaluacion.profesor_nombre || 'No especificado'}</span>
-                      </div>
-                      
-                      <div className="info-item">
-                        <span className="label">Asignada:</span>
-                        <span className="value">{formatDate(evaluacion.created_at)}</span>
-                      </div>
-                      
-                      {evaluacion.fecha_limite && (
-                        <div className="info-item">
-                          <span className="label">Fecha límite:</span>
-                          <span className={`value ${overdue ? 'overdue-text' : ''}`}>
-                            {formatDate(evaluacion.fecha_limite)}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="evaluacion-actions">
-                    <button 
-                      className="btn-descargar"
-                      onClick={() => descargarEvaluacion(evaluacion)}
-                      disabled={overdue}
-                    >
-                      📄 Descargar
-                    </button>
-                    <button 
-                      className="btn-subir-respuesta"
-                      onClick={() => subirRespuesta(evaluacion)}
-                      disabled={overdue || subiendoRespuesta === evaluacion.id}
-                    >
-                      {subiendoRespuesta === evaluacion.id ? '⏳ Subiendo...' : '📤 Subir Respuesta'}
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    );
-  }
 
   return (
-    <div className="evaluaciones-estudiante-container">
-      <div className="evaluaciones-header">
-        <h2>📋 Mis Evaluaciones</h2>
-        <p>Evaluaciones asignadas por tus profesores</p>
-      </div>
+    <div className="evaluaciones-section">
+      <h2 className="section-title">📋 Mis Evaluaciones</h2>
 
       {loading && (
         <div className="loading-state">
@@ -270,8 +194,7 @@ export default function EvaluacionesEstudiante() {
                 <th>Tipo</th>
                 <th>Profesor</th>
                 <th>Fecha Límite</th>
-                <th>Estado</th>
-                <th>Acción</th>
+                <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -289,7 +212,7 @@ export default function EvaluacionesEstudiante() {
                           {evaluacion.tipo === 'tarea' && '📚 Tarea'}
                         </span>
                       </td>
-                      <td>{evaluacion.descripcion || 'Sin descripción'}</td>
+                      <td>{evaluacion.profesor_nombre || 'Sin profesor'}</td>
                       <td>
                         {evaluacion.fecha_limite ? (
                           <span className={overdue ? 'fecha-vencida' : 'fecha-limite'}>
@@ -300,22 +223,32 @@ export default function EvaluacionesEstudiante() {
                         )}
                       </td>
                       <td>
-                        <div className="acciones-evaluacion">
+                        {evaluacion.tipo === 'tarea' ? (
+                          <div className="acciones-tarea">
+                            <button
+                              className="btn-acceder-evaluacion"
+                              onClick={() => descargarEvaluacion(evaluacion)}
+                              disabled={overdue}
+                            >
+                              📥 Descargar Tarea
+                            </button>
+                            <button
+                              className="btn-subir-tarea"
+                              onClick={() => subirRespuesta(evaluacion)}
+                              disabled={subiendoRespuesta === evaluacion.id || overdue}
+                            >
+                              {subiendoRespuesta === evaluacion.id ? '⏳ Subiendo...' : '📤 Subir Tarea'}
+                            </button>
+                          </div>
+                        ) : (
                           <button 
-                            className="btn-accion btn-descargar"
-                            onClick={() => descargarEvaluacion(evaluacion)}
-                            disabled={overdue}
+                            className="btn-acceder-evaluacion"
+                            onClick={() => window.open(evaluacion.enlace, '_blank')}
+                            disabled={!evaluacion.activa || overdue}
                           >
-                            📄 Descargar
+                            🚀 Realizar Evaluación
                           </button>
-                          <button 
-                            className="btn-accion btn-subir"
-                            onClick={() => subirRespuesta(evaluacion)}
-                            disabled={overdue || subiendoRespuesta === evaluacion.id}
-                          >
-                            {subiendoRespuesta === evaluacion.id ? '⏳ Subiendo...' : '📤 Subir Respuesta'}
-                          </button>
-                        </div>
+                        )}
                       </td>
                     </tr>
                   </React.Fragment>

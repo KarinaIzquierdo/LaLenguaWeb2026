@@ -257,20 +257,20 @@ body {
     font-size: 1rem;
 }
 
-.nav {
+.dashboard-nav {
     display: flex;
     gap: 2rem;
     align-items: center;
 }
 
-.nav a {
+.dashboard-nav a {
     color: rgba(255, 255, 255, 0.9);
     text-decoration: none;
     font-size: 0.95rem;
     transition: color 0.3s;
 }
 
-.nav a:hover, .nav a.active {
+.dashboard-nav a:hover, .dashboard-nav a.active {
     color: white;
     font-weight: 500;
 }
@@ -1449,7 +1449,7 @@ body {
         gap: 1rem;
     }
     
-    .nav {
+    .dashboard-nav {
         display: none;
     }
     
@@ -2080,3 +2080,167 @@ body {
                 display: block;
             }
         }
+
+/* ===== MATERIAL DEL CLUB - ESTILO LIMPIO ===== */
+.club-materials-section {
+  margin: 2rem 0;
+}
+
+.section-header-clean {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.club-selector {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: white;
+  font-size: 0.9rem;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.club-selector:hover {
+  border-color: #667eea;
+}
+
+.club-selector:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.club-materials-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.club-material-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.club-material-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.club-material-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  border-color: #667eea;
+}
+
+.material-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.material-icon {
+  font-size: 1.5rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.material-info {
+  flex: 1;
+}
+
+.material-info h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #2d3748;
+  margin-bottom: 0.25rem;
+}
+
+.material-week {
+  background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 15px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.material-date {
+  font-size: 0.85rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.material-content {
+  margin-bottom: 1.5rem;
+}
+
+.material-content p {
+  color: #4a5568;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.material-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  text-decoration: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.material-button:hover {
+  background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+/* Responsive para Material del Club */
+@media (max-width: 768px) {
+  .club-materials-section {
+    margin: 1rem 0;
+  }
+  
+  .section-header-clean {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .club-materials-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .club-material-card {
+    padding: 1rem;
+  }
+}

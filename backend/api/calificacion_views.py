@@ -4,7 +4,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.utils import timezone
 from django.shortcuts import get_object_or_404
-from .models import RespuestaEvaluacion, Evaluacion
+from .models import RespuestaEvaluacion, Evaluacion, CustomUser
 from .serializers import RespuestaEvaluacionSerializer
 
 @api_view(['GET'])
@@ -203,3 +203,169 @@ def obtener_detalle_respuesta(request, respuesta_id):
     except Exception as e:
         return Response({'error': f'Error al obtener respuesta: {str(e)}'}, 
                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def panel_calificaciones_view(request):
+    """Panel de calificaciones para el profesor.
+
+    Devuelve una lista plana donde cada elemento representa el par
+    (estudiante, evaluación) para las evaluaciones PUBLICADAS creadas
+    por el profesor autenticado y los estudiantes asignados desde
+    DriveEvaluaciones.
+
+    Si existe una RespuestaEvaluacion, se incluye información de
+    calificación y fecha de envío; si no, los campos de respuesta
+    van en blanco pero igualmente aparece la fila.
+    """
+
+    # Restringir solo a profesores (por rol o flag is_profesor)
+    user_role = getattr(request.user, 'role', None)
+    is_profesor_flag = getattr(request.user, 'is_profesor', False)
+    if user_role != 'profesor' and not is_profesor_flag:
+        return Response(
+            {'error': 'Solo los profesores pueden acceder a esta función'},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    # Evaluaciones publicadas creadas por el profesor
+    evaluaciones = (
+        Evaluacion.objects
+        .filter(profesor=request.user, estado='publicada')
+        .prefetch_related('estudiantes_asignados', 'respuestas')
+    )
+
+    items = []
+
+    for evaluacion in evaluaciones:
+        # Mapear respuestas por estudiante para acceso rápido
+        respuestas_por_estudiante = {
+            r.estudiante_id: r for r in evaluacion.respuestas.all()
+        }
+
+        for estudiante in evaluacion.estudiantes_asignados.all():
+            respuesta = respuestas_por_estudiante.get(estudiante.id)
+
+            # Nombre amigable del estudiante
+            nombre_estudiante = (
+                estudiante.get_full_name()
+                if hasattr(estudiante, 'get_full_name') and estudiante.get_full_name()
+                else (estudiante.username or estudiante.email)
+            )
+
+            item = {
+                'evaluacion_id': evaluacion.id,
+                'evaluacion_titulo': evaluacion.titulo,
+                'evaluacion_tipo': evaluacion.tipo,
+                'estudiante_id': estudiante.id,
+                'estudiante_nombre': nombre_estudiante,
+                'respuesta_id': respuesta.id if respuesta else None,
+                'tiene_respuesta': bool(respuesta and respuesta.completado),
+                'calificacion': float(respuesta.calificacion)
+                if respuesta and respuesta.calificacion is not None
+                else None,
+                'fecha_envio': (
+                    respuesta.fecha_envio.isoformat()
+                    if respuesta and respuesta.fecha_envio
+                    else None
+                ),
+                'archivo_respuesta_url': (
+                    request.build_absolute_uri(respuesta.archivo_respuesta.url)
+                    if respuesta and respuesta.archivo_respuesta
+                    else None
+                ),
+            }
+
+            items.append(item)
+
+    return Response({
+        'success': True,
+        'items': items,
+        'total': len(items),
+    })
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def calificar_desde_panel(request):
+    """Permite calificar directamente desde el panel usando evaluacion_id y estudiante_id.
+
+    Si no existe una RespuestaEvaluacion previa, se crea automáticamente y se asigna
+    la calificación indicada. Esto permite que el profesor ponga nota aunque el
+    estudiante no haya subido archivo.
+    """
+
+    user_role = getattr(request.user, 'role', None)
+    is_profesor_flag = getattr(request.user, 'is_profesor', False)
+    if user_role != 'profesor' and not is_profesor_flag:
+        return Response(
+            {'error': 'Solo los profesores pueden calificar evaluaciones'},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    evaluacion_id = request.data.get('evaluacion_id')
+    estudiante_id = request.data.get('estudiante_id')
+    calificacion = request.data.get('calificacion')
+    comentarios = request.data.get('comentarios_profesor', '')
+
+    if not evaluacion_id or not estudiante_id:
+        return Response(
+            {'error': 'evaluacion_id y estudiante_id son requeridos'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    if calificacion is None:
+        return Response(
+            {'error': 'La calificación es requerida'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        calificacion_val = float(calificacion)
+        if calificacion_val < 0 or calificacion_val > 100:
+            return Response(
+                {'error': 'La calificación debe estar entre 0 y 100'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+    except (ValueError, TypeError):
+        return Response(
+            {'error': 'La calificación debe ser un número válido'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        evaluacion = get_object_or_404(Evaluacion, id=evaluacion_id, profesor=request.user)
+        estudiante = get_object_or_404(CustomUser, id=estudiante_id)
+
+        # Crear o recuperar la respuesta del estudiante para esta evaluación
+        respuesta, created = RespuestaEvaluacion.objects.get_or_create(
+            evaluacion=evaluacion,
+            estudiante=estudiante,
+            defaults={
+                'completado': False,
+                'respuestas_json': {},
+                'tiempo_gastado': 0,
+                'advertencias': 0,
+            }
+        )
+
+        respuesta.calificacion = calificacion_val
+        respuesta.comentarios_profesor = comentarios
+        respuesta.fecha_calificacion = timezone.now()
+        respuesta.calificado_por = request.user
+        respuesta.save()
+
+        serializer = RespuestaEvaluacionSerializer(respuesta)
+
+        return Response({
+            'success': True,
+            'message': 'Evaluación calificada exitosamente',
+            'respuesta': serializer.data
+        })
+
+    except Exception as e:
+        return Response(
+            {'error': f'Error al calificar desde panel: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

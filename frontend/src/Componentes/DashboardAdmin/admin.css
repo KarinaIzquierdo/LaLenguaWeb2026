@@ -182,6 +182,18 @@
   flex-wrap: wrap;
 }
 
+.misiones-actions-cell {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.misiones-actions-cell > .btn-primary,
+.misiones-actions-cell > .btn-danger {
+  margin: 4px 8px;
+}
+
 .btn-edit {
   background: #3182ce;
   color: white;

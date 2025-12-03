@@ -11,7 +11,6 @@ from . import mission_views
 from . import profesor_views
 from . import user_views
 from . import mobile_views
-from . import bloque_views
 from . import registro_eliminacion_views
 from . import contact_views
 from . import asistencia_views
@@ -50,6 +49,8 @@ urlpatterns = [
     path('users/<int:user_id>/toggle-active/', views.toggle_user_active_view, name='toggle_user_active'),
     path('users/', views.list_users_view, name='list_users'),
     path('users/<int:user_id>/', user_views.delete_user_view, name='delete_user'),
+    path('admin/dashboard-stats/', views.admin_dashboard_stats_view, name='admin_dashboard_stats'),
+    path('admin/dashboard-charts/', views.admin_dashboard_charts_view, name='admin_dashboard_charts'),
     
     # Endpoints para galería
     path('gallery/', views.gallery_list_view, name='gallery_list'),
@@ -81,15 +82,6 @@ urlpatterns = [
     path('especializaciones/<int:pk>/delete/', especializacion_views.especializaciones_delete_view, name='especializaciones_delete'),
     path('especializaciones/<int:pk>/toggle/', especializacion_views.especializaciones_toggle_view, name='especializaciones_toggle'),
     
-    # Endpoints para bloques
-    path('bloques/', bloque_views.bloques_list_view, name='bloques_list'),
-    path('bloques/create/', bloque_views.bloque_create_view, name='bloque_create'),
-    path('bloques/<int:pk>/', bloque_views.bloque_detail_view, name='bloque_detail'),
-    path('bloques/<int:pk>/update/', bloque_views.bloque_update_view, name='bloque_update'),
-    path('bloques/<int:pk>/delete/', bloque_views.bloque_delete_view, name='bloque_delete'),
-    path('bloques/<int:pk>/estudiantes/', bloque_views.bloque_estudiantes_view, name='bloque_estudiantes'),
-    path('bloques/<int:pk>/toggle/', bloque_views.bloque_toggle_view, name='bloque_toggle'),
-    
     # Endpoints para evaluaciones
     path('evaluaciones/', evaluacion_views.evaluaciones_list_view, name='evaluaciones_list'),
     path('evaluaciones/create/', evaluacion_views.evaluacion_create_view, name='evaluacion_create'),
@@ -116,6 +108,8 @@ urlpatterns = [
     path('notificaciones/marcar-todas-leidas/', notificacion_views.marcar_todas_leidas, name='marcar_todas_leidas'),
     
     # Endpoints para calificación
+    path('calificaciones/panel/', calificacion_views.panel_calificaciones_view, name='panel_calificaciones'),
+    path('calificaciones/panel/calificar/', calificacion_views.calificar_desde_panel, name='calificar_desde_panel'),
     path('calificaciones/por-calificar/', calificacion_views.obtener_respuestas_por_calificar, name='respuestas_por_calificar'),
     path('calificaciones/calificadas/', calificacion_views.obtener_respuestas_calificadas, name='respuestas_calificadas'),
     path('calificaciones/<int:respuesta_id>/', calificacion_views.obtener_detalle_respuesta, name='detalle_respuesta'),
@@ -169,9 +163,14 @@ urlpatterns = [
     
     # Endpoints para notificaciones de estudiantes
     path('notificaciones/estudiante/', notificacion_estudiante_views.notificaciones_estudiante_view, name='notificaciones_estudiante'),
-    path('notificaciones/<int:notificacion_id>/marcar-leida/', notificacion_estudiante_views.marcar_notificacion_leida_view, name='marcar_notificacion_leida'),
-    path('notificaciones/marcar-todas-leidas/', notificacion_estudiante_views.marcar_todas_leidas_view, name='marcar_todas_leidas'),
-    path('notificaciones/contador-no-leidas/', notificacion_estudiante_views.contador_no_leidas_view, name='contador_no_leidas'),
+    path('notificaciones/estudiante/<int:notificacion_id>/marcar-leida/', notificacion_estudiante_views.marcar_notificacion_leida_view, name='marcar_notificacion_leida_estudiante'),
+    path('notificaciones/estudiante/marcar-todas-leidas/', notificacion_estudiante_views.marcar_todas_leidas_view, name='marcar_todas_leidas_estudiante'),
+    path('notificaciones/estudiante/contador-no-leidas/', notificacion_estudiante_views.contador_no_leidas_view, name='contador_no_leidas_estudiante'),
+    
+    # Endpoints para retos diarios (Daily Challenge)
+    path('daily-challenges/', views.daily_challenges_view, name='daily_challenges'),  # Para estudiantes (solo lectura)
+    path('daily-challenges/admin/', views.daily_challenges_admin_list_create_view, name='daily_challenges_admin_list_create'),
+    path('daily-challenges/admin/<int:pk>/', views.daily_challenges_admin_detail_view, name='daily_challenges_admin_detail'),
 ]
 
 urlpatterns += router.urls

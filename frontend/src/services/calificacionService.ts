@@ -1,9 +1,10 @@
-const API_BASE_URL = 'http://localhost:8000/api';
+import { API_BASE_URL } from '../config/api';
 
 interface RespuestaEvaluacion {
   id: number;
   evaluacion: number;
   evaluacion_titulo: string;
+  evaluacion_tipo?: string;
   estudiante: number;
   estudiante_nombre: string;
   archivo_respuesta?: string;
@@ -19,12 +20,119 @@ interface RespuestaEvaluacion {
   calificado_por_nombre?: string;
 }
 
+interface PanelCalificacionItem {
+  evaluacion_id: number;
+  evaluacion_titulo: string;
+  evaluacion_tipo?: string;
+  estudiante_id: number;
+  estudiante_nombre: string;
+  respuesta_id: number | null;
+  tiene_respuesta: boolean;
+  calificacion: number | null;
+  fecha_envio: string | null;
+  archivo_respuesta_url?: string | null;
+}
+
 interface CalificacionData {
   calificacion: number;
   comentarios_profesor?: string;
 }
 
 class CalificacionService {
+  private getBaseUrl() {
+    // Si se define VITE_DJANGO_API_URL, usarla (por ejemplo, para probar contra Django local)
+    if (import.meta.env.VITE_DJANGO_API_URL) {
+      return import.meta.env.VITE_DJANGO_API_URL as string;
+    }
+    // En cualquier otro caso (dev o prod) usar la base global configurada (normalmente PHP)
+    return API_BASE_URL;
+  }
+
+  async calificarDesdePanel(
+    evaluacionId: number,
+    estudianteId: number,
+    calificacionData: CalificacionData
+  ): Promise<{
+    success: boolean;
+    respuesta?: RespuestaEvaluacion;
+    message?: string;
+    error?: string;
+  }> {
+    try {
+      const response = await fetch(`${this.getBaseUrl()}/calificaciones/panel/calificar/`, {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({
+          evaluacion_id: evaluacionId,
+          estudiante_id: estudianteId,
+          ...calificacionData,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || data.success === false) {
+        return {
+          success: false,
+          error: data.error || data.message || 'Error al calificar desde panel',
+        };
+      }
+
+      return {
+        success: true,
+        respuesta: data.respuesta,
+        message: data.message,
+      };
+    } catch (error) {
+      console.error('Error en calificarDesdePanel:', error);
+      return {
+        success: false,
+        error: 'Error de conexión',
+      };
+    }
+  }
+
+  async obtenerPanelCalificaciones(): Promise<{
+    success: boolean;
+    items: PanelCalificacionItem[];
+    total: number;
+    error?: string;
+  }> {
+    try {
+      const response = await fetch(`${this.getBaseUrl()}/calificaciones/panel/`, {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || data.success === false) {
+        return {
+          success: false,
+          items: [],
+          total: 0,
+          error: data.error || data.message || 'Error al obtener panel de calificaciones',
+        };
+      }
+
+      const items: PanelCalificacionItem[] = data.items || [];
+
+      return {
+        success: true,
+        items,
+        total: data.total ?? items.length,
+      };
+    } catch (error) {
+      console.error('Error en obtenerPanelCalificaciones:', error);
+      return {
+        success: false,
+        items: [],
+        total: 0,
+        error: 'Error de conexión',
+      };
+    }
+  }
+
   private getAuthHeaders() {
     const token = localStorage.getItem('token');
     return {
@@ -40,7 +148,7 @@ class CalificacionService {
     error?: string;
   }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/calificaciones/por-calificar/`, {
+      const response = await fetch(`${this.getBaseUrl()}/calificaciones/por-calificar/`, {
         method: 'GET',
         headers: this.getAuthHeaders(),
       });
@@ -79,7 +187,7 @@ class CalificacionService {
     error?: string;
   }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/calificaciones/calificadas/`, {
+      const response = await fetch(`${this.getBaseUrl()}/calificaciones/calificadas/`, {
         method: 'GET',
         headers: this.getAuthHeaders(),
       });
@@ -117,7 +225,7 @@ class CalificacionService {
     error?: string;
   }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/calificaciones/${respuestaId}/`, {
+      const response = await fetch(`${this.getBaseUrl()}/calificaciones/${respuestaId}/`, {
         method: 'GET',
         headers: this.getAuthHeaders(),
       });
@@ -151,7 +259,7 @@ class CalificacionService {
     error?: string;
   }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/calificaciones/${respuestaId}/calificar/`, {
+      const response = await fetch(`${this.getBaseUrl()}/calificaciones/${respuestaId}/calificar/`, {
         method: 'POST',
         headers: this.getAuthHeaders(),
         body: JSON.stringify(calificacionData),
@@ -187,7 +295,7 @@ class CalificacionService {
     error?: string;
   }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/calificaciones/${respuestaId}/actualizar/`, {
+      const response = await fetch(`${this.getBaseUrl()}/calificaciones/${respuestaId}/actualizar/`, {
         method: 'PUT',
         headers: this.getAuthHeaders(),
         body: JSON.stringify(calificacionData),
@@ -255,4 +363,4 @@ class CalificacionService {
 }
 
 export const calificacionService = new CalificacionService();
-export type { RespuestaEvaluacion, CalificacionData };
+export type { RespuestaEvaluacion, CalificacionData, PanelCalificacionItem };

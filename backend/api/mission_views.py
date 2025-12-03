@@ -39,18 +39,13 @@ def mission_current_link_view(request, mission_key: str):
     )
 
     user_id = request.query_params.get('user_id')
-    bloque = request.query_params.get('bloque')
 
     obj = None
     # 1) Prioridad por estudiante
     if user_id:
         obj = base.filter(audience_type='student', user_id=user_id).order_by('-start_at', '-created_at').first()
 
-    # 2) Luego por bloque
-    if not obj and bloque:
-        obj = base.filter(audience_type='bloque', audience_value=bloque).order_by('-start_at', '-created_at').first()
-
-    # 3) Finalmente global
+    # 2) Finalmente global (bloques deshabilitados)
     if not obj:
         obj = base.filter(audience_type='global').order_by('-start_at', '-created_at').first()
 
@@ -76,15 +71,13 @@ def missions_available_view(request):
     )
 
     user_id = request.query_params.get('user_id')
-    bloque = request.query_params.get('bloque')
 
-    # Prioridad: student > bloque > global
+    # Prioridad: student > global (bloques deshabilitados)
     qs_student = base.filter(audience_type='student', user_id=user_id) if user_id else base.none()
-    qs_bloque = base.filter(audience_type='bloque', audience_value=bloque) if bloque else base.none()
     qs_global = base.filter(audience_type='global')
 
     # Combinar con prioridad
-    combined = qs_student | qs_bloque | qs_global
+    combined = qs_student | qs_global
     # Obtener mission_keys únicos
     mission_keys = combined.values_list('mission_key', flat=True).distinct()
 

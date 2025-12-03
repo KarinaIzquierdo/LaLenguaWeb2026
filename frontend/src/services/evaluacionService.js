@@ -1,4 +1,7 @@
-const API_BASE_URL = 'http://localhost:8000/api';
+import { API_BASE_URL as BASE_URL } from '../config/api';
+
+// Router PHP principal (legacy) - se mantiene para compatibilidad en algunas vistas antiguas
+const API_BASE_URL = BASE_URL;
 
 // Get auth token from localStorage
 const getAuthToken = () => {
@@ -74,7 +77,7 @@ export const evaluacionService = {
       formData.append('estudiantes_asignados', JSON.stringify(evaluacionData.estudiantes_asignados));
     }
     
-    return makeAuthenticatedRequest(`${API_BASE_URL}/evaluaciones/create/`, {
+    return makeAuthenticatedRequest(`${API_BASE_URL}/evaluaciones/`, {
       method: 'POST',
       body: formData,
     });
@@ -134,14 +137,16 @@ export const evaluacionService = {
 
   // Obtener evaluaciones asignadas al estudiante (para dashboard de estudiante)
   async getStudentEvaluaciones() {
-    return makeAuthenticatedRequest(`${API_BASE_URL}/student/evaluaciones/`);
+    // Usar directamente Django (sin /index.php)
+    return makeAuthenticatedRequest(`${BASE_URL}/student/evaluaciones/`);
   },
 
   // Descargar archivo de evaluación
   async downloadEvaluacion(id) {
     try {
       const token = getAuthToken();
-      const response = await fetch(`${API_BASE_URL}/evaluaciones/${id}/download/`, {
+      // Endpoint Django para descargar el archivo de la evaluación
+      const response = await fetch(`${BASE_URL}/evaluaciones/${id}/download/`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -189,10 +194,11 @@ export const evaluacionService = {
     }
     
     if (respuestaData.comentarios) {
-      formData.append('comentarios', respuestaData.comentarios);
+      formData.append('comentarios_profesor', respuestaData.comentarios);
     }
 
-    return makeAuthenticatedRequest(`${API_BASE_URL}/evaluaciones/${evaluacionId}/upload-respuesta/`, {
+    // Usar endpoint Django para subir la respuesta (tarea del estudiante)
+    return makeAuthenticatedRequest(`${BASE_URL}/evaluaciones/${evaluacionId}/upload-respuesta/`, {
       method: 'POST',
       body: formData,
     });
@@ -200,7 +206,8 @@ export const evaluacionService = {
 
   // Obtener reportes de progreso de estudiantes (para profesores)
   async getReportesProgreso() {
-    return makeAuthenticatedRequest(`${API_BASE_URL}/reportes/progreso/`);
+    // Reportes reales desde Django
+    return makeAuthenticatedRequest(`${BASE_URL}/reportes/progreso/`);
   },
 
   // Obtener datos del examen para modo seguro
@@ -242,7 +249,8 @@ export const evaluacionService = {
 
   // Obtener respuestas del estudiante
   getStudentRespuestas: async () => {
-    const response = await fetch(`${API_BASE_URL}/student/respuestas/`, {
+    // Usar directamente el backend Django (sin /index.php)
+    const response = await fetch(`${BASE_URL}/student/respuestas/`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${getAuthToken()}`,

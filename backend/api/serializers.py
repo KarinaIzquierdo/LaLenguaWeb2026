@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import authenticate
-from .models import CustomUser, Clase, Evaluation, MediaItem, Club, ClubMaterial, Especializacion, Evaluacion, RespuestaEvaluacion, Notificacion, NotificacionEstudiante, Plan, Venta, Bloque, MissionExternalLink, Suscripcion
+from .models import CustomUser, Clase, Evaluation, MediaItem, Club, ClubMaterial, Especializacion, Evaluacion, RespuestaEvaluacion, Notificacion, NotificacionEstudiante, Plan, Venta, MissionExternalLink, Suscripcion, DailyChallengeQuestion
 
 class UserSerializer(serializers.ModelSerializer):
     especializacion_nombre = serializers.SerializerMethodField()
@@ -10,7 +10,7 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ('id', 'username', 'email', 'first_name', 'last_name', 'phone', 'country', 'city', 'level', 
                  'birth_date', 'cedula', 'address', 'emergency_contact', 'emergency_phone', 
                  'english_level', 'learning_goals', 'profile_completed', 'role', 'is_profesor', 'is_active', 
-                 'bloque_asignado', 'especializacion', 'especializacion_nombre', 'correo_personal')
+                 'especializacion', 'especializacion_nombre', 'correo_personal')
         read_only_fields = ('id',)
     
     def get_especializacion_nombre(self, obj):
@@ -26,7 +26,7 @@ class MobileUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
         fields = ('id', 'username', 'email', 'first_name', 'last_name', 'role', 
-                 'is_active', 'bloque_asignado', 'especializacion', 'date_joined', 'correo_personal', 'english_level')
+                 'is_active', 'especializacion', 'date_joined', 'correo_personal', 'english_level')
         read_only_fields = ('id', 'date_joined')
     
     def get_especializacion(self, obj):
@@ -52,17 +52,26 @@ class LoginSerializer(serializers.Serializer):
 
         if email and password:
             # Buscar usuario por correo_personal (case insensitive)
+            user = None
             try:
                 user = CustomUser.objects.get(correo_personal__iexact=email)
-                # Verificar contraseña
-                if user.check_password(password):
-                    if user.is_active:
-                        data['user'] = user
-                    else:
-                        raise serializers.ValidationError('La cuenta de usuario está desactivada.')
-                else:
-                    raise serializers.ValidationError('Email o contraseña incorrectos.')
             except CustomUser.DoesNotExist:
+                # Si no se encuentra por correo_personal, intentar por email institucional
+                try:
+                    user = CustomUser.objects.get(email__iexact=email)
+                except CustomUser.DoesNotExist:
+                    user = None
+
+            if not user:
+                raise serializers.ValidationError('Email o contraseña incorrectos.')
+
+            # Verificar contraseña
+            if user.check_password(password):
+                if user.is_active:
+                    data['user'] = user
+                else:
+                    raise serializers.ValidationError('La cuenta de usuario está desactivada.')
+            else:
                 raise serializers.ValidationError('Email o contraseña incorrectos.')
         else:
             raise serializers.ValidationError('Debe proporcionar email/username y contraseña.')
@@ -163,7 +172,6 @@ class ClaseSerializer(serializers.ModelSerializer):
 class UserRegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8)
     role = serializers.ChoiceField(choices=CustomUser.ROLE_CHOICES)
-    bloque_asignado = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     especializacion = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     correo_personal = serializers.EmailField(required=True)  # Ahora es obligatorio
     username = serializers.CharField(required=False, allow_blank=True)
@@ -171,7 +179,7 @@ class UserRegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CustomUser
-        fields = ('username', 'first_name', 'last_name', 'email', 'role', 'password', 'bloque_asignado', 'especializacion', 'correo_personal')
+        fields = ('username', 'first_name', 'last_name', 'email', 'role', 'password', 'especializacion', 'correo_personal')
 
     def validate_correo_personal(self, value):
         """Validar que el correo personal sea único"""
@@ -187,7 +195,6 @@ class UserRegisterSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         password = validated_data.pop('password')
-        bloque_asignado = validated_data.pop('bloque_asignado', None)
         especializacion_str = validated_data.pop('especializacion', None)
         correo_personal = validated_data.get('correo_personal')  # Ya no lo sacamos, está en validated_data
         username = validated_data.pop('username', None)
@@ -210,10 +217,6 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         # Establecer is_profesor si el rol es profesor
         if validated_data.get('role') == 'profesor':
             user.is_profesor = True
-        
-        # Asignar bloque si se proporciona
-        if bloque_asignado:
-            user.bloque_asignado = bloque_asignado
         
         # Buscar y asignar especialización si se proporciona
         if especializacion_str:
@@ -320,10 +323,11 @@ class RespuestaEvaluacionSerializer(serializers.ModelSerializer):
     evaluacion_titulo = serializers.CharField(source='evaluacion.titulo', read_only=True)
     estudiante_nombre = serializers.CharField(source='estudiante.get_full_name', read_only=True)
     calificado_por_nombre = serializers.CharField(source='calificado_por.get_full_name', read_only=True)
+    evaluacion_tipo = serializers.CharField(source='evaluacion.tipo', read_only=True)
     
     class Meta:
         model = RespuestaEvaluacion
-        fields = ['id', 'evaluacion', 'evaluacion_titulo', 'estudiante', 'estudiante_nombre', 
+        fields = ['id', 'evaluacion', 'evaluacion_titulo', 'evaluacion_tipo', 'estudiante', 'estudiante_nombre', 
                  'archivo_respuesta', 'respuestas_json', 'tiempo_gastado', 'advertencias',
                  'completado', 'fecha_envio', 'calificacion', 'comentarios_profesor', 
                  'fecha_calificacion', 'calificado_por', 'calificado_por_nombre']
@@ -423,32 +427,6 @@ class VentaSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
 
 
-class BloqueSerializer(serializers.ModelSerializer):
-    estudiantes_count = serializers.ReadOnlyField()
-    
-    class Meta:
-        model = Bloque
-        fields = ['id', 'nombre', 'nivel', 'estado', 'grupo_color', 'horario_inicio', 
-                 'horario_fin', 'cupo_maximo', 'activo', 'estudiantes_count', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'created_at', 'updated_at', 'estudiantes_count']
-    
-    def validate(self, attrs):
-        """Validar que no exista otro bloque con el mismo nombre y nivel"""
-        nombre = attrs.get('nombre')
-        nivel = attrs.get('nivel')
-        
-        # Si estamos actualizando, excluir el bloque actual de la validación
-        if self.instance:
-            existing = Bloque.objects.filter(nombre=nombre, nivel=nivel).exclude(id=self.instance.id)
-        else:
-            existing = Bloque.objects.filter(nombre=nombre, nivel=nivel)
-        
-        if existing.exists():
-            raise serializers.ValidationError(f'Ya existe un bloque {nivel} - {nombre}')
-        
-        return attrs
-
-
 class SuscripcionSerializer(serializers.ModelSerializer):
     estudiante_nombre = serializers.SerializerMethodField()
     plan_nombre = serializers.SerializerMethodField()
@@ -469,3 +447,14 @@ class SuscripcionSerializer(serializers.ModelSerializer):
     
     def get_plan_nombre(self, obj):
         return obj.plan.nombre
+
+
+class DailyChallengeQuestionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DailyChallengeQuestion
+        fields = [
+            'id', 'pregunta', 'categoria', 'nivel',
+            'opcion_a', 'opcion_b', 'opcion_c', 'opcion_d',
+            'respuesta_correcta', 'explicacion', 'activo', 'created_at'
+        ]
+        read_only_fields = ['id', 'created_at']

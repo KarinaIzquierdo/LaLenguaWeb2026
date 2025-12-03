@@ -9,7 +9,6 @@ import FormularioUsuarios from "../FormularioUsuarios";
 import GestionEstudiantes from "../GestionEstudiantes";
 import ProgramarClases from "../ProgramarClases";
 import GestionCursos from '../GestionCursos';
-import BloquesView from '../BloquesView';
 import Dashboard_Admin from '../Dashboard_Admin';
 import RegistrosEliminacion from '../RegistrosEliminacion';
 
@@ -31,7 +30,6 @@ export const Rutas = () => {
                 <Route path="registros-eliminacion" element={<RegistrosEliminacion />} />
                 <Route path="programar-clases" element={<ProgramarClases />} />
                 <Route path="gestion-cursos" element={<GestionCursos />} />
-                <Route path="bloques" element={<BloquesView />} />
             </Route>
 
             {/* Ruta para manejar páginas no encontradas */}

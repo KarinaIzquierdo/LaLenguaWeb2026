@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import './GestionEstudiantes.css';
 import { userService } from '../../services/userService';
-import { bloqueService } from '../../services/bloqueService';
 import ModalEliminarEstudiante from './ModalEliminarEstudiante';
 import type { EliminacionData } from './ModalEliminarEstudiante';
 
+const ITEMS_PER_PAGE = 20;
 interface Student {
   id: number;
   nombres: string;
@@ -22,7 +22,6 @@ interface EditForm {
   nombres: string;
   apellidos: string;
   correo_personal: string;
-  bloque_asignado: string;
   nivel: string;
 }
 
@@ -31,9 +30,8 @@ const GestionEstudiantes = () => {
   const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterBloque, setFilterBloque] = useState('');
   const [filterNivel, setFilterNivel] = useState('');
-  const [bloques, setBloques] = useState<string[]>([]);
+  const [paginaActual, setPaginaActual] = useState(1);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -43,14 +41,12 @@ const GestionEstudiantes = () => {
     nombres: '',
     apellidos: '',
     correo_personal: '',
-    bloque_asignado: '',
     nivel: 'A1'
   });
 
   // Cargar estudiantes del backend
   useEffect(() => {
     loadStudents();
-    loadBloques();
   }, []);
 
   const loadStudents = async () => {
@@ -73,12 +69,6 @@ const GestionEstudiantes = () => {
     }
   };
 
-  const loadBloques = () => {
-    const bloquesData = bloqueService.getBloques();
-    const bloqueIds = bloquesData.map((b: any) => b.id);
-    setBloques(bloqueIds);
-  };
-
   // Aplicar filtros
   useEffect(() => {
     let filtered = students;
@@ -91,18 +81,14 @@ const GestionEstudiantes = () => {
       );
     }
 
-    // Filtro por bloque
-    if (filterBloque) {
-      filtered = filtered.filter(s => s.bloque_asignado === filterBloque);
-    }
-
     // Filtro por nivel
     if (filterNivel) {
       filtered = filtered.filter(s => s.nivel === filterNivel);
     }
 
     setFilteredStudents(filtered);
-  }, [searchTerm, filterBloque, filterNivel, students]);
+    setPaginaActual(1);
+  }, [searchTerm, filterNivel, students]);
 
   const handleViewDetails = (student: Student) => {
     setSelectedStudent(student);
@@ -115,7 +101,6 @@ const GestionEstudiantes = () => {
       nombres: student.nombres || '',
       apellidos: student.apellidos || '',
       correo_personal: student.correo_personal || '',
-      bloque_asignado: student.bloque_asignado || '',
       nivel: student.nivel || 'A1'
     });
     setShowEditModal(true);
@@ -129,7 +114,6 @@ const GestionEstudiantes = () => {
         first_name: editForm.nombres,
         last_name: editForm.apellidos,
         correo_personal: editForm.correo_personal,
-        bloque_asignado: editForm.bloque_asignado,
         english_level: editForm.nivel
       };
       await userService.update(selectedStudent.id, dataToSend);
@@ -152,7 +136,7 @@ const GestionEstudiantes = () => {
     
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://127.0.0.1:8000/api/users/${studentToDelete.id}/`, {
+      const response = await fetch(`https://lalenguacolombia.co/api/index.php/users/${studentToDelete.id}/`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -200,6 +184,23 @@ const GestionEstudiantes = () => {
     }
   };
 
+  const totalStudents = filteredStudents.length;
+  const totalPaginas = Math.max(1, Math.ceil(totalStudents / ITEMS_PER_PAGE));
+  const paginaActualSegura = Math.min(paginaActual, totalPaginas);
+  const indiceInicio = (paginaActualSegura - 1) * ITEMS_PER_PAGE;
+  const studentsPagina = filteredStudents.slice(indiceInicio, indiceInicio + ITEMS_PER_PAGE);
+  const pageNumbers = Array.from({ length: totalPaginas }, (_, i) => i + 1);
+
+  const irAPagina = (pagina: number) => {
+    const nuevaPagina = Math.max(1, Math.min(pagina, totalPaginas));
+    setPaginaActual(nuevaPagina);
+  };
+
+  const irPrimera = () => irAPagina(1);
+  const irUltima = () => irAPagina(totalPaginas);
+  const irAnterior = () => irAPagina(paginaActualSegura - 1);
+  const irSiguiente = () => irAPagina(paginaActualSegura + 1);
+
   return (
     <div className="student-management-container">
       <div className="header-section">
@@ -230,16 +231,6 @@ const GestionEstudiantes = () => {
           className="search-input"
         />
         <select
-          value={filterBloque}
-          onChange={(e) => setFilterBloque(e.target.value)}
-          className="filter-select"
-        >
-          <option value="">Todos los bloques</option>
-          {bloques.map(b => (
-            <option key={b} value={b}>{b}</option>
-          ))}
-        </select>
-        <select
           value={filterNivel}
           onChange={(e) => setFilterNivel(e.target.value)}
           className="filter-select"
@@ -252,11 +243,10 @@ const GestionEstudiantes = () => {
           <option value="C1">C1</option>
           <option value="C2">C2</option>
         </select>
-        {(searchTerm || filterBloque || filterNivel) && (
+        {(searchTerm || filterNivel) && (
           <button
             onClick={() => {
               setSearchTerm('');
-              setFilterBloque('');
               setFilterNivel('');
             }}
             className="clear-filters-btn"
@@ -278,7 +268,6 @@ const GestionEstudiantes = () => {
               <tr>
                 <th>Nombre Completo</th>
                 <th>Email</th>
-                <th>Bloque</th>
                 <th>Nivel</th>
                 <th>Especialización</th>
                 <th>Estado</th>
@@ -287,17 +276,12 @@ const GestionEstudiantes = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredStudents.map((student) => (
+              {studentsPagina.map((student) => (
                 <tr key={student.id}>
                   <td className="student-name">
                     {student.nombres} {student.apellidos}
                   </td>
-                  <td>{student.correo_personal || student.correo || 'N/A'}</td>
-                  <td>
-                    <span className="bloque-badge">
-                      {student.bloque_asignado || 'Sin asignar'}
-                    </span>
-                  </td>
+                  <td>{student.correo_personal || 'N/A'}</td>
                   <td>
                     <span 
                       className="nivel-badge"
@@ -344,6 +328,37 @@ const GestionEstudiantes = () => {
               ))}
             </tbody>
           </table>
+          {totalStudents > 0 && (
+            <div className="paginacion-registros">
+              <span className="paginacion-info">
+                Mostrando {indiceInicio + 1}
+                –{Math.min(indiceInicio + ITEMS_PER_PAGE, totalStudents)} de {totalStudents}
+              </span>
+              <div className="paginacion-botones">
+                <button onClick={irPrimera} disabled={paginaActualSegura === 1}>
+                  « Primero
+                </button>
+                <button onClick={irAnterior} disabled={paginaActualSegura === 1}>
+                  ‹ Anterior
+                </button>
+                {pageNumbers.map((num) => (
+                  <button
+                    key={num}
+                    onClick={() => irAPagina(num)}
+                    className={num === paginaActualSegura ? 'pagina-activa' : ''}
+                  >
+                    {num}
+                  </button>
+                ))}
+                <button onClick={irSiguiente} disabled={paginaActualSegura === totalPaginas}>
+                  Siguiente ›
+                </button>
+                <button onClick={irUltima} disabled={paginaActualSegura === totalPaginas}>
+                  Último »
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -363,10 +378,6 @@ const GestionEstudiantes = () => {
               <div className="detail-row">
                 <span className="detail-label">Email:</span>
                 <span className="detail-value">{selectedStudent.correo_personal || 'N/A'}</span>
-              </div>
-              <div className="detail-row">
-                <span className="detail-label">Bloque asignado:</span>
-                <span className="detail-value">{selectedStudent.bloque_asignado || 'Sin asignar'}</span>
               </div>
               <div className="detail-row">
                 <span className="detail-label">Nivel de inglés:</span>
@@ -424,19 +435,6 @@ const GestionEstudiantes = () => {
                   onChange={(e) => setEditForm({...editForm, correo_personal: e.target.value})}
                   className="form-input"
                 />
-              </div>
-              <div className="form-group">
-                <label>Bloque:</label>
-                <select
-                  value={editForm.bloque_asignado}
-                  onChange={(e) => setEditForm({...editForm, bloque_asignado: e.target.value})}
-                  className="form-input"
-                >
-                  <option value="">Sin asignar</option>
-                  {bloques.map(b => (
-                    <option key={b} value={b}>{b}</option>
-                  ))}
-                </select>
               </div>
               <div className="form-group">
                 <label>Nivel de inglés:</label>

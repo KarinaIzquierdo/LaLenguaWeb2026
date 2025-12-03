@@ -9,8 +9,9 @@ import { FaEdit, FaToggleOn, FaToggleOff, FaPlus, FaSpinner, FaTrash } from 'rea
 import { userService } from '../../services/userService';
 import type { RegisterData } from '../../services/userService';
 import { rolMapFrontendToBackend } from '../../services/rolMap';
-import { bloqueService, type Bloque } from '../../services/bloqueService';
 import { especializacionService, type Especializacion } from '../../services/especializacionService';
+
+const ITEMS_PER_PAGE = 20;
 
 /**
  * @component FormularioUsuarios
@@ -30,7 +31,6 @@ interface Usuario {
   correo_personal?: string;
   rol: string;
   activo: boolean;
-  bloque_asignado?: string;
   especializacion_id?: number;
   especializacion?: string;
 }
@@ -70,25 +70,17 @@ export default function FormularioUsuarios() {
     correo_personal: '',  // Ahora es el campo principal
     rol: 'Estudiante',
     contrasena: '',
-    bloque_asignado: '',
     especializacion_id: undefined,
   });
-
-  /**
-   * @state {Array<Bloque>} bloques - Lista de bloques disponibles.
-   */
-  const [bloques, setBloques] = useState<Bloque[]>([]);
 
   /**
    * @state {Array<Especializacion>} especializaciones - Lista de especializaciones disponibles.
    */
   const [especializaciones, setEspecializaciones] = useState<Especializacion[]>([]);
+  const [paginaActual, setPaginaActual] = useState(1);
 
-  // Cargar bloques y especializaciones al montar el componente
+  // Cargar especializaciones al montar el componente
   useEffect(() => {
-    const bloquesDisponibles = bloqueService.getBloques();
-    setBloques(bloquesDisponibles);
-    
     const cargarEspecializaciones = async () => {
       try {
         const especializacionesDisponibles = await especializacionService.getEspecializacionesActivas();
@@ -101,6 +93,23 @@ export default function FormularioUsuarios() {
     
     cargarEspecializaciones();
   }, []);
+
+  const totalUsers = users.length;
+  const totalPaginas = Math.max(1, Math.ceil(totalUsers / ITEMS_PER_PAGE));
+  const paginaActualSegura = Math.min(paginaActual, totalPaginas);
+  const indiceInicio = (paginaActualSegura - 1) * ITEMS_PER_PAGE;
+  const usersPagina = users.slice(indiceInicio, indiceInicio + ITEMS_PER_PAGE);
+  const pageNumbers = Array.from({ length: totalPaginas }, (_, i) => i + 1);
+
+  const irAPagina = (pagina: number) => {
+    const nuevaPagina = Math.max(1, Math.min(pagina, totalPaginas));
+    setPaginaActual(nuevaPagina);
+  };
+
+  const irPrimera = () => irAPagina(1);
+  const irUltima = () => irAPagina(totalPaginas);
+  const irAnterior = () => irAPagina(paginaActualSegura - 1);
+  const irSiguiente = () => irAPagina(paginaActualSegura + 1);
 
   /**
    * @state {Object} formErrors - Estado para los errores de validación del formulario.
@@ -173,7 +182,6 @@ export default function FormularioUsuarios() {
       correo_personal: '',
       rol: 'Estudiante',
       contrasena: '',
-      bloque_asignado: '',
       especializacion_id: undefined,
     });
     setFormErrors({});
@@ -194,7 +202,6 @@ export default function FormularioUsuarios() {
       correo_personal: user.correo_personal || '',
       rol: user.rol,
       contrasena: '', // Contraseña no se edita directamente aquí por seguridad
-      bloque_asignado: user.bloque_asignado || '',
       especializacion_id: user.especializacion_id,
     });
     setFormErrors({});
@@ -211,6 +218,7 @@ export default function FormularioUsuarios() {
     // Refrescar usuarios desde backend
     const data = await userService.getAll();
     setUsers(data);
+    setPaginaActual(1);
     setIsLoading(false);
   };
 
@@ -242,11 +250,19 @@ export default function FormularioUsuarios() {
     
     try {
       setIsLoading(true);
-      await userService.deleteUser(userId);
-      // Refrescar usuarios desde backend
-      const data = await userService.getAll();
-      setUsers(data);
-      alert(`Usuario "${userName}" eliminado exitosamente.`);
+      const result = await userService.deleteUser(userId);
+
+      if (result && result.success) {
+        // Refrescar usuarios desde backend
+        const data = await userService.getAll();
+        setUsers(data);
+        setPaginaActual(1);
+        alert(`Usuario "${userName}" eliminado exitosamente.`);
+      } else {
+        console.error('Error en deleteUser:', result);
+        const message = (result && (result.message || result.error)) || 'La operación de eliminación no se completó en el servidor.';
+        alert(`Error al eliminar el usuario: ${message}`);
+      }
     } catch (error) {
       console.error('Error al eliminar usuario:', error);
       alert('Error al eliminar el usuario. Inténtalo nuevamente.');
@@ -262,105 +278,71 @@ export default function FormularioUsuarios() {
    */
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    // Validar formulario
     const errors = validateForm();
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
       return;
     }
-    setIsLoading(true);
-    if (!editingUser) {
-      // Registro en backend
-      const registerData: RegisterData = {
-        first_name: formData.nombres,
-        last_name: formData.apellidos,
-        email: formData.correo || undefined,  // Opcional, se genera automáticamente si no se proporciona
-        correo_personal: formData.correo_personal!,  // Obligatorio
-        role: rolMapFrontendToBackend[formData.rol],
-        password: formData.contrasena,
-        bloque_asignado: formData.bloque_asignado,
-        especializacion: formData.especializacion_id || null,
-      };
-      const result = await userService.register(registerData);
-      if (result.success) {
-        // El backend envía automáticamente el email de bienvenida
-        console.log('✅ Usuario creado. Email de bienvenida enviado automáticamente por el backend.');
 
-        // Refrescar usuarios desde backend
-        try {
+    setIsLoading(true);
+
+    try {
+      if (!editingUser) {
+        // Crear nuevo usuario
+        const backendRole =
+          rolMapFrontendToBackend[formData.rol] ||
+          (formData.rol === 'Financiero' ? 'financiero' : 'student');
+
+        const registerData: RegisterData = {
+          first_name: formData.nombres.trim(),
+          last_name: formData.apellidos.trim(),
+          correo_personal: formData.correo_personal.trim(),
+          role: backendRole,
+          password: formData.contrasena,
+          email: formData.correo?.trim() || undefined,
+          especializacion: formData.especializacion_id ?? null,
+        };
+
+        const result = await userService.register(registerData);
+
+        if (result.success) {
           const data = await userService.getAll();
           setUsers(data);
-          // Sincronizar asignación local (el Dashboard del estudiante lee localStorage)
-          try {
-            if (formData.bloque_asignado) {
-              const newId: any = (result as any)?.user?.id || (result as any)?.user?.pk || null;
-              let targetId: any = newId;
-              if (!targetId) {
-                const created = (data as any[]).find(u => u.correo_personal === registerData.correo_personal);
-                if (created) targetId = created.id;
-              }
-              if (targetId) {
-                bloqueService.assignBloqueToUser(String(targetId), formData.bloque_asignado);
-              }
-            }
-          } catch {
-            // No bloquear el flujo por un error de sincronización local
-          }
-        } catch (error) {
-          console.log('Usuario creado exitosamente, pero no se pudo refrescar la lista');
+          setShowForm(false);
+          setEditingUser(null);
+          setFormErrors({});
+        } else {
+          setFormErrors(result.errors || { correo_personal: result.message || 'Error al registrar usuario' });
         }
-        
-        // Mostrar mensaje de éxito
-        alert(`✅ Usuario creado exitosamente!\n\nSe ha enviado un email de bienvenida a: ${formData.correo_personal}`);
-        
+      } else {
+        // Editar usuario existente
+        const updateData: any = {
+          first_name: formData.nombres.trim(),
+          last_name: formData.apellidos.trim(),
+          correo_personal: formData.correo_personal.trim(),
+        };
+
+        await userService.update(editingUser.id, updateData);
+
+        const data = await userService.getAll();
+        setUsers(data);
+        setPaginaActual(1);
+
         setShowForm(false);
         setEditingUser(null);
         setFormErrors({});
-        // Resetear formulario
-        setFormData({
-          nombres: '',
-          apellidos: '',
-          correo: '',
-          correo_personal: '',
-          rol: 'Estudiante',
-          contrasena: '',
-          bloque_asignado: '',
-          especializacion_id: undefined,
-        });
-      } else {
-        setFormErrors(result.errors || { correo: result.message || 'Error al registrar usuario' });
       }
+    } catch (error) {
+      console.error('Error al guardar usuario:', error);
+      alert('Error al guardar el usuario. Inténtalo nuevamente.');
+    } finally {
       setIsLoading(false);
-      return;
     }
-
-    // Simular una operación asíncrona para editar (debería ser llamada real al backend)
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    // Refrescar usuarios desde backend
-    const data = await userService.getAll();
-    setUsers(data);
-    // Sincronizar asignación local para el usuario editado
-    try {
-      if (editingUser) {
-        const userIdStr = String(editingUser.id);
-        const bloqueId = formData.bloque_asignado || '';
-        if (bloqueId) {
-          bloqueService.assignBloqueToUser(userIdStr, bloqueId);
-        } else {
-          const assignments = bloqueService.getUserBlockAssignments();
-          delete assignments[userIdStr];
-          localStorage.setItem('user_blocks_assignment', JSON.stringify(assignments));
-        }
-      }
-    } catch {
-      // Continuar sin bloquear la UI
-    }
-    setShowForm(false);
-    setEditingUser(null);
-    setFormErrors({});
-    setIsLoading(false);
   };
 
-  // Cargar usuarios reales al montar el componente
+  // Cargar lista de usuarios al montar el componente
   useEffect(() => {
     const fetchUsers = async () => {
       try {
@@ -400,25 +382,19 @@ export default function FormularioUsuarios() {
                   <th>Nombre Completo</th>
                   <th>Correo Personal</th>
                   <th>Rol</th>
-                  <th>Bloque</th>
                   <th>Especialización</th>
                   <th>Estado</th>
                   <th>Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                {users.map((user) => {
+                {usersPagina.map((user) => {
                   return (
                     <tr key={user.id}>
                       <td>{user.id}</td>
                       <td>{`${user.nombres} ${user.apellidos}`}</td>
-                      <td>{user.correo_personal || user.correo}</td>
+                      <td>{user.correo_personal || 'Sin correo personal'}</td>
                       <td>{user.rol}</td>
-                      <td>
-                        <span className="bloque-badge">
-                          {user.bloque_asignado || 'Sin asignar'}
-                        </span>
-                      </td>
                       <td>
                         <span className="especializacion-badge">
                           {user.especializacion || 'Sin asignar'}
@@ -475,13 +451,44 @@ export default function FormularioUsuarios() {
                 })}
                 {users.length === 0 && (
                   <tr>
-                    <td colSpan={8} style={{ textAlign: 'center', padding: '2rem' }}>
+                    <td colSpan={7} style={{ textAlign: 'center', padding: '2rem' }}>
                       No hay usuarios registrados
                     </td>
                   </tr>
                 )}
               </tbody>
             </table>
+            {totalUsers > 0 && (
+              <div className="paginacion-registros">
+                <span className="paginacion-info">
+                  Mostrando {indiceInicio + 1}
+                  –{Math.min(indiceInicio + ITEMS_PER_PAGE, totalUsers)} de {totalUsers}
+                </span>
+                <div className="paginacion-botones">
+                  <button onClick={irPrimera} disabled={paginaActualSegura === 1}>
+                    « Primero
+                  </button>
+                  <button onClick={irAnterior} disabled={paginaActualSegura === 1}>
+                    ‹ Anterior
+                  </button>
+                  {pageNumbers.map((num) => (
+                    <button
+                      key={num}
+                      onClick={() => irAPagina(num)}
+                      className={num === paginaActualSegura ? 'pagina-activa' : ''}
+                    >
+                      {num}
+                    </button>
+                  ))}
+                  <button onClick={irSiguiente} disabled={paginaActualSegura === totalPaginas}>
+                    Siguiente ›
+                  </button>
+                  <button onClick={irUltima} disabled={paginaActualSegura === totalPaginas}>
+                    Último »
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -589,23 +596,6 @@ export default function FormularioUsuarios() {
               <option value="Profesor">Profesor</option>
               <option value="Admin">Admin</option>
               <option value="Financiero">Financiero</option>
-            </select>
-          </div>
-
-          <div className="form-field">
-            <label htmlFor="bloque_asignado">Bloque Asignado</label>
-            <select
-              id="bloque_asignado"
-              name="bloque_asignado"
-              value={formData.bloque_asignado}
-              onChange={handleChange}
-            >
-              <option value="">Sin asignar</option>
-              {bloques.map((bloque) => (
-                <option key={bloque.id} value={bloque.id}>
-                  {bloque.nivel} {bloque.turno}
-                </option>
-              ))}
             </select>
           </div>
 

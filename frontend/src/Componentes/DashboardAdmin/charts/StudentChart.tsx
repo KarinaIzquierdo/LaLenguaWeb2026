@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Bar } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -9,6 +10,8 @@ import {
   Legend,
 } from 'chart.js';
 import { useTheme } from '../../../hooks/useTheme';
+import { API_BASE_URL as DJANGO_API_BASE_URL } from '../../../config/api';
+import { authService } from '../../../services/authService';
 
 ChartJS.register(
   CategoryScale,
@@ -19,25 +22,73 @@ ChartJS.register(
   Legend
 );
 
+interface StudentsMonthlyData {
+  labels: string[];
+  nuevo: number[];
+  egresado: number[];
+}
+
+const DEFAULT_STUDENTS_MONTHLY: StudentsMonthlyData = {
+  labels: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio'],
+  nuevo: [60, 19, 13, 9, 22, 31],
+  egresado: [10, 20, 30, 19, 50, 60],
+};
+
 const StudentChart = () => {
   const { theme } = useTheme();
 
-  const textColor = theme === 'dark' ? '#e5e7eb' : '#374151'; // Gris claro para oscuro, gris oscuro para claro
-  const gridColor = theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'; // Cuadrícula más clara para oscuro, más oscura para claro
+  const textColor = theme === 'dark' ? '#e5e7eb' : '#374151';
+  const gridColor = theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+
+  const [studentsMonthly, setStudentsMonthly] = useState<StudentsMonthlyData>(DEFAULT_STUDENTS_MONTHLY);
+
+  useEffect(() => {
+    const loadChartData = async () => {
+      try {
+        const token = authService.getToken?.() || localStorage.getItem('token');
+        if (!token) return;
+
+        const res = await fetch(`${DJANGO_API_BASE_URL}/admin/dashboard-charts/`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data.success === false) {
+          return;
+        }
+
+        const s = data.data?.students_monthly;
+        if (s && Array.isArray(s.labels)) {
+          setStudentsMonthly({
+            labels: s.labels,
+            nuevo: s.new || [],
+            egresado: s.removed || [],
+          });
+        }
+      } catch (e) {
+        console.error('Error cargando StudentChart:', e);
+      }
+    };
+
+    loadChartData();
+  }, []);
 
   const data = {
-    labels: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio'],
+    labels: studentsMonthly.labels,
     datasets: [
       {
         label: 'Nuevos Estudiantes por Mes',
-        data: [60, 19, 13, 9, 22, 31],
+        data: studentsMonthly.nuevo,
         backgroundColor: 'rgba(59, 130, 246, 0.5)',
         borderColor: 'rgba(59, 130, 246, 1)',
         borderWidth: 3,
       },
       {
         label: 'Estudiantes Egresados por Mes',
-        data: [10, 20, 30, 19, 50, 60],
+        data: studentsMonthly.egresado,
         backgroundColor: 'rgba(239, 68, 68, 0.5)',
         borderColor: 'rgba(239, 68, 68, 1)',
         borderWidth: 3,

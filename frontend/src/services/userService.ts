@@ -1,5 +1,5 @@
 // Servicio para registrar usuarios desde el frontend
-const API_BASE_URL = 'http://localhost:8000/api';
+import { API_BASE_URL } from '../config/api';
 
 export interface RegisterData {
   first_name: string;
@@ -30,14 +30,7 @@ export const userService = {
         body: JSON.stringify(data),
       });
       const result = await response.json();
-      
-      // Si el registro fue exitoso y hay un bloque asignado, guardarlo en localStorage
-      if (result.success && data.bloque_asignado && result.user) {
-        const { bloqueService } = await import('./bloqueService');
-        bloqueService.assignBloqueToUser(result.user.id.toString(), data.bloque_asignado);
-        console.log(`Bloque ${data.bloque_asignado} asignado al usuario ${result.user.id}`);
-      }
-      
+
       return result;
     } catch (error) {
       return { success: false, message: 'Error de conexión' };
@@ -55,22 +48,37 @@ export const userService = {
       });
       if (!response.ok) return [];
       const data = await response.json();
+
+      // El backend devuelve { success, message, users: [...] }
+      const users = Array.isArray(data) ? data : (data.users || []);
+
       // Mapear campos del backend a los nombres esperados por el frontend
-      return data.map((user: any) => ({
-        id: user.id,
-        nombres: user.first_name,
-        apellidos: user.last_name,
-        correo: user.email,
-        correo_personal: user.correo_personal,
-        rol: user.role,
-        activo: user.is_active,
-        is_active: user.is_active,
-        bloque_asignado: user.bloque_asignado,
-        especializacion_id: user.especializacion,
-        especializacion: user.especializacion,
-        date_joined: user.date_joined,
-        nivel: user.english_level || null,
-      }));
+      return users.map((user: any) => {
+        // Determinar correo personal sin mostrar cuentas institucionales @thelanguage.co
+        const rawPersonal = user.correo_personal || null;
+        const rawEmail = user.email || null;
+        const isInstitutional = (email: string | null) => !!email && email.toLowerCase().includes('@thelanguage.co');
+
+        const correo_personal = rawPersonal
+          ? (isInstitutional(rawPersonal) ? null : rawPersonal)
+          : (isInstitutional(rawEmail) ? null : rawEmail);
+
+        return {
+          id: user.id,
+          nombres: user.first_name,
+          apellidos: user.last_name,
+          correo: user.email,
+          correo_personal,
+          rol: user.role,
+          activo: user.is_active,
+          is_active: user.is_active,
+          bloque_asignado: user.bloque_asignado,
+          especializacion_id: user.especializacion_id ?? null,
+          especializacion: user.especializacion ?? null,
+          date_joined: user.date_joined,
+          nivel: user.english_level || null,
+        };
+      });
     } catch (error) {
       return [];
     }

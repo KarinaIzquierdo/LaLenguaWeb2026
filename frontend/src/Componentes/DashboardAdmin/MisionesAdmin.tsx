@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react';
 import { missionService, type MissionLink } from '../../services/missionService';
 import { userService } from '../../services/userService';
-import { authService } from '../../services/authService';
-import { bloqueService } from '../../services/bloqueService';
 import './admin.css';
 
 export default function MisionesAdmin() {
@@ -12,7 +10,6 @@ export default function MisionesAdmin() {
   const [filterKey, setFilterKey] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [users, setUsers] = useState<Array<{ id: number; name: string }>>([]);
-  const [bloques, setBloques] = useState<Array<{ id: string; label: string }>>([]);
 
   const load = async () => {
     try {
@@ -29,55 +26,14 @@ export default function MisionesAdmin() {
 
   useEffect(() => { load(); }, [filterKey]);
 
-  // Cargar usuarios (para audience student) y bloques (para audience bloque)
+  // Cargar usuarios (para audience student)
   useEffect(() => {
     const fetchAux = async () => {
-      // Usuarios
       try {
         const list = await userService.getAll();
         setUsers(list.map(u => ({ id: u.id, name: `${u.nombres || ''} ${u.apellidos || ''}`.trim() || u.correo_personal || String(u.id) })));
       } catch {
         setUsers([]);
-      }
-
-      // Bloques desde backend
-      try {
-        const token = authService.getToken();
-        const res = await fetch('http://127.0.0.1:8000/api/bloques/', {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': token ? `Bearer ${token}` : ''
-          }
-        });
-        if (res.ok) {
-          const raw = await res.json();
-          const list: any[] = Array.isArray(raw) ? raw : (raw?.data || raw?.results || []);
-          // Usar id consistente: nivel_turno, que es el que consume el dashboard del alumno
-          const mapped = (list || []).map((b: any) => {
-            const nivel = b.nivel || b.nivel_nombre || (b.nombre?.split('_')[0]) || 'N';
-            const turno = b.turno || (b.nombre?.split('_')[1]) || 'Turno';
-            const id = `${nivel}_${turno}`;
-            const label = b.nombre || `${nivel} ${turno}`;
-            return { id, label };
-          });
-          if (mapped.length > 0) {
-            setBloques(mapped);
-          } else {
-            // Fallback a bloques en localStorage (bloqueService)
-            const loc = bloqueService.getBloques();
-            const mappedLocal = (loc || []).map((b: any) => ({ id: b.id, label: `${b.nivel} ${b.turno}` }));
-            setBloques(mappedLocal);
-          }
-        } else {
-          // Fallback local si API falla
-          const loc = bloqueService.getBloques();
-          const mappedLocal = (loc || []).map((b: any) => ({ id: b.id, label: `${b.nivel} ${b.turno}` }));
-          setBloques(mappedLocal);
-        }
-      } catch {
-        const loc = bloqueService.getBloques();
-        const mappedLocal = (loc || []).map((b: any) => ({ id: b.id, label: `${b.nivel} ${b.turno}` }));
-        setBloques(mappedLocal);
       }
     };
     fetchAux();
@@ -134,17 +90,8 @@ export default function MisionesAdmin() {
           <input placeholder="URL" value={form.url || ''} onChange={e => setForm({ ...form, url: e.target.value })} />
           <select value={(form.audience_type as any) || 'global'} onChange={e => setForm({ ...form, audience_type: e.target.value as any })}>
             <option value="global">Global</option>
-            <option value="bloque">Por Bloque</option>
             <option value="student">Por Estudiante</option>
           </select>
-          {form.audience_type === 'bloque' && (
-            <select value={form.audience_value || ''} onChange={e => setForm({ ...form, audience_value: e.target.value })}>
-              <option value="">Seleccione bloque…</option>
-              {bloques.map(b => (
-                <option key={b.id} value={b.id}>{b.label}</option>
-              ))}
-            </select>
-          )}
           {form.audience_type === 'student' && (
             <select value={form.user as any || ''} onChange={e => setForm({ ...form, user: Number(e.target.value) })}>
               <option value="">Seleccione estudiante…</option>
@@ -205,7 +152,7 @@ export default function MisionesAdmin() {
                     {item.start_at ? new Date(item.start_at).toLocaleString() : '—'} → {item.expires_at ? new Date(item.expires_at).toLocaleString() : '—'}
                   </td>
                   <td style={{ textAlign: 'center' }}>{item.status}{item.is_active ? '' : ' (off)'}</td>
-                  <td style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+                  <td className="misiones-actions-cell">
                     <button className="btn-primary" onClick={() => toggleActive(item)}>{item.is_active ? 'Desactivar' : 'Activar'}</button>
                     <button className="btn-primary" onClick={() => expireNow(item)}>Expirar ahora</button>
                     <button className="btn-danger" onClick={() => remove(item.id)}>Eliminar</button>

@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -10,6 +11,8 @@ import {
   Legend,
 } from 'chart.js';
 import { useTheme } from '../../../hooks/useTheme';
+import { API_BASE_URL as DJANGO_API_BASE_URL } from '../../../config/api';
+import { authService } from '../../../services/authService';
 
 ChartJS.register(
   CategoryScale,
@@ -21,34 +24,60 @@ ChartJS.register(
   Legend
 );
 
+interface LevelProgressData {
+  labels: string[];
+  averages: number[];
+}
+
+const DEFAULT_LEVEL_PROGRESS: LevelProgressData = {
+  labels: ['Básico', 'Intermedio', 'Avanzado'],
+  averages: [65, 72, 80],
+};
+
 const StudentProgressChart = () => {
   const { theme } = useTheme();
 
   const textColor = theme === 'dark' ? '#e5e7eb' : '#374151';
   const gridColor = theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
 
+  const [progress, setProgress] = useState<LevelProgressData>(DEFAULT_LEVEL_PROGRESS);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const token = authService.getToken?.() || localStorage.getItem('token');
+        if (!token) return;
+
+        const res = await fetch(`${DJANGO_API_BASE_URL}/admin/dashboard-charts/`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data.success === false) return;
+
+        const lp = data.data?.level_progress;
+        if (lp && Array.isArray(lp.labels) && Array.isArray(lp.averages)) {
+          setProgress({ labels: lp.labels, averages: lp.averages });
+        }
+      } catch (e) {
+        console.error('Error cargando StudentProgressChart:', e);
+      }
+    };
+
+    loadData();
+  }, []);
+
   const data = {
-    labels: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio'],
+    labels: progress.labels,
     datasets: [
       {
-        label: 'Nivel Básico',
-        data: [65, 59, 80, 81, 56, 55],
+        label: 'Progreso promedio (%)',
+        data: progress.averages,
         fill: false,
         borderColor: 'rgba(64, 255, 255, 1)',
-        tension: 0.1,
-      },
-      {
-        label: 'Nivel Intermedio',
-        data: [28, 48, 40, 19, 86, 27],
-        fill: false,
-        borderColor: 'rgba(250, 56, 98, 1)',
-        tension: 0.1,
-      },
-      {
-        label: 'Nivel Avanzado',
-        data: [10, 20, 30, 40, 50, 60],
-        fill: false,
-        borderColor: 'rgba(11, 157, 255, 1)',
         tension: 0.1,
       },
     ],

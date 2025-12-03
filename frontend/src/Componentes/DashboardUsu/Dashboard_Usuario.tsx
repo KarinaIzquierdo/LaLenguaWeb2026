@@ -3,6 +3,7 @@ import './Dashboard.css';
 import PiePagina from '../Layout/PiePagina';
 import EvaluationModal from './EvaluationModal';
 import ResultsModal from './ResultsModal';
+import NotesModal from './NotesModal';
 import OnboardingTour from "../Onboarding/OnboardingTour";
 import ProfileModal from "../Profile/ProfileModal";
 import ChallengeModal from "./ChallengeModal";
@@ -10,11 +11,10 @@ import Toast from "./Toast";
 import { useDashboardEvents } from "./DashboardEvents";
 import NavUsu from "./Nav_Usu";
 import { EvaluationService } from '../../services/evaluationService';
-import { bloqueService } from '../../services/bloqueService';
 import { authService } from '../../services/authService';
 import { ClaseService } from '../../services/claseService';
 import { clbService, type Club, type ClubMaterial } from '../../services/clbService';
-import DriveEvaluacionesEstudiante from '../DashboardUsuario/DriveEvaluacionesEstudiante';
+import EvaluacionesEstudiante from '../DashboardUsuario/EvaluacionesEstudiante';
 
 interface DashboardProps {
   onLogout?: () => void;
@@ -62,13 +62,6 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
   // Clases states
   const [clases, setClases] = useState<any[]>([]);
   const [isLoadingClases, setIsLoadingClases] = useState(true);
-  const [bloqueInfo, setBloqueInfo] = useState<{
-    bloque: any;
-    clases: string[];
-    misiones: string[];
-    profesores: string[];
-    horarios: string[];
-  } | null>(null);
   const [userId, setUserId] = useState<string>('');
 
   // CLB (Club) states
@@ -89,8 +82,11 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
   const [currentPage, setCurrentPage] = useState(1);
   const clasesPerPage = 5;
 
-  // API base para consultar enlaces de misiones
-  const API_BASE_URL = 'http://127.0.0.1:8000';
+  // Modal de notas y asistencia
+  const [showNotesModal, setShowNotesModal] = useState(false);
+
+  // API base para consultar enlaces de misiones (router PHP legacy)
+  const PHP_API_BASE_URL = 'https://lalenguacolombia.co/api/index.php';
 
   // Utilidad para crear mission_key a partir del título mostrado en la card
   const slugify = (text: string): string => {
@@ -108,9 +104,7 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
       setIsLoadingMissions(true);
       const params = new URLSearchParams();
       if (userId) params.append('user_id', userId);
-      const bloqueCode = bloqueInfo?.bloque ? `${bloqueInfo.bloque.nivel}_${bloqueInfo.bloque.turno}` : '';
-      if (bloqueCode) params.append('bloque', bloqueCode);
-      const url = `${API_BASE_URL}/api/missions/available/${params.toString() ? `?${params.toString()}` : ''}`;
+      const url = `${PHP_API_BASE_URL}/missions/available/${params.toString() ? `?${params.toString()}` : ''}`;
       const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
@@ -132,9 +126,7 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
       const missionKey = slugify(missionTitle);
       const params = new URLSearchParams();
       if (userId) params.append('user_id', userId);
-      const bloqueCode = bloqueInfo?.bloque ? `${bloqueInfo.bloque.nivel}_${bloqueInfo.bloque.turno}` : '';
-      if (bloqueCode) params.append('bloque', bloqueCode);
-      const url = `${API_BASE_URL}/api/missions/${missionKey}/link/${params.toString() ? `?${params.toString()}` : ''}`;
+      const url = `${PHP_API_BASE_URL}/missions/${missionKey}/link/${params.toString() ? `?${params.toString()}` : ''}`;
       const res = await fetch(url);
       if (res.status === 204) {
         showNotification('info', 'Misión no disponible', 'Esta misión no tiene un enlace vigente.');
@@ -223,8 +215,17 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
     setShowOnboarding(true);
   };
 
-  // Banco de preguntas para retos diarios
-  const dailyChallenges = [
+  // Tipo para retos diarios (pueden venir del backend)
+  interface DailyChallenge {
+    id?: number;
+    question: string;
+    options: string[];
+    correctAnswer: number;
+    explanation: string;
+  }
+
+  // Banco de preguntas por defecto para retos diarios (fallback si el backend no devuelve nada)
+  const DEFAULT_DAILY_CHALLENGES: DailyChallenge[] = [
     {
       question: "What is the correct way to say 'I am going to the store'?",
       options: ["I go to the store", "I am going to the store", "I going to store", "I will go store"],
@@ -257,10 +258,16 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
     }
   ];
 
+  const [dailyChallenges, setDailyChallenges] = useState<DailyChallenge[]>(DEFAULT_DAILY_CHALLENGES);
+
   // Función para abrir modal de reto diario
   const openChallengeModal = () => {
     if (hasCompletedToday) {
       alert("⏰ Ya completaste tu reto de hoy. ¡Vuelve mañana para continuar tu racha!");
+      return;
+    }
+    if (!dailyChallenges.length) {
+      alert('No hay retos configurados por ahora. Intenta más tarde.');
       return;
     }
     const randomChallenge = dailyChallenges[Math.floor(Math.random() * dailyChallenges.length)];
@@ -354,23 +361,18 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
       const profile = await authService.getUserProfile();
       const userIdStr = profile.id?.toString() || '';
       
-      // Cargar clases del backend
-      const clasesDelBackend = await ClaseService.getClases();
-      
-      // Filtrar clases asignadas al usuario
-      const clasesProfesor = clasesDelBackend
-        .filter((clase: any) => {
-          if (!clase.estudiantes) return false;
-          return clase.estudiantes.some((est: any) => 
-            est === parseInt(userIdStr) || est === userIdStr
-          );
-        })
-        .map((clase: any) => ({
-          ...clase,
-          profesor: clase.profesor || 'Sin asignar',
-          tipo: 'profesor'
-        }));
-      setClases(clasesProfesor);
+      // Cargar solo las clases del usuario desde el backend
+      const userIdNum = Number(userIdStr);
+      const clasesDelBackend = await ClaseService.getClasesPorUsuario(userIdNum);
+
+      // Enriquecer con algunos campos para el frontend
+      const clasesUsuario = (clasesDelBackend || []).map((clase: any) => ({
+        ...clase,
+        profesor: clase.profesor || 'Sin asignar',
+        tipo: 'profesor'
+      }));
+
+      setClases(clasesUsuario);
     } catch (error) {
       console.error('Error refrescando clases:', error);
     }
@@ -382,15 +384,6 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
         const profile = await authService.getUserProfile();
         const userIdStr = profile.id?.toString() || '';
         setUserId(userIdStr);
-        // Sincronizar asignación de bloque desde backend al localStorage (si existe)
-        try {
-          const backendBloque = (profile as any)?.bloque_asignado || (profile as any)?.bloque || null;
-          if (userIdStr && backendBloque && typeof backendBloque === 'string') {
-            bloqueService.assignBloqueToUser(userIdStr, backendBloque);
-          }
-        } catch (e) {
-          // No bloquear el flujo
-        }
         
         // Cargar datos específicos del usuario desde localStorage
         const todayStr = new Date().toDateString();
@@ -418,74 +411,21 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
         // El perfil se considera siempre completado para evitar modal constante
         setIsNewUser(false);
         
-        // Obtener información del bloque del usuario
-        const userBloqueInfo = bloqueService.getUserBloqueInfo(userIdStr);
-        setBloqueInfo(userBloqueInfo);
-        
-        // Cargar misiones disponibles después de tener userId y bloqueInfo
-        // Se ejecutará de nuevo cuando cambien estos valores
-        
-        // Si no hay bloque asignado pero el usuario tiene bloque_asignado en el backend, asignarlo
-        if (!userBloqueInfo.bloque && profile.bloque_asignado) {
-          bloqueService.assignBloqueToUser(userIdStr, profile.bloque_asignado);
-          // Recargar información del bloque
-          const updatedBloqueInfo = bloqueService.getUserBloqueInfo(userIdStr);
-          setBloqueInfo(updatedBloqueInfo);
-        }
-        
-        // Sistema híbrido: combinar clases del bloque + clases programadas por profesores
-        
+        // Obtener clases programadas para el usuario directamente desde el backend
         let clasesFinales: any[] = [];
-        
-        // 1. Agregar clases del bloque (programación base) - SIEMPRE mostrar las clases del bloque
-        if (userBloqueInfo.bloque && userBloqueInfo.clases.length > 0) {
-          const clasesDelBloque = userBloqueInfo.clases.map((nombreClase: string, index: number) => {
-            // Obtener estado desde localStorage (sincronizado con profesor)
-            const claseKey = `clase_${nombreClase.replace(/\s+/g, '_')}_estado`;
-            const estadoGuardado = localStorage.getItem(claseKey) || 'programada';
-            
+        try {
+          const userIdNum = Number(userIdStr);
+          const clasesDelBackend = await ClaseService.getClasesPorUsuario(userIdNum);
+
+          const clasesProfesor = (clasesDelBackend || []).map((clase: any) => {
             return {
-              id: `bloque-${userBloqueInfo.bloque?.id}-${index}`,
-              nombre: nombreClase,
-              fecha: '2025-09-12', // Fecha actual
-              hora: userBloqueInfo.horarios[index % userBloqueInfo.horarios.length] || '2:00 PM - 3:30 PM',
-              profesor: userBloqueInfo.profesores[index % userBloqueInfo.profesores.length] || 'Profesor Asignado',
-              tema: nombreClase,
-              bloque: userBloqueInfo.bloque?.nivel + ' ' + userBloqueInfo.bloque?.turno,
-              tipo: 'bloque', // Identificar tipo de clase
-              estado: estadoGuardado
+              ...clase,
+              profesor: clase.profesor || 'Sin asignar',
+              tipo: 'profesor' // Identificar tipo de clase
             };
           });
-          
-          clasesFinales = [...clasesDelBloque];
-        }
-        
-        // 2. Agregar clases programadas por profesores (solo las asignadas al usuario)
-        try {
-          const clasesDelBackend = await ClaseService.getClases();
-          
-          // Filtrar solo las clases que incluyen al usuario actual
-          const clasesProfesor = clasesDelBackend
-            .filter((clase: any) => {
-              // Verificar si el usuario está en la lista de estudiantes de la clase
-              if (!clase.estudiantes) return false;
-              
-              const estaAsignado = clase.estudiantes.some((est: any) => {
-                // Los estudiantes vienen como números simples, no como objetos
-                return est === parseInt(userIdStr) || est === userIdStr;
-              });
-              
-              return estaAsignado;
-            })
-            .map((clase: any) => {
-              return {
-                ...clase,
-                profesor: clase.profesor || 'Sin asignar',
-                tipo: 'profesor' // Identificar tipo de clase
-              };
-            });
-          
-          clasesFinales = [...clasesFinales, ...clasesProfesor];
+
+          clasesFinales = [...clasesProfesor];
         } catch (error) {
           console.error('Error cargando clases del profesor:', error);
         }
@@ -543,6 +483,44 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
 
     loadUserData();
     
+    // Cargar retos diarios desde el backend PHP (/daily-challenges/)
+    const loadDailyChallenges = async () => {
+      try {
+        const token = authService.getToken?.() || localStorage.getItem('token');
+        if (!token) return;
+
+        const res = await fetch(`${PHP_API_BASE_URL}/daily-challenges/`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!res.ok) {
+          return;
+        }
+
+        const data = await res.json();
+        if (data && data.success && Array.isArray(data.data) && data.data.length > 0) {
+          const mapped: DailyChallenge[] = data.data.map((item: any) => ({
+            id: item.id,
+            question: item.question,
+            options: item.options || [],
+            correctAnswer: item.correct_answer,
+            explanation: item.explanation || '',
+          }));
+
+          if (mapped.length > 0) {
+            setDailyChallenges(mapped);
+          }
+        }
+      } catch (e) {
+        console.error('Error cargando retos diarios:', e);
+      }
+    };
+
+    loadDailyChallenges();
+    
     // Escuchar cambios de estado de clases en tiempo real
     const handleClaseEstadoChanged = (event: any) => {
       console.log('Evento de cambio de estado recibido en estudiante:', event.detail);
@@ -556,7 +534,6 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
     
     // Polling para actualizar clases cada 30 segundos
     const intervalId = setInterval(() => {
-      console.log('🔄 Actualizando clases automáticamente...');
       refreshClases();
     }, 30000); // 30 segundos
     
@@ -604,12 +581,12 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
     loadMaterials();
   }, [selectedClubId]);
 
-  // Cargar misiones cuando userId y bloqueInfo estén disponibles
+  // Cargar misiones cuando userId esté disponible
   useEffect(() => {
     if (userId) {
       loadAvailableMissions();
     }
-  }, [userId, bloqueInfo]);
+  }, [userId]);
 
   useEffect(() => {
     const fetchEvaluaciones = async () => {
@@ -716,7 +693,12 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
               <div className="stars">⭐⭐⭐</div>
             </li>
           </ul>
-          <button className="btn-primary detalles">Ver detalles</button>
+          <button
+            className="btn-primary detalles"
+            onClick={() => setShowNotesModal(true)}
+          >
+            Ver detalles
+          </button>
         </div>
 
         {/* Daily Challenge Card */}
@@ -834,15 +816,15 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
         )}
       </div>
 
-      {/* Material del Club (datos reales) - Ubicado encima de Evaluaciones y Quizzes */}
-      <div className="evaluations-section" style={{ marginTop: 24 }}>
-        <div className="section-header">
+      {/* Material del Club */}
+      <div className="club-materials-section">
+        <div className="section-header-clean">
           <h2 className="section-title">Material del Club</h2>
           {clubs.length > 0 && (
             <select
               value={selectedClubId ?? ''}
               onChange={(e) => setSelectedClubId(Number(e.target.value))}
-              style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }}
+              className="club-selector"
             >
               {clubs.map((c) => (
                 <option key={c.id} value={c.id}>{c.name}</option>
@@ -858,22 +840,22 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
         ) : clubMaterials.length === 0 ? (
           <div className="no-classes-message">No hay material publicado aún.</div>
         ) : (
-          <div className="evaluations-grid">
+          <div className="club-materials-grid">
             {clubMaterials.map((item) => (
-              <div key={item.id} className="evaluation-card vocabulary-quiz">
-                <div className="evaluation-header">
-                  <div className="evaluation-icon">📎</div>
-                  <div className="evaluation-info">
+              <div key={item.id} className="club-material-card">
+                <div className="material-header">
+                  <div className="material-icon">📎</div>
+                  <div className="material-info">
                     <h3>{item.title}</h3>
-                    <span className="evaluation-type">Semana {item.week}</span>
+                    <span className="material-week">Semana {item.week}</span>
                   </div>
-                  <div className="evaluation-status available">{new Date(item.created_at).toLocaleDateString('es-ES')}</div>
+                  <div className="material-date">{new Date(item.created_at).toLocaleDateString('es-ES')}</div>
                 </div>
-                <div className="evaluation-content">
+                <div className="material-content">
                   <p>{item.description || 'Recurso del club'}</p>
                 </div>
                 {item.url && (
-                  <a className="evaluation-button" href={item.url} target="_blank" rel="noreferrer">
+                  <a className="material-button" href={item.url} target="_blank" rel="noreferrer">
                     Abrir recurso
                   </a>
                 )}
@@ -884,7 +866,7 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
       </div>
 
       {/* Evaluaciones Section */}
-      <DriveEvaluacionesEstudiante />
+      <EvaluacionesEstudiante />
 
       {/* Classes Section */}
       <div className="classes-section">
@@ -892,7 +874,6 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
           <h2 className="section-title">Clases Programadas</h2>
           <button 
             onClick={() => {
-              console.log('🔄 Refrescando clases manualmente...');
               refreshClases();
             }}
             style={{
@@ -1059,7 +1040,11 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
         onClose={() => setShowResultsModal(false)}
       />
 
-      {/* NotesModal eliminado */}
+      {/* Notes Modal (progreso detallado: notas y asistencia) */}
+      <NotesModal
+        isVisible={showNotesModal}
+        onClose={() => setShowNotesModal(false)}
+      />
 
       {/* Modal de Reto Diario */}
       {showChallengeModal && currentChallenge && (

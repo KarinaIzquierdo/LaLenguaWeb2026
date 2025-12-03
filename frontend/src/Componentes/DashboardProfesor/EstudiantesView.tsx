@@ -69,8 +69,8 @@ export default function EstudiantesView() {
         return;
       }
       
-      // Obtener las clases del profesor
-      const todasLasClases = await ClaseService.getClasesPorProfesor(currentUser.id);
+      // Obtener todas las clases desde el backend
+      const todasLasClases = await ClaseService.getClases();
       
       // Filtrar solo clases programadas o en curso (no completadas ni canceladas)
       const clasesActivas = todasLasClases.filter((c: any) => 
@@ -92,49 +92,38 @@ export default function EstudiantesView() {
         await cargarAsistenciasClase(claseHoy.id);
       }
       
-      // Obtener IDs únicos de estudiantes de TODAS las clases (no solo activas)
-      const estudiantesIds = new Set<number>();
-      todasLasClases.forEach((clase: any) => {
-        if (clase.estudiantes && Array.isArray(clase.estudiantes)) {
-          clase.estudiantes.forEach((estudianteId: number) => {
-            estudiantesIds.add(estudianteId);
-          });
-        }
-      });
-      
+      // Obtener todos los usuarios y quedarnos solo con los estudiantes
+      const usuarios = await userService.getAll();
+      const soloEstudiantes = usuarios.filter((u: any) => u.rol === 'student');
+
       // Si no hay estudiantes, mostrar lista vacía
-      if (estudiantesIds.size === 0) {
+      if (soloEstudiantes.length === 0) {
         setEstudiantes([]);
         setCargando(false);
         return;
       }
-      
-      // Obtener todos los usuarios
-      const usuarios = await userService.getAll();
-      
-      // Filtrar solo los estudiantes que están en las clases del profesor
+
+      // Construir la lista de estudiantes con estadísticas de asistencia
       const estudiantesData: Estudiante[] = await Promise.all(
-        usuarios
-          .filter(u => u.rol === 'student' && estudiantesIds.has(u.id))
-          .map(async u => {
-            // Obtener estadísticas de asistencia
-            const stats = await asistenciaService.getEstadisticasAsistencia(u.id);
-            
-            return {
-              id: u.id.toString(),
-              nombre: `${u.nombres} ${u.apellidos}`,
-              email: u.correo_personal || u.correo,
-              nivel: u.nivel || 'Sin nivel',
-              fechaRegistro: u.date_joined || new Date().toISOString(),
-              clasesCompletadas: stats.presentes, // Clases donde asistió
-              evaluacionesRealizadas: 0, // TODO: Calcular desde evaluaciones
-              promedioGeneral: 0, // TODO: Calcular desde evaluaciones
-              ultimaActividad: new Date().toISOString(),
-              estado: (u.is_active ? 'activo' : 'inactivo') as 'activo' | 'inactivo'
-            };
-          })
+        soloEstudiantes.map(async (u: any) => {
+          // Obtener estadísticas de asistencia desde el servicio (actualmente contra el backend antiguo)
+          const stats = await asistenciaService.getEstadisticasAsistencia(u.id);
+
+          return {
+            id: u.id.toString(),
+            nombre: `${u.nombres} ${u.apellidos}`,
+            email: u.correo_personal || u.correo,
+            nivel: u.nivel || 'Sin nivel',
+            fechaRegistro: u.date_joined || new Date().toISOString(),
+            clasesCompletadas: stats.presentes, // Clases donde asistió
+            evaluacionesRealizadas: 0, // TODO: Calcular desde evaluaciones
+            promedioGeneral: 0, // TODO: Calcular desde evaluaciones
+            ultimaActividad: new Date().toISOString(),
+            estado: (u.is_active ? 'activo' : 'inactivo') as 'activo' | 'inactivo'
+          };
+        })
       );
-      
+
       setEstudiantes(estudiantesData);
       
       // Cargar estadísticas de asistencia para cada estudiante

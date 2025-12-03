@@ -37,7 +37,7 @@ def delete_user_view(request, user_id):
                 phone=user.phone or '',
                 cedula=user.cedula or '',
                 nivel=user.level or user.english_level or '',
-                bloque_asignado=user.bloque_asignado or '',
+                bloque_asignado=getattr(user, 'bloque_asignado', '') or '',
                 especializacion=user.especializacion.nombre if user.especializacion else '',
                 fecha_registro=fecha_registro,
                 dias_registrado=dias_registrado,
@@ -74,8 +74,6 @@ def delete_user_view(request, user_id):
                 user.last_name = data['last_name']
             if 'correo_personal' in data:
                 user.correo_personal = data['correo_personal']
-            if 'bloque_asignado' in data:
-                user.bloque_asignado = data['bloque_asignado']
             if 'english_level' in data:
                 user.english_level = data['english_level']
             if 'is_active' in data:
@@ -92,7 +90,7 @@ def delete_user_view(request, user_id):
                     'last_name': user.last_name,
                     'email': user.email,
                     'correo_personal': user.correo_personal,
-                    'bloque_asignado': user.bloque_asignado,
+                    'bloque_asignado': getattr(user, 'bloque_asignado', '') or '',
                     'english_level': user.english_level,
                     'is_active': user.is_active,
                 }

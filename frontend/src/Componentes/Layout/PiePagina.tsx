@@ -13,7 +13,7 @@ function PiePagina() {
         {/* Logo y descripción */}
         <div className="footer-brand">
           <div className="footer-logo">
-            <span className="logo-text">La Lengua</span>
+            <span className="logo-text"> La Lengua</span>
           </div>
           <p className="footer-description">
             Acompaña a La Lengua en su aventura  mientras aprendes inglés de manera divertida e interactiva.
@@ -70,9 +70,9 @@ function PiePagina() {
         <div className="footer-contact">
           <h3>Contacto</h3>
           <div className="contact-info">
-            <p>📧 hello@thelanguage.com</p>
-            <p>📱 +57 316 4844819</p>
-            <p>📍 Bogotá, Colombia</p>
+            <p>fernandaIuis@lalenguacolombia.com</p>
+            <p>+57 316 4844819</p>
+            <p> Bogotá, Colombia</p>
           </div>
         </div>
       </div>

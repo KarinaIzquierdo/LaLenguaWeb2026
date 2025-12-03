@@ -29,8 +29,6 @@ export const createInitialBloques = () => {
 
   // Guardar bloques en localStorage
   localStorage.setItem('bloques_data', JSON.stringify(bloques));
-  console.log('✅ Bloques creados exitosamente');
-  console.log('📊 Bloques disponibles:', bloques.length);
   
   return bloques;
 };

@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://127.0.0.1:8000/api';
+const API_BASE_URL = 'https://lalenguacolombia.co/api/index.php';
 
 // Interfaces
 export interface Usuario {
@@ -120,8 +120,25 @@ export const subscriptionService = {
       const response = await axios.get(`${API_BASE_URL}/users/`, {
         headers: getAuthHeaders()
       });
-      // Filtrar solo estudiantes
-      return response.data.filter((user: Usuario) => user.role === 'student' || user.role === 'estudiante');
+
+      // El backend PHP devuelve { success, message, users: [...] }
+      // pero mantenemos compatibilidad si alguna vez devuelve un array plano
+      const raw = response.data;
+      const users = Array.isArray(raw) ? raw : (raw.users || raw.data || []);
+
+      // Asegurar que siempre devolvemos objetos con la forma de Usuario
+      const estudiantes = (users as any[]).filter((user: any) => 
+        user.role === 'student' || user.role === 'estudiante'
+      );
+
+      return estudiantes.map((u: any) => ({
+        id: u.id,
+        first_name: u.first_name,
+        last_name: u.last_name,
+        email: u.email,
+        date_joined: u.date_joined,
+        role: u.role,
+      }));
     } catch (error) {
       console.error('Error fetching estudiantes:', error);
       throw error;

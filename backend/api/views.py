@@ -11,14 +11,18 @@ from django.contrib.auth import authenticate
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
-from .models import CustomUser, Profesor, Clase, Evaluation, MediaItem, Club, ClubMaterial, Especializacion, Evaluacion, Notificacion, NotificacionEstudiante, RespuestaEvaluacion
+from .models import CustomUser, Profesor, Clase, Evaluation, MediaItem, Club, ClubMaterial, Especializacion, Evaluacion, Notificacion, NotificacionEstudiante, RespuestaEvaluacion, DailyChallengeQuestion, RegistroEliminacion, Asistencia, Suscripcion
 from .serializers import (
     UserSerializer, LoginSerializer, ChangePasswordSerializer, ClaseSerializer,
     UserRegisterSerializer, EvaluationSerializer, MediaItemSerializer,
     ClubSerializer, ClubMaterialSerializer, EvaluacionSerializer, NotificacionSerializer,
+    DailyChallengeQuestionSerializer,
 )
 from .especializacion_serializer import EspecializacionSerializer
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
+from django.db.models import Sum, Count, Q
+from django.db.models.functions import TruncMonth
 
 def home_view(request):
     """
@@ -249,7 +253,7 @@ def mobile_profile_view(request):
         'address': user.address if user.address else '',
         'learning_goals': user.learning_goals if user.learning_goals else '',
         'profile_completed': user.profile_completed if user.profile_completed is not None else False,
-        'bloque_asignado': user.bloque_asignado if user.bloque_asignado else '',
+        'bloque_asignado': getattr(user, 'bloque_asignado', '') or '',
         'created_at': user.created_at.isoformat() if user.created_at else '',
         'correo_personal': user.correo_personal if user.correo_personal else ''
     }, status=status.HTTP_200_OK)
@@ -337,7 +341,7 @@ def mobile_update_profile_view(request):
                 'address': user.address if user.address else '',
                 'learning_goals': user.learning_goals if user.learning_goals else '',
                 'profile_completed': user.profile_completed if user.profile_completed is not None else False,
-                'bloque_asignado': user.bloque_asignado if user.bloque_asignado else '',
+                'bloque_asignado': getattr(user, 'bloque_asignado', '') or '',
                 'created_at': user.created_at.isoformat() if user.created_at else '',
                 'correo_personal': user.correo_personal if user.correo_personal else ''
             }
@@ -1135,6 +1139,121 @@ def profesor_profile_view(request):
     }, status=status.HTTP_200_OK)
 
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def daily_challenges_view(request):
+    """Devuelve la lista de retos diarios configurados en el admin"""
+    # Obtener preguntas activas
+    challenges_qs = DailyChallengeQuestion.objects.filter(activo=True)
+
+    # Convertir a lista para poder barajar
+    challenges = list(challenges_qs)
+
+    # Barajar para que no siempre salgan en el mismo orden
+    try:
+        import random
+        random.shuffle(challenges)
+    except Exception:
+        pass
+
+    # Limitar a un máximo razonable (por ejemplo 20)
+    challenges = challenges[:20]
+
+    data = []
+    for ch in challenges:
+        opciones = [
+            ch.opcion_a,
+            ch.opcion_b,
+            ch.opcion_c,
+            ch.opcion_d,
+        ]
+        # Filtrar opciones vacías
+        opciones = [opt for opt in opciones if opt]
+
+        # Mapear respuesta correcta a índice
+        correct_index = 0
+        mapa = {'A': 0, 'B': 1, 'C': 2, 'D': 3}
+        if ch.respuesta_correcta in mapa:
+            correct_index = mapa[ch.respuesta_correcta]
+
+        data.append({
+            'id': ch.id,
+            'question': ch.pregunta,
+            'options': opciones,
+            'correct_answer': correct_index,
+            'explanation': ch.explicacion or '',
+            'category': ch.categoria,
+            'level': ch.nivel or '',
+        })
+
+    return Response({
+        'success': True,
+        'data': data
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def daily_challenges_admin_list_create_view(request):
+    """Lista y crea retos diarios (solo admins)."""
+    if not (request.user.is_staff or getattr(request.user, 'role', None) == 'admin'):
+        return Response({
+            'success': False,
+            'message': 'Solo administradores pueden gestionar retos diarios'
+        }, status=status.HTTP_403_FORBIDDEN)
+
+    if request.method == 'GET':
+        queryset = DailyChallengeQuestion.objects.all().order_by('-created_at')
+        serializer = DailyChallengeQuestionSerializer(queryset, many=True)
+        return Response({'success': True, 'data': serializer.data}, status=status.HTTP_200_OK)
+
+    # POST - crear
+    serializer = DailyChallengeQuestionSerializer(data=request.data)
+    if serializer.is_valid():
+        challenge = serializer.save()
+        return Response({
+            'success': True,
+            'data': DailyChallengeQuestionSerializer(challenge).data
+        }, status=status.HTTP_201_CREATED)
+
+    return Response({'success': False, 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET', 'PUT', 'PATCH', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def daily_challenges_admin_detail_view(request, pk):
+    """Detalle/actualización/eliminación de un reto diario (solo admins)."""
+    if not (request.user.is_staff or getattr(request.user, 'role', None) == 'admin'):
+        return Response({
+            'success': False,
+            'message': 'Solo administradores pueden gestionar retos diarios'
+        }, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        challenge = DailyChallengeQuestion.objects.get(pk=pk)
+    except DailyChallengeQuestion.DoesNotExist:
+        return Response({
+            'success': False,
+            'message': 'Reto no encontrado'
+        }, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'GET':
+        serializer = DailyChallengeQuestionSerializer(challenge)
+        return Response({'success': True, 'data': serializer.data}, status=status.HTTP_200_OK)
+
+    if request.method in ['PUT', 'PATCH']:
+        partial = request.method == 'PATCH'
+        serializer = DailyChallengeQuestionSerializer(challenge, data=request.data, partial=partial)
+        if serializer.is_valid():
+            challenge = serializer.save()
+            return Response({'success': True, 'data': DailyChallengeQuestionSerializer(challenge).data}, status=status.HTTP_200_OK)
+        return Response({'success': False, 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+    # DELETE
+    challenge.delete()
+    return Response({'success': True, 'message': 'Reto eliminado correctamente'}, status=status.HTTP_204_NO_CONTENT)
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def profesor_change_password_view(request):
@@ -1181,15 +1300,26 @@ class ClaseViewSet(viewsets.ModelViewSet):
         return super().get_queryset().order_by('-created_at')
     
     def create(self, request, *args, **kwargs):
-        """
-        Sobrescribir create para enviar notificaciones a los estudiantes
-        """
-        response = super().create(request, *args, **kwargs)
-        
+        """Crear clase asegurando asignación de estudiantes y enviar notificaciones."""
+        # Hacer una copia mutable de los datos
+        data = request.data.copy()
+
+        # Compatibilidad: si solo viene "estudiantes" pero no "estudiantesSeleccionados",
+        # mapearlo al campo que usa el serializer para poblar el ManyToMany
+        if 'estudiantesSeleccionados' not in data and data.get('estudiantes'):
+            data['estudiantesSeleccionados'] = data.get('estudiantes')
+
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+
+        headers = self.get_success_headers(serializer.data)
+        response = Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
         # Si la creación fue exitosa, enviar notificaciones
-        if response.status_code == 201:
+        if response.status_code == status.HTTP_201_CREATED:
             clase = Clase.objects.get(id=response.data['id'])
-            
+
             # Crear notificación para cada estudiante asignado
             for estudiante in clase.estudiantes.all():
                 NotificacionEstudiante.objects.create(
@@ -1204,7 +1334,7 @@ class ClaseViewSet(viewsets.ModelViewSet):
                         'meet_link': clase.meet_link
                     }
                 )
-        
+
         return response
     
     @action(detail=True, methods=['patch'])
@@ -1243,15 +1373,6 @@ def register_view(request):
     serializer = UserRegisterSerializer(data=request.data)
     if serializer.is_valid():
         user = serializer.save()
-        
-        # Si se proporciona bloque_asignado, asignarlo al usuario
-        if 'bloque_asignado' in request.data and request.data['bloque_asignado']:
-            user.bloque_asignado = request.data['bloque_asignado']
-            user.save()
-            
-            # Enviar respuesta con información del bloque para sincronización frontend
-            print(f"✅ Usuario {user.id} registrado con bloque: {user.bloque_asignado}")
-        
         # Enviar email de bienvenida al correo personal
         if user.correo_personal:
             try:
@@ -1337,6 +1458,160 @@ def list_users_view(request):
     users = CustomUser.objects.all().order_by('-date_joined')
     serializer = MobileUserSerializer(users, many=True)
     return Response(serializer.data)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def admin_dashboard_stats_view(request):
+    """Devuelve estadísticas generales para el dashboard del administrador"""
+    user = request.user
+    if not (getattr(user, 'role', None) == 'admin' or user.is_staff):
+        return Response({
+            'success': False,
+            'message': 'Solo administradores pueden ver estas estadísticas'
+        }, status=status.HTTP_403_FORBIDDEN)
+
+    today = timezone.now().date()
+    start_of_month = today.replace(day=1)
+
+    # Total de estudiantes activos
+    total_students = CustomUser.objects.filter(role='student', is_active=True).count()
+
+    # Clases programadas (hoy en adelante) con estado programada o activa
+    scheduled_classes = Clase.objects.filter(
+        fecha__gte=today,
+        estado__in=['programada', 'activa']
+    ).count()
+
+    # Ingresos del mes: ventas pagadas en el mes actual
+    from .models import Venta
+    ventas_mes = Venta.objects.filter(
+        estado='pagado',
+        fecha_venta__date__gte=start_of_month,
+        fecha_venta__date__lte=today
+    ).aggregate(total=Sum('precio_total'))
+
+    monthly_revenue = float(ventas_mes['total'] or 0)
+
+    return Response({
+        'success': True,
+        'data': {
+            'total_students': total_students,
+            'scheduled_classes': scheduled_classes,
+            'monthly_revenue': monthly_revenue,
+            'month_start': start_of_month.isoformat(),
+            'today': today.isoformat(),
+        }
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def admin_dashboard_charts_view(request):
+    """Devuelve datos agregados para las gráficas del dashboard admin"""
+    user = request.user
+    if not (getattr(user, 'role', None) == 'admin' or user.is_staff):
+        return Response({
+            'success': False,
+            'message': 'Solo administradores pueden ver estas estadísticas'
+        }, status=status.HTTP_403_FORBIDDEN)
+
+    today = timezone.now().date()
+
+    # ========== 1) NUEVOS ESTUDIANTES Y EGRESADOS POR MES ==========
+    # Agrupar últimos 6 meses por month (date)
+    new_qs = CustomUser.objects.filter(
+        role='student',
+        date_joined__isnull=False
+    ).annotate(month=TruncMonth('date_joined')).values('month').annotate(count=Count('id')).order_by('month')
+
+    removed_qs = RegistroEliminacion.objects.annotate(
+        month=TruncMonth('fecha_eliminacion')
+    ).values('month').annotate(count=Count('id')).order_by('month')
+
+    months = sorted({e['month'] for e in new_qs} | {e['month'] for e in removed_qs})
+    # Limitar a los últimos 6 meses
+    months = months[-6:]
+
+    def month_label(dt):
+        return dt.strftime('%b %Y') if dt else ''
+
+    new_map = {e['month']: e['count'] for e in new_qs}
+    removed_map = {e['month']: e['count'] for e in removed_qs}
+
+    students_monthly = {
+        'labels': [month_label(m) for m in months],
+        'new': [new_map.get(m, 0) for m in months],
+        'removed': [removed_map.get(m, 0) for m in months],
+    }
+
+    # ========== 2) DISTRIBUCIÓN POR NIVEL ==========
+    level_qs = CustomUser.objects.filter(role='student', is_active=True).values('english_level').annotate(count=Count('id')).order_by('english_level')
+
+    level_distribution = {
+        'labels': [e['english_level'] or 'Sin nivel' for e in level_qs],
+        'counts': [e['count'] for e in level_qs],
+    }
+
+    # ========== 3) ASISTENCIA PROMEDIO POR MES ==========
+    asistencia_qs = Asistencia.objects.annotate(month=TruncMonth('fecha')).values('month').annotate(
+        total=Count('id'),
+        presentes=Count('id', filter=Q(estado='presente')),
+    ).order_by('month')
+
+    months_att = [e['month'] for e in asistencia_qs][-6:]
+    att_map = {e['month']: e for e in asistencia_qs}
+
+    attendance_monthly_labels = []
+    attendance_percentages = []
+    for m in months_att:
+        row = att_map[m]
+        total = row['total'] or 0
+        presentes = row['presentes'] or 0
+        pct = round((presentes / total * 100), 1) if total > 0 else 0
+        attendance_monthly_labels.append(month_label(m))
+        attendance_percentages.append(pct)
+
+    attendance_monthly = {
+        'labels': attendance_monthly_labels,
+        'percentage': attendance_percentages,
+    }
+
+    # ========== 4) PROGRESO PROMEDIO POR NIVEL ==========
+    subs = Suscripcion.objects.select_related('estudiante')
+    level_progress_map: dict[str, dict[str, float]] = {}
+
+    for s in subs:
+        level = getattr(s.estudiante, 'english_level', None) or 'Sin nivel'
+        progreso = s.progreso_porcentaje
+        if level not in level_progress_map:
+            level_progress_map[level] = {'sum': 0.0, 'count': 0}
+        level_progress_map[level]['sum'] += float(progreso)
+        level_progress_map[level]['count'] += 1
+
+    level_labels = []
+    level_averages = []
+    for level, agg in level_progress_map.items():
+        level_labels.append(level)
+        if agg['count'] > 0:
+            level_averages.append(round(agg['sum'] / agg['count'], 1))
+        else:
+            level_averages.append(0)
+
+    level_progress = {
+        'labels': level_labels,
+        'averages': level_averages,
+    }
+
+    return Response({
+        'success': True,
+        'data': {
+            'students_monthly': students_monthly,
+            'level_distribution': level_distribution,
+            'attendance_monthly': attendance_monthly,
+            'level_progress': level_progress,
+        }
+    }, status=status.HTTP_200_OK)
 
 
 # ==================== ENDPOINTS PARA GALERÍA ====================

@@ -52,12 +52,12 @@ export default function UserInfoModal({ isOpen, onClose, onComplete }: UserInfoM
       return;
     }
 
-    // Validar fecha de nacimiento (mayor de edad)
+    // Validar fecha de nacimiento (mínimo 10 años)
     const birthDate = new Date(formData.birthDate);
     const today = new Date();
     const age = today.getFullYear() - birthDate.getFullYear();
-    if (age < 16) {
-      setMessage('Debes ser mayor de 16 años para registrarte');
+    if (age < 10) {
+      setMessage('Debes tener al menos 10 años para registrarte');
       setMessageType('error');
       return;
     }

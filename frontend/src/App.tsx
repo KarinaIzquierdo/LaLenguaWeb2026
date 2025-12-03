@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import Home from './Componentes/Home/Home'
 import Blog from './Componentes/Blog/Blog'
+import PlanesPublicos from './Componentes/Planes/PlanesPublicos'
 import Header from './Componentes/Layout/Encabezado'
 import Footer from './Componentes/Layout/PiePagina'
 import Dashboard from './Componentes/DashboardUsu/Dashboard_Usuario'
@@ -18,13 +19,13 @@ import FormularioUsuarios from './Componentes/DashboardAdmin/FormularioUsuarios'
 import GestionEstudiantes from './Componentes/DashboardAdmin/GestionEstudiantes'
 import ProgramarClases from './Componentes/DashboardAdmin/ProgramarClases'
 // import GestionCursos from './Componentes/DashboardAdmin/GestionCursos'
-import BloquesView from './Componentes/DashboardAdmin/BloquesView'
 import GestionGaleria from './Componentes/DashboardAdmin/GestionGaleria'
 import Especializaciones from './Componentes/DashboardAdmin/Especializaciones'
 import PlanesPrecios from './Componentes/DashboardAdmin/PlanesPrecios';
 import RegistroVentas from './Componentes/DashboardAdmin/RegistroVentas';
 import GestionSuscripciones from './Componentes/DashboardAdmin/GestionSuscripciones';
 import MisionesAdmin from './Componentes/DashboardAdmin/MisionesAdmin';
+import RetosDiariosAdmin from './Componentes/DashboardAdmin/RetosDiariosAdmin';
 import RegistrosEliminacion from './Componentes/DashboardAdmin/RegistrosEliminacion';
 
 function App() {
@@ -75,6 +76,11 @@ function App() {
   }
 
   const handleLogin = async (credentials: any) => {
+    console.log('=== HANDLE LOGIN START ===');
+    console.log('authService:', authService);
+    console.log('authService.getUserProfile:', authService.getUserProfile);
+    console.log('typeof authService.getUserProfile:', typeof authService.getUserProfile);
+    
     const result = await authService.login(credentials)
     
     if (result.success) {
@@ -83,6 +89,9 @@ function App() {
       
       // Obtener el rol del usuario y verificar si es primer login
       try {
+        console.log('About to call getUserProfile...');
+        console.log('authService before call:', authService);
+        
         const profile = await authService.getUserProfile()
         console.log('Profile check:', profile)
         console.log('Profile role:', profile.role)
@@ -177,6 +186,18 @@ function App() {
                 />
               </>
             } />
+
+            {/* Ruta de Planes - Pública para todos */}
+            <Route path="/planes" element={
+              <>
+                <PlanesPublicos />
+                <LoginModal 
+                  isOpen={isLoginModalOpen}
+                  onClose={handleCloseModal}
+                  onLogin={handleLogin}
+                />
+              </>
+            } />
             
             {/* Dashboard de estudiante */}
             <Route path="/dashboard" element={
@@ -219,13 +240,13 @@ function App() {
               <Route path="registros-eliminacion" element={<RegistrosEliminacion />} />
               <Route path="programar-clases" element={<ProgramarClases />} />
               {/** Gestión de cursos movida al Dashboard del Profesor como "Gestión CLB" **/}
-              <Route path="bloques" element={<BloquesView />} />
               <Route path="galeria" element={<GestionGaleria />} />
               <Route path="especializaciones" element={<Especializaciones />} />
               <Route path="planes-precios" element={<PlanesPrecios />} />
               <Route path="registro-ventas" element={<RegistroVentas />} />
               <Route path="gestion-suscripciones" element={<GestionSuscripciones />} />
               <Route path="misiones" element={<MisionesAdmin />} />
+              <Route path="retos-diarios" element={<RetosDiariosAdmin />} />
             </Route>
             
             {/* Ruta de login - redirige al home */}

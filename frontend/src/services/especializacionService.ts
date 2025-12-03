@@ -3,6 +3,8 @@
  * @brief Servicio para gestionar especializaciones conectado con la API
  */
 
+import { API_BASE_URL } from '../config/api';
+
 export interface Especializacion {
   id: number;
   nombre: string;
@@ -22,7 +24,8 @@ interface ApiResponse<T> {
 }
 
 class EspecializacionService {
-  private baseUrl = 'http://localhost:8000/api/especializaciones';
+  // Usamos la misma URL base de la app (backend Django en /api)
+  private baseUrl = `${API_BASE_URL}/especializaciones`;
 
   private getAuthHeaders() {
     const token = localStorage.getItem('token');

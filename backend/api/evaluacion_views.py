@@ -3,10 +3,11 @@ from rest_framework.decorators import api_view, permission_classes, parser_class
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
-from .models import Evaluacion, CustomUser, RespuestaEvaluacion
+from .models import Evaluacion, CustomUser, RespuestaEvaluacion, Notificacion
 from .serializers import EvaluacionSerializer, UserSerializer, RespuestaEvaluacionSerializer
 from django.http import HttpResponse, Http404
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 import os
 import json
 
@@ -142,11 +143,15 @@ def evaluacion_delete_view(request, pk):
 @permission_classes([IsAuthenticated])
 def evaluacion_publish_view(request, pk):
     """
-    Publicar evaluación (cambiar estado a 'published')
+    Publicar evaluación (cambiar estado a 'publicada')
     """
     try:
         evaluacion = Evaluacion.objects.get(pk=pk, profesor=request.user)
-        evaluacion.estado = 'published'
+        # Toggle entre 'borrador' y 'publicada'
+        if evaluacion.estado == 'publicada':
+            evaluacion.estado = 'borrador'
+        else:
+            evaluacion.estado = 'publicada'
         evaluacion.save()
         
         return Response({
@@ -170,7 +175,7 @@ def student_evaluaciones_view(request):
     print(f"DEBUG STUDENT EVALUACIONES: Usuario: {request.user}")
     evaluaciones = Evaluacion.objects.filter(
         estudiantes_asignados=request.user,
-        estado='published'
+        estado='publicada'
     ).order_by('-created_at')
     
     print(f"DEBUG: Encontradas {evaluaciones.count()} evaluaciones")
@@ -247,43 +252,93 @@ def download_evaluacion_view(request, pk):
 @permission_classes([IsAuthenticated])
 @parser_classes([MultiPartParser, FormParser])
 def upload_respuesta_view(request, pk):
-    """
-    Subir respuesta de evaluación por parte del estudiante
-    """
+    """Subir respuesta de evaluación por parte del estudiante"""
     try:
-        evaluacion = get_object_or_404(Evaluacion, pk=pk, estudiantes_asignados=request.user, estado='publicada')
-        
+        evaluacion = get_object_or_404(
+            Evaluacion,
+            pk=pk,
+            estudiantes_asignados=request.user,
+            estado='publicada'
+        )
+
         # Verificar si ya existe una respuesta
         respuesta, created = RespuestaEvaluacion.objects.get_or_create(
             evaluacion=evaluacion,
             estudiante=request.user,
             defaults={'completado': False}
         )
-        
-        # Actualizar la respuesta con los nuevos datos
-        data = request.data.copy()
-        data['evaluacion'] = evaluacion.id
-        
-        serializer = RespuestaEvaluacionSerializer(respuesta, data=data, partial=True, context={'request': request})
-        
+
+        # Construir explícitamente los datos para evitar problemas al copiar archivos del request
+        file_obj = request.FILES.get('archivo_respuesta')
+        data = {
+            'evaluacion': evaluacion.id,
+        }
+        if file_obj is not None:
+            data['archivo_respuesta'] = file_obj
+
+        # Permitir que el estudiante envíe un comentario opcional (se guarda en comentarios_profesor)
+        comentarios = request.data.get('comentarios') or request.data.get('comentarios_profesor')
+        if comentarios is not None:
+            data['comentarios_profesor'] = comentarios
+
+        serializer = RespuestaEvaluacionSerializer(
+            respuesta,
+            data=data,
+            partial=True,
+            context={'request': request}
+        )
+
         if serializer.is_valid():
-            respuesta = serializer.save()
+            # Guardar la respuesta marcándola como completada y actualizando fecha_envio
+            respuesta = serializer.save(completado=True)
+            respuesta.fecha_envio = timezone.now()
+            respuesta.save()
+
+            # Crear notificación para el profesor indicando que el estudiante subió la tarea
+            try:
+                profesor = getattr(evaluacion, 'profesor', None)
+                if profesor is not None:
+                    Notificacion.objects.create(
+                        profesor=profesor,
+                        tipo='evaluacion_subida',
+                        titulo=f'Nueva respuesta a "{evaluacion.titulo}"',
+                        mensaje=(
+                            f'El estudiante {request.user.get_full_name() or request.user.username} '
+                            f'ha subido su tarea para "{evaluacion.titulo}".'
+                        ),
+                        prioridad='media',
+                        evaluacion_relacionada=evaluacion,
+                        estudiante_relacionado=request.user,
+                    )
+            except Exception as notif_err:
+                # No romper el flujo si la notificación falla; solo registrar en logs
+                print(f"Error creando notificación de evaluación_subida: {notif_err}")
+
             return Response({
                 'success': True,
-                'data': serializer.data,
+                'data': RespuestaEvaluacionSerializer(respuesta, context={'request': request}).data,
                 'message': 'Respuesta subida exitosamente'
             }, status=status.HTTP_200_OK)
-        
+
+        # Si el serializer no es válido, devolver errores claros
         return Response({
             'success': False,
             'errors': serializer.errors
         }, status=status.HTTP_400_BAD_REQUEST)
-        
+
     except Evaluacion.DoesNotExist:
         return Response({
             'success': False,
             'message': 'Evaluación no encontrada o no tienes acceso'
         }, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        # Capturar cualquier otro error inesperado para evitar 500 silenciosos
+        import traceback
+        traceback.print_exc()
+        return Response({
+            'success': False,
+            'message': f'Error interno al subir respuesta: {str(e)}'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(['GET'])
@@ -292,7 +347,8 @@ def student_respuestas_view(request):
     """
     Listar respuestas del estudiante autenticado
     """
-    respuestas = RespuestaEvaluacion.objects.filter(estudiante=request.user).order_by('-created_at')
+    # Ordenar por fecha de envío en lugar de created_at (campo que no existe)
+    respuestas = RespuestaEvaluacion.objects.filter(estudiante=request.user).order_by('-fecha_envio')
     serializer = RespuestaEvaluacionSerializer(respuestas, many=True, context={'request': request})
     return Response({
         'success': True,

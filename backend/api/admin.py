@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.utils.html import format_html
-from .models import MissionExternalLink, RegistroEliminacion, Asistencia, Clase, Suscripcion
+from .models import MissionExternalLink, RegistroEliminacion, Asistencia, Clase, Suscripcion, DailyChallengeQuestion
 
 
 @admin.register(MissionExternalLink)
@@ -219,3 +219,27 @@ class SuscripcionAdmin(admin.ModelAdmin):
             count += 1
         self.message_user(request, f'{count} suscripciones actualizadas.')
     actualizar_estados.short_description = 'Actualizar estados de suscripciones'
+
+
+@admin.register(DailyChallengeQuestion)
+class DailyChallengeQuestionAdmin(admin.ModelAdmin):
+    list_display = ('pregunta_resumida', 'categoria', 'nivel', 'respuesta_correcta', 'activo', 'created_at')
+    list_filter = ('categoria', 'nivel', 'activo')
+    search_fields = ('pregunta', 'opcion_a', 'opcion_b', 'opcion_c', 'opcion_d')
+    list_editable = ('activo',)
+
+    fieldsets = (
+        ('Pregunta', {
+            'fields': ('pregunta', 'categoria', 'nivel', 'activo')
+        }),
+        ('Opciones', {
+            'fields': ('opcion_a', 'opcion_b', 'opcion_c', 'opcion_d', 'respuesta_correcta')
+        }),
+        ('Explicación', {
+            'fields': ('explicacion',)
+        }),
+    )
+
+    def pregunta_resumida(self, obj):
+        return (obj.pregunta[:60] + '…') if len(obj.pregunta) > 60 else obj.pregunta
+    pregunta_resumida.short_description = 'Pregunta'

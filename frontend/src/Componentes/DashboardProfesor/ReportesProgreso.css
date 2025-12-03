@@ -63,7 +63,8 @@
   border-radius: 12px;
   font-size: 0.875rem;
   font-weight: 600;
-  color: white;
+  color: #111827; /* texto oscuro para mejor lectura */
+  background: #e5e7eb; /* fondo gris claro para que destaque el nivel */
 }
 
 .nivel-badge-table.básico {

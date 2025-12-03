@@ -1,35 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 
-class Bloque(models.Model):
-    """
-    Modelo para los bloques de clases (horarios y niveles)
-    """
-    nombre = models.CharField(max_length=50, help_text="Nombre del turno: Mañana, Tarde, Noche")
-    nivel = models.CharField(max_length=10, help_text="Nivel: A1, A2, B1, B2, C1, C2")
-    estado = models.CharField(max_length=20, default='configurado', help_text="Estado del bloque")
-    grupo_color = models.CharField(max_length=7, default='#FFC107', help_text="Color en formato hexadecimal")
-    horario_inicio = models.TimeField(blank=True, null=True, help_text="Hora de inicio del bloque")
-    horario_fin = models.TimeField(blank=True, null=True, help_text="Hora de fin del bloque")
-    cupo_maximo = models.IntegerField(default=20, help_text="Número máximo de estudiantes")
-    activo = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    
-    class Meta:
-        ordering = ['nivel', 'nombre']
-        verbose_name = 'Bloque'
-        verbose_name_plural = 'Bloques'
-        unique_together = ['nombre', 'nivel']  # No puede haber dos "A1 - Mañana"
-    
-    def __str__(self):
-        return f"{self.nivel} - {self.nombre}"
-    
-    @property
-    def estudiantes_count(self):
-        """Cuenta cuántos estudiantes están asignados a este bloque"""
-        return CustomUser.objects.filter(bloque_asignado=str(self)).count()
-
 
 class CustomUser(AbstractUser):
     """
@@ -64,9 +35,6 @@ class CustomUser(AbstractUser):
         ('financiero', 'Financiero'),
     ]
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='student')
-    
-    # Bloque asignado para estudiantes
-    bloque_asignado = models.CharField(max_length=50, blank=True, null=True)
     
     # Especialización asignada (relación con modelo Especializacion)
     especializacion = models.ForeignKey('Especializacion', on_delete=models.SET_NULL, null=True, blank=True, related_name='estudiantes')
@@ -743,3 +711,43 @@ class Asistencia(models.Model):
     
     def __str__(self):
         return f"{self.estudiante.username} - {self.fecha} - {self.estado}"
+
+
+class DailyChallengeQuestion(models.Model):
+    """Preguntas configurables para los retos diarios del dashboard de estudiante"""
+
+    CATEGORY_CHOICES = [
+        ('vocabulary', 'Vocabulario'),
+        ('grammar', 'Gramática'),
+        ('conversation', 'Conversación'),
+        ('general', 'General'),
+    ]
+
+    pregunta = models.TextField()
+    categoria = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='general')
+    nivel = models.CharField(max_length=50, blank=True, null=True, help_text="Nivel sugerido (A1, A2, B1, etc.)")
+
+    opcion_a = models.CharField(max_length=255)
+    opcion_b = models.CharField(max_length=255)
+    opcion_c = models.CharField(max_length=255, blank=True, null=True)
+    opcion_d = models.CharField(max_length=255, blank=True, null=True)
+
+    RESPUESTA_CHOICES = [
+        ('A', 'Opción A'),
+        ('B', 'Opción B'),
+        ('C', 'Opción C'),
+        ('D', 'Opción D'),
+    ]
+    respuesta_correcta = models.CharField(max_length=1, choices=RESPUESTA_CHOICES)
+
+    explicacion = models.TextField(blank=True, null=True)
+    activo = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Reto Diario'
+        verbose_name_plural = 'Retos Diarios'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return self.pregunta[:60]

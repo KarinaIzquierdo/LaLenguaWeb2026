@@ -49,6 +49,12 @@ export default function Header({ onLoginClick }: HeaderProps) {
           }, 100);
         }}>Contact</a>
         <Link to="/blog" className={location.pathname === '/blog' ? 'active blog-link' : 'blog-link'}>Blog</Link>
+        <Link 
+          to="/planes" 
+          className={location.pathname === '/planes' ? 'active' : ''}
+        >
+          Planes
+        </Link>
         <button onClick={onLoginClick} className="login-btn">
           <span className="btn-text">La Lengua</span>
           <span className="btn-hover">Login</span>

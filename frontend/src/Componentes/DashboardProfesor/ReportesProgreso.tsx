@@ -4,6 +4,8 @@ import DetalleEstudianteModal from './DetalleEstudianteModal';
 import { evaluacionService } from '../../services/evaluacionService';
 import { userService } from '../../services/userService';
 import { ClaseService } from '../../services/claseService';
+import { asistenciaService } from '../../services/asistenciaService';
+import { calificacionService } from '../../services/calificacionService';
 
 interface EstudianteProgreso {
   id: number;
@@ -56,59 +58,113 @@ export default function ReportesProgreso() {
         setLoading(false);
         return;
       }
-      
-      // Obtener las clases del profesor
-      const clasesDelProfesor = await ClaseService.getClasesPorProfesor(currentUser.id);
-      
-      // Obtener IDs únicos de estudiantes de todas las clases
-      const estudiantesIds = new Set<number>();
-      clasesDelProfesor.forEach((clase: any) => {
-        if (clase.estudiantes && Array.isArray(clase.estudiantes)) {
-          clase.estudiantes.forEach((estudianteId: number) => {
-            estudiantesIds.add(estudianteId);
+
+      // Cargar calificaciones reales ya calificadas para este profesor
+      const mapaCalificaciones: Record<number, { suma: number; count: number }> = {};
+      try {
+        const respCalif = await calificacionService.obtenerRespuestasCalificadas();
+        if (respCalif.success && Array.isArray(respCalif.respuestas)) {
+          respCalif.respuestas.forEach((resp: any) => {
+            const estudianteId = resp.estudiante;
+            const nota = resp.calificacion;
+            if (!estudianteId || nota === null || nota === undefined) return;
+
+            if (!mapaCalificaciones[estudianteId]) {
+              mapaCalificaciones[estudianteId] = { suma: 0, count: 0 };
+            }
+            mapaCalificaciones[estudianteId].suma += Number(nota);
+            mapaCalificaciones[estudianteId].count += 1;
           });
         }
-      });
-      
-      // Si no hay estudiantes, mostrar lista vacía
-      if (estudiantesIds.size === 0) {
+      } catch (e) {
+        console.error('Error obteniendo calificaciones para reportes:', e);
+      }
+
+      // Cargar todos los usuarios desde el backend PHP
+      const usuarios = await userService.getAll();
+
+      // Filtrar solo estudiantes (por ahora, sin segmentar por profesor específico)
+      const estudiantesFiltrados = usuarios.filter((u: any) => u.rol === 'student');
+
+      if (estudiantesFiltrados.length === 0) {
         setEstudiantes([]);
-        const stats: EstadisticasGenerales = {
+        const statsVacias: EstadisticasGenerales = {
           total_estudiantes: 0,
           progreso_promedio: 0,
           calificacion_promedio: 0
         };
-        setEstadisticas(stats);
+        setEstadisticas(statsVacias);
         setLoading(false);
         return;
       }
-      
-      // Cargar todos los usuarios
-      const usuarios = await userService.getAll();
-      
-      // Filtrar solo los estudiantes que están en las clases del profesor
-      const estudiantesData: EstudianteProgreso[] = usuarios
-        .filter(u => u.rol === 'student' && estudiantesIds.has(u.id))
-        .map(u => ({
-          id: u.id,
-          nombre: `${u.nombres} ${u.apellidos}`,
-          nivel: u.nivel || 'Sin nivel',
-          progreso: 0, // TODO: Calcular progreso real
-          clasesCompletadas: 0, // TODO: Calcular desde asistencias
-          clasesTotales: 10, // TODO: Obtener total de clases
-          ultimaClase: new Date().toISOString(),
-          fortalezas: [],
-          areasAMejorar: [],
-          calificacionPromedio: 0 // TODO: Calcular desde evaluaciones
-        }));
-      
+
+      // Construir datos de progreso usando asistencias reales y calificaciones reales
+      const estudiantesData: EstudianteProgreso[] = await Promise.all(
+        estudiantesFiltrados.map(async (u: any) => {
+          let progreso = 0;
+          let clasesCompletadas = 0;
+          let clasesTotales = 0;
+          let ultimaClase = u.date_joined || new Date().toISOString();
+
+          try {
+            const asistencias = await asistenciaService.getAsistenciasPorEstudiante(u.id);
+            if (Array.isArray(asistencias) && asistencias.length > 0) {
+              clasesTotales = asistencias.length;
+              clasesCompletadas = asistencias.filter((a: any) => a.estado === 'presente').length;
+              progreso = clasesTotales > 0 
+                ? Math.round((clasesCompletadas / clasesTotales) * 100)
+                : 0;
+
+              // El endpoint PHP devuelve las asistencias ordenadas por fecha DESC,
+              // por lo que la primera es la última clase registrada
+              const ultima = asistencias[0];
+              if (ultima && ultima.fecha) {
+                ultimaClase = ultima.fecha;
+              }
+            }
+          } catch (e) {
+            console.error('Error obteniendo asistencias para', u.id, e);
+          }
+
+          // Calificación promedio real (0-100) basada en respuestas calificadas
+          const infoCalif = mapaCalificaciones[u.id];
+          const calificacionPromedio = infoCalif && infoCalif.count > 0
+            ? infoCalif.suma / infoCalif.count
+            : 0;
+
+          return {
+            id: u.id,
+            nombre: `${u.nombres} ${u.apellidos}`,
+            nivel: u.nivel || 'Sin nivel',
+            progreso,
+            clasesCompletadas,
+            clasesTotales,
+            ultimaClase,
+            fortalezas: [],
+            areasAMejorar: [],
+            calificacionPromedio
+          };
+        })
+      );
+
       setEstudiantes(estudiantesData);
-      
-      // Calcular estadísticas
+
+      // Calcular estadísticas generales basadas en los datos de los estudiantes
+      const totalEstudiantesCalc = estudiantesData.length;
+      const sumaProgreso = estudiantesData.reduce((acc, est) => acc + (est.progreso || 0), 0);
+      const progresoPromedioCalc = totalEstudiantesCalc > 0 ? sumaProgreso / totalEstudiantesCalc : 0;
+      const sumaCalificaciones = estudiantesData.reduce(
+        (acc, est) => acc + (est.calificacionPromedio || 0),
+        0
+      );
+      const calificacionPromedioCalc = totalEstudiantesCalc > 0
+        ? sumaCalificaciones / totalEstudiantesCalc
+        : 0;
+
       const stats: EstadisticasGenerales = {
-        total_estudiantes: estudiantesData.length,
-        progreso_promedio: 0,
-        calificacion_promedio: 0
+        total_estudiantes: totalEstudiantesCalc,
+        progreso_promedio: progresoPromedioCalc,
+        calificacion_promedio: calificacionPromedioCalc
       };
       setEstadisticas(stats);
       
@@ -159,19 +215,8 @@ INFORMACIÓN GENERAL:
 - Nivel: ${estudiante.nivel}
 - Progreso general: ${estudiante.progreso}%
 - Clases completadas: ${estudiante.clasesCompletadas} de ${estudiante.clasesTotales}
-- Calificación promedio: ${estudiante.calificacionPromedio}/10
+- Calificación promedio: ${estudiante.calificacionPromedio.toFixed(1)}/100
 - Última clase: ${new Date(estudiante.ultimaClase).toLocaleDateString('es-ES')}
-
-FORTALEZAS:
-${estudiante.fortalezas.map(f => `- ${f}`).join('\n')}
-
-ÁREAS A MEJORAR:
-${estudiante.areasAMejorar.map(a => `- ${a}`).join('\n')}
-
-RECOMENDACIONES:
-- Continuar reforzando las fortalezas identificadas
-- Enfocar las próximas clases en las áreas de mejora
-- Mantener la motivación y el ritmo de aprendizaje
 
 Generado el: ${new Date().toLocaleDateString('es-ES')}
     `.trim();
@@ -306,13 +351,6 @@ Generado el: ${new Date().toLocaleDateString('es-ES')}
                     <td>{new Date(estudiante.ultimaClase).toLocaleDateString('es-ES')}</td>
                     <td>
                       <div className="acciones-table">
-                        <button 
-                          className="btn-accion-table btn-ver"
-                          onClick={() => mostrarDetalles(estudiante)}
-                          title="Ver Detalles"
-                        >
-                          👁️
-                        </button>
                         <button 
                           className="btn-accion-table btn-generar"
                           onClick={() => generarReporte(estudiante)}

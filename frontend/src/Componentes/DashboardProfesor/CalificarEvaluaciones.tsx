@@ -1,86 +1,66 @@
 import React, { useState, useEffect } from 'react';
-import { calificacionService, type RespuestaEvaluacion } from '../../services/calificacionService';
+import { calificacionService, type PanelCalificacionItem } from '../../services/calificacionService';
 import './CalificarEvaluaciones.css';
 
 interface CalificarEvaluacionesProps {}
 
 export default function CalificarEvaluaciones({}: CalificarEvaluacionesProps) {
   const [activeTab, setActiveTab] = useState<'por-calificar' | 'calificadas'>('por-calificar');
-  const [respuestasPorCalificar, setRespuestasPorCalificar] = useState<RespuestaEvaluacion[]>([]);
-  const [respuestasCalificadas, setRespuestasCalificadas] = useState<RespuestaEvaluacion[]>([]);
+  const [items, setItems] = useState<PanelCalificacionItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [respuestaSeleccionada, setRespuestaSeleccionada] = useState<RespuestaEvaluacion | null>(null);
-  const [mostrarModal, setMostrarModal] = useState(false);
-  const [calificacion, setCalificacion] = useState<string>('');
-  const [comentarios, setComentarios] = useState<string>('');
+  const [notas, setNotas] = useState<Record<string, string>>({});
   const [guardando, setGuardando] = useState(false);
-  const [mostrarVistaPrevia, setMostrarVistaPrevia] = useState(false);
-  const [archivoPrevia, setArchivoPrevia] = useState<string | null>(null);
+  const [filtro, setFiltro] = useState('');
 
   useEffect(() => {
-    cargarRespuestas();
-  }, [activeTab]);
+    cargarPanel();
+  }, []);
 
-  const cargarRespuestas = async () => {
+  const cargarPanel = async () => {
     setLoading(true);
     setError(null);
 
     try {
-      if (activeTab === 'por-calificar') {
-        console.log('🔍 Cargando respuestas por calificar...');
-        const response = await calificacionService.obtenerRespuestasPorCalificar();
-        console.log('📊 Respuesta del servidor:', response);
-        
-        if (response.success) {
-          console.log(`✅ ${response.respuestas.length} respuestas cargadas`);
-          console.log('📋 Respuestas con archivos:', response.respuestas.filter(r => r.archivo_respuesta).length);
-          response.respuestas.forEach((r, i) => {
-            console.log(`${i+1}. ${r.estudiante_nombre} - ${r.evaluacion_titulo}`);
-            console.log(`   Archivo: ${r.archivo_respuesta || 'Sin archivo'}`);
-          });
-          setRespuestasPorCalificar(response.respuestas);
-        } else {
-          console.error('❌ Error en respuesta:', response.error);
-          setError(response.error || 'Error al cargar respuestas');
-        }
-      } else {
-        const response = await calificacionService.obtenerRespuestasCalificadas();
-        if (response.success) {
-          setRespuestasCalificadas(response.respuestas);
-        } else {
-          setError(response.error || 'Error al cargar respuestas');
-        }
+      const response = await calificacionService.obtenerPanelCalificaciones();
+      if (!response.success) {
+        setError(response.error || 'Error al cargar panel de calificaciones');
+        setItems([]);
+        return;
       }
+
+      setItems(response.items);
+
+      // Inicializar notas con las calificaciones existentes
+      const inicial: Record<string, string> = {};
+      response.items.forEach((item) => {
+        if (item.calificacion !== null) {
+          const key = `${item.evaluacion_id}-${item.estudiante_id}`;
+          inicial[key] = item.calificacion.toString();
+        }
+      });
+      setNotas(inicial);
     } catch (err) {
-      console.error('💥 Error de conexión:', err);
+      console.error('💥 Error de conexión en panel:', err);
       setError('Error de conexión');
     } finally {
       setLoading(false);
     }
   };
 
-  const abrirModalCalificacion = (respuesta: RespuestaEvaluacion) => {
-    setRespuestaSeleccionada(respuesta);
-    setCalificacion(respuesta.calificacion?.toString() || '');
-    setComentarios(respuesta.comentarios_profesor || '');
-    setMostrarModal(true);
+  const handleNotaChange = (key: string, value: string) => {
+    setNotas((prev) => ({ ...prev, [key]: value }));
   };
 
-  const cerrarModal = () => {
-    setMostrarModal(false);
-    setRespuestaSeleccionada(null);
-    setCalificacion('');
-    setComentarios('');
-  };
-
-  const guardarCalificacion = async () => {
-    if (!respuestaSeleccionada || !calificacion) {
+  const guardarCalificacion = async (item: PanelCalificacionItem) => {
+    const rowKey = `${item.evaluacion_id}-${item.estudiante_id}`;
+    const valor = notas[rowKey] ?? '';
+    if (!valor.trim()) {
       alert('Por favor ingresa una calificación');
       return;
     }
 
-    const calificacionNum = parseFloat(calificacion);
+    const calificacionNum = parseFloat(valor);
     if (isNaN(calificacionNum) || calificacionNum < 0 || calificacionNum > 100) {
       alert('La calificación debe ser un número entre 0 y 100');
       return;
@@ -91,194 +71,70 @@ export default function CalificarEvaluaciones({}: CalificarEvaluacionesProps) {
     try {
       const calificacionData = {
         calificacion: calificacionNum,
-        comentarios_profesor: comentarios
+        comentarios_profesor: '', // interfaz simplificada: sin comentarios por ahora
       };
 
-      let response;
-      if (respuestaSeleccionada.calificacion !== null && respuestaSeleccionada.calificacion !== undefined) {
-        // Actualizar calificación existente
-        response = await calificacionService.actualizarCalificacion(respuestaSeleccionada.id, calificacionData);
-      } else {
-        // Nueva calificación
-        response = await calificacionService.calificarRespuesta(respuestaSeleccionada.id, calificacionData);
-      }
+      // Usar el endpoint de panel que crea o actualiza la respuesta según sea necesario
+      const response = await calificacionService.calificarDesdePanel(
+        item.evaluacion_id,
+        item.estudiante_id,
+        calificacionData
+      );
 
       if (response.success) {
         alert(response.message || 'Calificación guardada exitosamente');
-        cerrarModal();
-        cargarRespuestas();
+        await cargarPanel();
       } else {
         alert(response.error || 'Error al guardar calificación');
       }
     } catch (err) {
+      console.error('Error guardando calificación:', err);
       alert('Error de conexión');
     } finally {
       setGuardando(false);
     }
   };
 
-  const obtenerTipoArchivo = (url: string): string => {
-    const extension = url.split('.').pop()?.toLowerCase();
-    switch (extension) {
-      case 'pdf': return 'PDF';
-      case 'doc':
-      case 'docx': return 'Word';
-      case 'txt': return 'Texto';
-      case 'jpg':
-      case 'jpeg':
-      case 'png':
-      case 'gif': return 'Imagen';
-      default: return 'Archivo';
-    }
-  };
-
-  const obtenerIconoArchivo = (url: string): string => {
-    const extension = url.split('.').pop()?.toLowerCase();
-    switch (extension) {
-      case 'pdf': return '📄';
-      case 'doc':
-      case 'docx': return '📝';
-      case 'txt': return '📃';
-      case 'jpg':
-      case 'jpeg':
-      case 'png':
-      case 'gif': return '🖼️';
-      default: return '📎';
-    }
-  };
-
-  const abrirVistaPrevia = (url: string) => {
-    setArchivoPrevia(url);
-    setMostrarVistaPrevia(true);
-  };
-
-  const descargarArchivo = (url: string, nombreEstudiante: string, tituloEvaluacion: string) => {
-    const extension = url.split('.').pop();
-    const nombreArchivo = `${nombreEstudiante}_${tituloEvaluacion}.${extension}`;
-    
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = nombreArchivo;
-    link.target = '_blank';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const renderRespuesta = (respuesta: RespuestaEvaluacion) => (
-    <div key={respuesta.id} className="respuesta-card">
-      <div className="respuesta-header">
-        <div className="respuesta-info">
-          <h4>{respuesta.evaluacion_titulo}</h4>
-          <p className="estudiante-nombre">👤 {respuesta.estudiante_nombre}</p>
-          <p className="fecha-envio">📅 {calificacionService.formatearFecha(respuesta.fecha_envio)}</p>
-          <p className="tiempo-gastado">⏱️ {calificacionService.formatearTiempo(respuesta.tiempo_gastado)}</p>
-        </div>
-        
-        {respuesta.calificacion !== null && respuesta.calificacion !== undefined && (
-          <div className="calificacion-badge" style={{ 
-            backgroundColor: calificacionService.obtenerColorCalificacion(respuesta.calificacion) 
-          }}>
-            <span className="calificacion-numero">{calificacionService.formatearCalificacion(respuesta.calificacion)}</span>
-            <span className="calificacion-etiqueta">{calificacionService.obtenerEtiquetaCalificacion(respuesta.calificacion)}</span>
-          </div>
-        )}
-      </div>
-
-      <div className="respuesta-content">
-        {respuesta.archivo_respuesta && (
-          <div className="archivo-respuesta">
-            <div className="archivo-info">
-              <span className="archivo-icono">{obtenerIconoArchivo(respuesta.archivo_respuesta)}</span>
-              <div className="archivo-detalles">
-                <span className="archivo-nombre">Archivo de respuesta ({obtenerTipoArchivo(respuesta.archivo_respuesta)})</span>
-                <span className="archivo-url">{respuesta.archivo_respuesta.split('/').pop()}</span>
-              </div>
-            </div>
-            <div className="archivo-acciones">
-              <button 
-                className="btn-vista-previa"
-                onClick={() => abrirVistaPrevia(respuesta.archivo_respuesta!)}
-                title="Ver archivo"
-              >
-                👁️ Ver
-              </button>
-              <button 
-                className="btn-descargar"
-                onClick={() => descargarArchivo(respuesta.archivo_respuesta!, respuesta.estudiante_nombre, respuesta.evaluacion_titulo)}
-                title="Descargar archivo"
-              >
-                💾 Descargar
-              </button>
-            </div>
-          </div>
-        )}
-        
-        {Object.keys(respuesta.respuestas_json).length > 0 && (
-          <div className="respuestas-json">
-            <h5>Respuestas:</h5>
-            <div className="respuestas-content">
-              {Object.entries(respuesta.respuestas_json).map(([key, value]) => (
-                <div key={key} className="respuesta-item">
-                  <strong>{key}:</strong> {String(value)}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {respuesta.comentarios_profesor && (
-          <div className="comentarios-profesor">
-            <h5>Comentarios del profesor:</h5>
-            <p>{respuesta.comentarios_profesor}</p>
-            {respuesta.fecha_calificacion && (
-              <small>Calificado el: {calificacionService.formatearFecha(respuesta.fecha_calificacion)}</small>
-            )}
-          </div>
-        )}
-      </div>
-
-      <div className="respuesta-actions">
-        <button 
-          className="btn-calificar"
-          onClick={() => abrirModalCalificacion(respuesta)}
-        >
-          {respuesta.calificacion !== null && respuesta.calificacion !== undefined ? '✏️ Editar Calificación' : '📝 Calificar'}
-        </button>
-      </div>
-    </div>
+  const filtroLower = filtro.toLowerCase();
+  const itemsFiltrados = items.filter((i) =>
+    i.estudiante_nombre.toLowerCase().includes(filtroLower) ||
+    i.evaluacion_titulo.toLowerCase().includes(filtroLower)
   );
+
+  const itemsPorCalificar = itemsFiltrados.filter((i) => i.calificacion === null);
+  const itemsCalificadas = itemsFiltrados.filter((i) => i.calificacion !== null);
 
   return (
     <div className="calificar-evaluaciones">
-      <div className="header">
-        <h2>📊 Calificar Evaluaciones</h2>
-        <p>Revisa y califica las evaluaciones enviadas por tus estudiantes</p>
+      <div className="calificar-header">
+        <h2>Calificar evaluaciones</h2>
+        <p>Selecciona una evaluación/tarea y asigna una nota al estudiante</p>
+      </div>
+
+      <div className="filtro-container">
+        <input
+          type="text"
+          placeholder="Buscar por estudiante o evaluación..."
+          value={filtro}
+          onChange={(e) => setFiltro(e.target.value)}
+        />
       </div>
 
       <div className="tabs-container">
         <div className="tabs-left">
-          <button 
+          <button
             className={`tab ${activeTab === 'por-calificar' ? 'active' : ''}`}
             onClick={() => setActiveTab('por-calificar')}
           >
-            📋 Por Calificar ({respuestasPorCalificar.length})
+            📋 Por Calificar ({itemsPorCalificar.length})
           </button>
-          <button 
+          <button
             className={`tab ${activeTab === 'calificadas' ? 'active' : ''}`}
             onClick={() => setActiveTab('calificadas')}
           >
-            ✅ Calificadas ({respuestasCalificadas.length})
+            ✅ Calificadas ({itemsCalificadas.length})
           </button>
         </div>
-        <button 
-          className="btn-actualizar"
-          onClick={cargarRespuestas}
-          disabled={loading}
-          title="Actualizar datos"
-        >
-          {loading ? '⏳' : '🔄'} Actualizar
-        </button>
       </div>
 
       <div className="content">
@@ -290,21 +146,138 @@ export default function CalificarEvaluaciones({}: CalificarEvaluacionesProps) {
         ) : error ? (
           <div className="error">
             <p>❌ {error}</p>
-            <button onClick={cargarRespuestas} className="btn-retry">🔄 Reintentar</button>
+            <button onClick={cargarPanel} className="btn-retry">🔄 Reintentar</button>
           </div>
         ) : (
           <div className="respuestas-list">
             {activeTab === 'por-calificar' ? (
-              respuestasPorCalificar.length > 0 ? (
-                respuestasPorCalificar.map(renderRespuesta)
+              itemsPorCalificar.length > 0 ? (
+                <table className="tabla-calificaciones">
+                  <thead>
+                    <tr>
+                      <th>Estudiante</th>
+                      <th>Evaluación</th>
+                      <th>Tipo</th>
+                      <th>Calificación (0-100)</th>
+                      <th>Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {itemsPorCalificar.map((item) => (
+                      <tr key={`${item.evaluacion_id}-${item.estudiante_id}`}>
+                        <td>{item.estudiante_nombre}</td>
+                        <td>{item.evaluacion_titulo}</td>
+                        <td>
+                          {item.evaluacion_tipo === 'tarea' ? (
+                            <span className="tipo-evaluacion">Tarea</span>
+                          ) : (
+                            item.evaluacion_tipo || '—'
+                          )}
+                        </td>
+                        <td>
+                          <div className="celda-nota">
+                            {item.archivo_respuesta_url && (
+                              <a
+                                href={item.archivo_respuesta_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="link-archivo-respuesta"
+                              >
+                                📎 Ver archivo del estudiante
+                              </a>
+                            )}
+                            <input
+                              type="number"
+                              min={0}
+                              max={100}
+                              step={0.1}
+                              value={
+                                notas[`${item.evaluacion_id}-${item.estudiante_id}`] ?? ''
+                              }
+                              onChange={(e) =>
+                                handleNotaChange(
+                                  `${item.evaluacion_id}-${item.estudiante_id}`,
+                                  e.target.value
+                                )
+                              }
+                              placeholder="Ej: 85.5"
+                            />
+                            {!item.tiene_respuesta && (
+                              <span
+                                style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block' }}
+                              >
+                                (El estudiante aún no ha enviado archivo)
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td>
+                          <button
+                            className="btn-calificar"
+                            disabled={
+                              guardando ||
+                              !notas[`${item.evaluacion_id}-${item.estudiante_id}`]?.trim()
+                            }
+                            onClick={() => guardarCalificacion(item)}
+                          >
+                            {guardando ? '⏳ Guardando...' : '💾 Guardar'}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               ) : (
                 <div className="empty-state">
                   <p>🎉 ¡No hay evaluaciones pendientes por calificar!</p>
                 </div>
               )
             ) : (
-              respuestasCalificadas.length > 0 ? (
-                respuestasCalificadas.map(renderRespuesta)
+              itemsCalificadas.length > 0 ? (
+                <table className="tabla-calificaciones">
+                  <thead>
+                    <tr>
+                      <th>Estudiante</th>
+                      <th>Evaluación</th>
+                      <th>Tipo</th>
+                      <th>Calificación</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {itemsCalificadas.map((item) => (
+                      <tr key={`${item.evaluacion_id}-${item.estudiante_id}`}>
+                        <td>{item.estudiante_nombre}</td>
+                        <td>{item.evaluacion_titulo}</td>
+                        <td>
+                          {item.evaluacion_tipo === 'tarea' ? (
+                            <span className="tipo-evaluacion">Tarea</span>
+                          ) : (
+                            item.evaluacion_tipo || '—'
+                          )}
+                        </td>
+                        <td>
+                          <div className="celda-nota">
+                            {item.archivo_respuesta_url && (
+                              <a
+                                href={item.archivo_respuesta_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="link-archivo-respuesta"
+                              >
+                                📎 Ver archivo del estudiante
+                              </a>
+                            )}
+                            <div>
+                              {item.calificacion !== null
+                                ? calificacionService.formatearCalificacion(item.calificacion)
+                                : '—'}
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               ) : (
                 <div className="empty-state">
                   <p>📝 Aún no has calificado ninguna evaluación</p>
@@ -314,148 +287,6 @@ export default function CalificarEvaluaciones({}: CalificarEvaluacionesProps) {
           </div>
         )}
       </div>
-
-      {/* Modal de Calificación */}
-      {mostrarModal && respuestaSeleccionada && (
-        <div className="modal-overlay" onClick={cerrarModal}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>
-                {respuestaSeleccionada.calificacion !== null && respuestaSeleccionada.calificacion !== undefined 
-                  ? '✏️ Editar Calificación' 
-                  : '📝 Calificar Evaluación'
-                }
-              </h3>
-              <button className="btn-close" onClick={cerrarModal}>✕</button>
-            </div>
-
-            <div className="modal-body">
-              <div className="evaluacion-info">
-                <h4>{respuestaSeleccionada.evaluacion_titulo}</h4>
-                <p><strong>Estudiante:</strong> {respuestaSeleccionada.estudiante_nombre}</p>
-                <p><strong>Fecha de envío:</strong> {calificacionService.formatearFecha(respuestaSeleccionada.fecha_envio)}</p>
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="calificacion">Calificación (0-100):</label>
-                <input
-                  type="number"
-                  id="calificacion"
-                  min="0"
-                  max="100"
-                  step="0.1"
-                  value={calificacion}
-                  onChange={(e) => setCalificacion(e.target.value)}
-                  placeholder="Ej: 85.5"
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="comentarios">Comentarios (opcional):</label>
-                <textarea
-                  id="comentarios"
-                  value={comentarios}
-                  onChange={(e) => setComentarios(e.target.value)}
-                  placeholder="Escribe comentarios sobre la evaluación..."
-                  rows={4}
-                />
-              </div>
-            </div>
-
-            <div className="modal-footer">
-              <button className="btn-cancel" onClick={cerrarModal}>
-                Cancelar
-              </button>
-              <button 
-                className="btn-save" 
-                onClick={guardarCalificacion}
-                disabled={guardando || !calificacion}
-              >
-                {guardando ? '⏳ Guardando...' : '💾 Guardar Calificación'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal de Vista Previa de Archivos */}
-      {mostrarVistaPrevia && archivoPrevia && (
-        <div className="modal-overlay" onClick={() => setMostrarVistaPrevia(false)}>
-          <div className="modal-content modal-previa" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>📄 Vista Previa del Archivo</h3>
-              <div className="modal-header-actions">
-                <button 
-                  className="btn-descargar-modal"
-                  onClick={() => {
-                    const link = document.createElement('a');
-                    link.href = archivoPrevia;
-                    link.download = archivoPrevia.split('/').pop() || 'archivo';
-                    link.target = '_blank';
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                  }}
-                >
-                  💾 Descargar
-                </button>
-                <button className="btn-close" onClick={() => setMostrarVistaPrevia(false)}>✕</button>
-              </div>
-            </div>
-
-            <div className="modal-body modal-previa-body">
-              {archivoPrevia.toLowerCase().endsWith('.pdf') ? (
-                <iframe
-                  src={archivoPrevia}
-                  width="100%"
-                  height="600px"
-                  style={{ border: 'none', borderRadius: '8px' }}
-                  title="Vista previa PDF"
-                />
-              ) : archivoPrevia.match(/\.(jpg|jpeg|png|gif)$/i) ? (
-                <div className="imagen-previa">
-                  <img 
-                    src={archivoPrevia} 
-                    alt="Vista previa" 
-                    style={{ maxWidth: '100%', maxHeight: '600px', objectFit: 'contain' }}
-                  />
-                </div>
-              ) : (
-                <div className="archivo-no-previsualizable">
-                  <div className="archivo-info-grande">
-                    <span className="archivo-icono-grande">{obtenerIconoArchivo(archivoPrevia)}</span>
-                    <h4>Archivo {obtenerTipoArchivo(archivoPrevia)}</h4>
-                    <p>Este tipo de archivo no se puede previsualizar directamente.</p>
-                    <p><strong>Nombre:</strong> {archivoPrevia.split('/').pop()}</p>
-                    <div className="acciones-archivo">
-                      <button 
-                        className="btn-abrir-nueva-ventana"
-                        onClick={() => window.open(archivoPrevia, '_blank')}
-                      >
-                        🔗 Abrir en nueva ventana
-                      </button>
-                      <button 
-                        className="btn-descargar-grande"
-                        onClick={() => {
-                          const link = document.createElement('a');
-                          link.href = archivoPrevia;
-                          link.download = archivoPrevia.split('/').pop() || 'archivo';
-                          link.target = '_blank';
-                          document.body.appendChild(link);
-                          link.click();
-                          document.body.removeChild(link);
-                        }}
-                      >
-                        💾 Descargar archivo
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -23,7 +23,9 @@ interface ValidationResult {
 }
 
 // URL del backend
-const API_URL = 'http://localhost:8000/api';
+import { API_BASE_URL } from '../config/api';
+
+const API_URL = API_BASE_URL;
 
 /**
  * Envía un email usando Django Backend

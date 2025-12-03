@@ -42,7 +42,6 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
       setIsLoading(true);
       try {
         // Limpiar estados incorrectos en localStorage
-        console.log('🧹 Limpiando estados incorrectos en localStorage...');
         const keysToRemove: string[] = [];
         for (let i = 0; i < localStorage.length; i++) {
           const key = localStorage.key(i);
@@ -51,10 +50,8 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
           }
         }
         keysToRemove.forEach(key => {
-          console.log(`Eliminando: ${key}`);
           localStorage.removeItem(key);
         });
-        console.log(`✅ ${keysToRemove.length} estados eliminados de localStorage`);
         
         // Obtener el nombre completo del profesor desde localStorage
         const userStr = localStorage.getItem('user');
@@ -64,40 +61,33 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
           try {
             const user = JSON.parse(userStr);
             nombreCompleto = `${user.first_name || ''} ${user.last_name || ''}`.trim();
-            console.log('Usuario desde localStorage:', user);
           } catch (e) {
             console.error('Error parseando usuario:', e);
           }
         }
         
-        console.log('=== CARGANDO CLASES DEL PROFESOR ===');
-        console.log('Nombre del profesor:', nombreCompleto);
-        
         // Obtener TODAS las clases del backend
-        const todasLasClases = await ClaseService.getClases();
-        console.log(`Total de clases en el sistema: ${todasLasClases.length}`);
+        const respuestaClases: any = await ClaseService.getClases();
+
+        // Asegurar que siempre trabajamos con un array
+        const todasLasClases: any[] = Array.isArray(respuestaClases)
+          ? respuestaClases
+          : (respuestaClases?.data || []);
         
-        // Mostrar todos los profesores únicos
+        // Mostrar todos los profesores únicos (solo para debug / futuro)
         const profesoresUnicos = [...new Set(todasLasClases.map((c: any) => c.profesor))];
-        console.log('Profesores en el sistema:', profesoresUnicos);
-        
+
         // Filtrar clases donde el profesor coincida EXACTAMENTE
-        const clasesDelProfesor = todasLasClases.filter((clase: any) => {
-          // Comparación exacta e insensible a mayúsculas
+        let clasesDelProfesor = todasLasClases.filter((clase: any) => {
           const coincide = clase.profesor?.trim().toLowerCase() === nombreCompleto.toLowerCase();
-          
-          if (coincide) {
-            console.log(`✅ Clase ID ${clase.id}: "${clase.nombre}" - Fecha: ${clase.fecha}`);
-          }
           return coincide;
         });
-        
-        console.log(`✅ Total de clases para ${nombreCompleto}: ${clasesDelProfesor.length}`);
-        
+
+        // Si no se encontró ninguna coincidencia, mostrar todas las clases como fallback
         if (clasesDelProfesor.length === 0) {
-          console.warn('⚠️ No se encontraron clases. Verifica que el nombre del profesor coincida exactamente.');
+          clasesDelProfesor = todasLasClases;
         }
-        
+
         // NO cargar clases del bloque
         setClasesDelBloque([]);
         setClases(clasesDelProfesor);
@@ -117,7 +107,6 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
   };
 
   const guardarAsistencia = (asistencias: { [key: string]: boolean }) => {
-    console.log('Asistencia guardada:', asistencias);
     const presentes = Object.values(asistencias).filter(a => a).length;
     const ausentes = Object.values(asistencias).filter(a => !a).length;
     alert(`✅ Asistencia guardada:\n${presentes} presentes, ${ausentes} ausentes`);
@@ -126,10 +115,6 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
   };
 
   const iniciarClase = async (claseId: number) => {
-    console.log('=== INICIAR CLASE DEBUG ===');
-    console.log('ID de clase a iniciar:', claseId);
-    console.log('Clases disponibles:', clases);
-    console.log('Clases del bloque:', clasesDelBloque);
     
     // Buscar la clase en ambos arrays
     let clase = clases.find(c => c.id === claseId);
@@ -137,9 +122,7 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
     if (!clase) {
       clase = clasesDelBloque.find(c => c.id === claseId);
       esClaseDelBloque = true;
-      console.log('Clase encontrada en clasesDelBloque:', clase);
     } else {
-      console.log('Clase encontrada en clases:', clase);
     }
     
     if (!clase) {
@@ -149,14 +132,11 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
     }
 
     try {
-      console.log('Cambiando estado de clase a activa...');
 
       // Si es una clase del profesor (no del bloque), actualizar en el backend
       if (!esClaseDelBloque) {
         try {
-          console.log(`Intentando cambiar estado de clase ${claseId} a 'activa'`);
           const response = await ClaseService.cambiarEstadoClase(claseId, 'activa');
-          console.log('Estado actualizado en el backend:', response);
         } catch (error: any) {
           console.error('Error actualizando estado en backend:', error);
           console.error('Detalles del error:', error.response?.data);
@@ -170,7 +150,6 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
           // Para clases del profesor, también guardar en localStorage
           const claseKey = `clase_${c.tema.replace(/\s+/g, '_')}_estado`;
           localStorage.setItem(claseKey, 'activa');
-          console.log(`Estado guardado en localStorage para clase profesor: ${claseKey} = activa`);
           
           // Disparar evento para sincronización
           window.dispatchEvent(new CustomEvent('claseEstadoChanged', {
@@ -188,7 +167,6 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
           // Usar el tema de la clase para crear una clave única
           const claseKey = `clase_${c.tema.replace(/\s+/g, '_')}_estado`;
           localStorage.setItem(claseKey, 'activa');
-          console.log(`Estado guardado en localStorage: ${claseKey} = activa`);
           
           // También disparar evento personalizado para notificar cambios
           window.dispatchEvent(new CustomEvent('claseEstadoChanged', {
@@ -202,14 +180,10 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
 
       // Abrir Google Meet - usar el campo correcto del backend
       const meetLink = clase.meet_link || clase.meetLink;
-      console.log('Enlace Meet a abrir:', meetLink);
-      console.log('Campo meet_link del backend:', clase.meet_link);
-      console.log('Campo meetLink local:', clase.meetLink);
       
       if (!meetLink || meetLink.trim() === '' || meetLink === 'undefined') {
         // Para clases del bloque, generar enlace Meet automáticamente
         const enlaceGenerado = `https://meet.google.com/new`;
-        console.log('Generando enlace Meet automático:', enlaceGenerado);
         window.open(enlaceGenerado, '_blank');
         alert(`¡Clase "${clase.nombre || clase.tema}" iniciada! Se abrió una nueva reunión de Meet.`);
         return;
@@ -221,7 +195,6 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
         enlaceCompleto = 'https://' + enlaceCompleto;
       }
       
-      console.log('Enlace completo a abrir:', enlaceCompleto);
       window.open(enlaceCompleto, '_blank');
       
       // Mostrar notificación
@@ -234,8 +207,15 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
 
   const finalizarClase = async (claseId: number) => {
     try {
-      console.log('Finalizando clase ID:', claseId);
-      
+      // Intentar marcar la clase como completada en el backend
+      try {
+        await ClaseService.cambiarEstadoClase(claseId, 'completada');
+      } catch (error: any) {
+        console.error('Error actualizando estado a completada en backend:', error);
+        console.error('Detalles del error:', error?.response?.data);
+        // Continuar con la actualización local aunque falle el backend
+      }
+
       // Buscar la clase en ambos arrays para obtener información
       let clase = clases.find(c => c.id === claseId);
       if (!clase) {
@@ -248,7 +228,6 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
           // Para clases del profesor, también guardar en localStorage
           const claseKey = `clase_${c.tema.replace(/\s+/g, '_')}_estado`;
           localStorage.setItem(claseKey, 'completada');
-          console.log(`Estado guardado en localStorage para clase profesor: ${claseKey} = completada`);
           
           // Disparar evento para sincronización
           window.dispatchEvent(new CustomEvent('claseEstadoChanged', {
@@ -265,7 +244,6 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
           // Guardar estado completada en localStorage
           const claseKey = `clase_${c.tema.replace(/\s+/g, '_')}_estado`;
           localStorage.setItem(claseKey, 'completada');
-          console.log(`Estado guardado en localStorage: ${claseKey} = completada`);
           
           // Disparar evento para sincronización
           window.dispatchEvent(new CustomEvent('claseEstadoChanged', {
@@ -328,12 +306,9 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
   };
 
   const esFechaPasada = (fecha: string) => {
-    const hoy = new Date();
-    const fechaClase = new Date(fecha);
-    // Comparar solo la fecha, sin la hora
-    hoy.setHours(0, 0, 0, 0);
-    fechaClase.setHours(0, 0, 0, 0);
-    return fechaClase < hoy;
+    // Comparar usando solo la cadena YYYY-MM-DD para evitar problemas de zona horaria
+    const hoyStr = new Date().toISOString().split('T')[0];
+    return fecha < hoyStr;
   };
 
   // Función para obtener bloques únicos de las clases
@@ -401,8 +376,6 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
 
   // Filtrar clases por fecha
   const hoy = new Date().toISOString().split('T')[0];
-  console.log('Fecha de hoy:', hoy);
-  console.log('Clases cargadas:', clases.map(c => ({ id: c.id, fecha: c.fecha, tema: c.tema })));
   
   const clasesVisibles = clasesDelBloque.filter(clase => {
     // Verificar estado en localStorage para persistencia
@@ -421,23 +394,13 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
     const claseKey = `clase_${clase.tema.replace(/\s+/g, '_')}_estado`;
     const estadoGuardado = localStorage.getItem(claseKey);
     
-    console.log(`Filtrando clase ID ${clase.id}:`, {
-      fecha: clase.fecha,
-      hoy: hoy,
-      coincideFecha: clase.fecha === hoy,
-      estado: clase.estado,
-      estadoGuardado: estadoGuardado
-    });
     
     // Si está completada en localStorage, no mostrar
     if (estadoGuardado === 'completada') {
-      console.log(`  ❌ Clase ${clase.id} filtrada: completada en localStorage`);
       return false;
     }
     
-    const resultado = clase.fecha === hoy && clase.estado !== 'completada';
-    console.log(`  ${resultado ? '✅' : '❌'} Clase ${clase.id} ${resultado ? 'incluida' : 'excluida'} en clasesHoy`);
-    return resultado;
+    return clase.fecha === hoy && clase.estado !== 'completada';
   });
   
   const clasesProximas = clases.filter(clase => {
@@ -454,16 +417,11 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
   });
   
   const clasesCompletadas = clases.filter(clase => {
-    // SOLO confiar en el estado del backend, ignorar localStorage
-    const esCompletada = clase.estado === 'completada';
-    
-    console.log(`Filtrando clase ID ${clase.id}:`, {
-      nombre: clase.nombre || clase.tema,
-      estado: clase.estado,
-      esCompletada: esCompletada
-    });
-    
-    return esCompletada;
+    // Considerar como historial tanto las marcadas como 'completada'
+    // como las que ya pasaron en fecha aunque sigan 'programada'
+    const esCompletadaPorEstado = clase.estado === 'completada';
+    const esPasada = esFechaPasada(clase.fecha);
+    return esCompletadaPorEstado || esPasada;
   });
 
   const clasesDelBloqueFiltradas = filtrarClasesDelBloque();
@@ -714,7 +672,6 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
                         className="btn-unirse-clase"
                         onClick={() => {
                           const meetLink = clase.meet_link || clase.meetLink;
-                          console.log('Unirse a Meet - Enlace:', meetLink);
                           if (meetLink && meetLink.trim() !== '') {
                             window.open(meetLink, '_blank');
                           } else {

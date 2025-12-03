@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://127.0.0.1:8000/api';
+const API_BASE_URL = 'https://lalenguacolombia.co/api/index.php';
 
 export interface Club {
   id: number;
@@ -111,12 +111,24 @@ export const clbService = {
   },
 
   async listAllUsers(): Promise<any[]> {
-    // Lista todos los usuarios (el backend ya expone /api/users/). Si soporta filtro ?role=student lo usamos, si no filtramos en front.
+    // Lista todos los usuarios usando el mismo endpoint que userService (/api/users/)
     const res = await fetch(`${API_BASE_URL}/users/`, { headers: jsonHeaders() });
     const text = await res.text();
     if (!res.ok) throw new Error(`HTTP ${res.status}: ${text}`);
     const data = JSON.parse(text);
-    return (data.data || data) as any[];
+
+    // El backend PHP devuelve { success, message, users: [...] }
+    if (Array.isArray(data)) {
+      return data as any[];
+    }
+    if (Array.isArray(data.users)) {
+      return data.users as any[];
+    }
+    if (Array.isArray(data.data)) {
+      return data.data as any[];
+    }
+    // Si por alguna razón no viene en ninguno de esos campos, devolver array vacío para no romper la vista
+    return [];
   },
 
   async addStudentById(clubId: number, userId: number): Promise<void> {

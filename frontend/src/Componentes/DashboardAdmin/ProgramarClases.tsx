@@ -9,7 +9,6 @@ import React, { useState, useEffect } from 'react';
 import { FaEdit, FaTrash, FaPlus, FaSpinner } from 'react-icons/fa';
 import { ClaseService } from '../../services/claseService';
 import { userService } from '../../services/userService';
-import { bloqueService } from '../../services/bloqueService';
 import './ProgramarClases.css';
 
 /**
@@ -55,11 +54,14 @@ interface EstudianteDisponible {
   bloque?: string;
 }
 
+const ITEMS_PER_PAGE = 20;
+
 export default function ProgramarClases() {
   /**
    * @state {Array<Object>} clases - Lista de todas las clases.
    */
   const [clases, setClases] = useState<Clase[]>([]);
+  const [paginaActual, setPaginaActual] = useState(1);
 
   /**
    * @state {boolean} showForm - Controla la visibilidad del formulario de creación/edición.
@@ -237,6 +239,7 @@ export default function ProgramarClases() {
       await ClaseService.deleteClase(classId);
       const data = await ClaseService.getClases();
       setClases(data);
+      setPaginaActual(1);
     } catch (err) {
       // Puedes mostrar un error aquí si lo deseas
     }
@@ -300,6 +303,7 @@ export default function ProgramarClases() {
       }
       const data = await ClaseService.getClases();
       setClases(data);
+      setPaginaActual(1);
       setShowForm(false);
       setEditingClass(null);
       setFormErrors({});
@@ -330,18 +334,12 @@ export default function ProgramarClases() {
         const estudiantes = usuarios
           .filter(usuario => usuario.rol === 'student' && usuario.activo)
           .map(usuario => {
-            // Obtener información del bloque asignado
-            const bloqueInfo = bloqueService.getUserBloqueInfo(usuario.id.toString());
-            const bloqueTexto = bloqueInfo.bloque 
-              ? `${bloqueInfo.bloque.nivel} ${bloqueInfo.bloque.turno}`
-              : 'Sin bloque';
-            
             return {
               id: usuario.id.toString(),
               nombre: `${usuario.nombres} ${usuario.apellidos}`,
-              nivel: bloqueInfo.bloque?.nivel || 'Sin nivel',
+              nivel: usuario.nivel || 'Sin nivel',
               email: usuario.correo,
-              bloque: bloqueTexto
+              bloque: usuario.nivel ? `Nivel ${usuario.nivel}` : 'Sin nivel'
             };
           });
         
@@ -356,7 +354,6 @@ export default function ProgramarClases() {
         
         setEstudiantesDisponibles(estudiantes);
         setProfesoresDisponibles(profesores);
-        console.log('Profesores cargados:', profesores);
       } catch (error) {
         console.error('Error cargando estudiantes y profesores:', error);
       } finally {
@@ -374,6 +371,7 @@ export default function ProgramarClases() {
       try {
         const data = await ClaseService.getClases();
         setClases(data);
+        setPaginaActual(1);
       } catch (err) {
         // Puedes mostrar un error aquí si lo deseas
       }
@@ -381,6 +379,23 @@ export default function ProgramarClases() {
     };
     fetchClases();
   }, []);
+
+  const totalClases = clases.length;
+  const totalPaginas = Math.max(1, Math.ceil(totalClases / ITEMS_PER_PAGE));
+  const paginaActualSegura = Math.min(paginaActual, totalPaginas);
+  const indiceInicio = (paginaActualSegura - 1) * ITEMS_PER_PAGE;
+  const clasesPagina = clases.slice(indiceInicio, indiceInicio + ITEMS_PER_PAGE);
+  const pageNumbers = Array.from({ length: totalPaginas }, (_, i) => i + 1);
+
+  const irAPagina = (pagina: number) => {
+    const nuevaPagina = Math.max(1, Math.min(pagina, totalPaginas));
+    setPaginaActual(nuevaPagina);
+  };
+
+  const irPrimera = () => irAPagina(1);
+  const irUltima = () => irAPagina(totalPaginas);
+  const irAnterior = () => irAPagina(paginaActualSegura - 1);
+  const irSiguiente = () => irAPagina(paginaActualSegura + 1);
 
   return (
     <div className="gestion-container">
@@ -603,7 +618,7 @@ export default function ProgramarClases() {
               </tr>
             </thead>
             <tbody>
-              {clases.map((clase) => (
+              {clasesPagina.map((clase) => (
                 <tr key={clase.id}>
                   <td>{clase.id}</td>
                   <td>{clase.nombre}</td>
@@ -628,6 +643,37 @@ export default function ProgramarClases() {
               )}
             </tbody>
           </table>
+          {clases.length > 0 && (
+            <div className="paginacion-registros">
+              <span className="paginacion-info">
+                Mostrando {indiceInicio + 1}
+                –{Math.min(indiceInicio + ITEMS_PER_PAGE, totalClases)} de {totalClases}
+              </span>
+              <div className="paginacion-botones">
+                <button onClick={irPrimera} disabled={paginaActualSegura === 1}>
+                  « Primero
+                </button>
+                <button onClick={irAnterior} disabled={paginaActualSegura === 1}>
+                  ‹ Anterior
+                </button>
+                {pageNumbers.map((num) => (
+                  <button
+                    key={num}
+                    onClick={() => irAPagina(num)}
+                    className={num === paginaActualSegura ? 'pagina-activa' : ''}
+                  >
+                    {num}
+                  </button>
+                ))}
+                <button onClick={irSiguiente} disabled={paginaActualSegura === totalPaginas}>
+                  Siguiente ›
+                </button>
+                <button onClick={irUltima} disabled={paginaActualSegura === totalPaginas}>
+                  Último »
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
