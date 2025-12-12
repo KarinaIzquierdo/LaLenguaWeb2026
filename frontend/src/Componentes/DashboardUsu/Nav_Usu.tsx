@@ -9,9 +9,10 @@ interface NavUsuProps {
   candies: number;
   experience: number;
   onLogout?: () => void;
+  onOpenAchievements?: () => void;
 }
 
-export default function NavUsu({ candies, experience, onLogout }: NavUsuProps) {
+export default function NavUsu({ candies, experience, onLogout, onOpenAchievements }: NavUsuProps) {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
@@ -87,7 +88,7 @@ export default function NavUsu({ candies, experience, onLogout }: NavUsuProps) {
             <span className="logo-text">La Lengua</span>
           </div>
           <div className="nav-actions">
-            {/* Sistema de Dulces y Experiencia */}
+            {/* Sistema de Dulces, Experiencia y Logros */}
             <div className="rewards-section">
               <div className="candy-counter">
                 <span className="candy-icon">🍬</span>
@@ -97,6 +98,16 @@ export default function NavUsu({ candies, experience, onLogout }: NavUsuProps) {
                 <span className="xp-icon">⭐</span>
                 <span className="xp-count">{experience} XP</span>
               </div>
+              {onOpenAchievements && (
+                <button
+                  type="button"
+                  className="achievements-pill"
+                  onClick={onOpenAchievements}
+                >
+                  <span className="achievements-icon">🏅</span>
+                  <span className="achievements-label">Logros</span>
+                </button>
+              )}
             </div>
 
             {/* Campanita de Notificaciones */}

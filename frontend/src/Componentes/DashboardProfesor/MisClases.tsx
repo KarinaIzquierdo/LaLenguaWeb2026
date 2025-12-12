@@ -53,44 +53,12 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
           localStorage.removeItem(key);
         });
         
-        // Obtener el nombre completo del profesor desde localStorage
-        const userStr = localStorage.getItem('user');
-        let nombreCompleto = '';
-        
-        if (userStr) {
-          try {
-            const user = JSON.parse(userStr);
-            nombreCompleto = `${user.first_name || ''} ${user.last_name || ''}`.trim();
-          } catch (e) {
-            console.error('Error parseando usuario:', e);
-          }
-        }
-        
-        // Obtener TODAS las clases del backend
-        const respuestaClases: any = await ClaseService.getClases();
-
-        // Asegurar que siempre trabajamos con un array
-        const todasLasClases: any[] = Array.isArray(respuestaClases)
-          ? respuestaClases
-          : (respuestaClases?.data || []);
-        
-        // Mostrar todos los profesores únicos (solo para debug / futuro)
-        const profesoresUnicos = [...new Set(todasLasClases.map((c: any) => c.profesor))];
-
-        // Filtrar clases donde el profesor coincida EXACTAMENTE
-        let clasesDelProfesor = todasLasClases.filter((clase: any) => {
-          const coincide = clase.profesor?.trim().toLowerCase() === nombreCompleto.toLowerCase();
-          return coincide;
-        });
-
-        // Si no se encontró ninguna coincidencia, mostrar todas las clases como fallback
-        if (clasesDelProfesor.length === 0) {
-          clasesDelProfesor = todasLasClases;
-        }
+        // Cargar solo las clases del profesor autenticado desde el backend
+        const clasesDelProfesor: any[] = await ClaseService.getClasesPorProfesor(profesorId ?? 0);
 
         // NO cargar clases del bloque
         setClasesDelBloque([]);
-        setClases(clasesDelProfesor);
+        setClases(clasesDelProfesor || []);
       } catch (err) {
         console.error('❌ Error al cargar clases:', err);
         setClases([]);
@@ -178,25 +146,28 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
         return c;
       }));
 
-      // Abrir Google Meet - usar el campo correcto del backend
+      // Abrir videoconferencia usando el enlace configurado en la clase
       const meetLink = clase.meet_link || clase.meetLink;
-      
-      if (!meetLink || meetLink.trim() === '' || meetLink === 'undefined') {
-        // Para clases del bloque, generar enlace Meet automáticamente
-        const enlaceGenerado = `https://meet.google.com/new`;
-        window.open(enlaceGenerado, '_blank');
-        alert(`¡Clase "${clase.nombre || clase.tema}" iniciada! Se abrió una nueva reunión de Meet.`);
+
+      const esLinkInvalido =
+        !meetLink ||
+        meetLink.trim() === '' ||
+        meetLink === 'undefined' ||
+        meetLink.includes('meet.google.com/new');
+
+      if (esLinkInvalido) {
+        alert('Esta clase no tiene aún un enlace de videoconferencia válido. Edita la clase y agrega el enlace (Zoom, Meet, Teams, etc.) antes de iniciarla.');
         return;
       }
-      
+
       // Asegurar que el enlace tenga protocolo
       let enlaceCompleto = meetLink;
       if (!enlaceCompleto.startsWith('http://') && !enlaceCompleto.startsWith('https://')) {
         enlaceCompleto = 'https://' + enlaceCompleto;
       }
-      
+
       window.open(enlaceCompleto, '_blank');
-      
+
       // Mostrar notificación
       alert(`¡Clase "${clase.nombre || clase.tema}" iniciada! Los estudiantes pueden acceder ahora.`);
     } catch (error) {
@@ -589,10 +560,16 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
                             className="btn-unirse-clase"
                             onClick={() => {
                               const meetLink = clase.meet_link || clase.meetLink;
-                              if (meetLink && meetLink.trim() !== '') {
+                              const esLinkValido =
+                                meetLink &&
+                                meetLink.trim() !== '' &&
+                                meetLink !== 'undefined' &&
+                                !meetLink.includes('meet.google.com/new');
+
+                              if (esLinkValido) {
                                 window.open(meetLink, '_blank');
                               } else {
-                                alert('No hay enlace de Meet disponible para esta clase.');
+                                alert('No hay enlace de videoconferencia configurado para esta clase. Edita la clase y agrega el enlace (Zoom, Meet, Teams, etc.).');
                               }
                             }}
                           >
@@ -672,10 +649,16 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
                         className="btn-unirse-clase"
                         onClick={() => {
                           const meetLink = clase.meet_link || clase.meetLink;
-                          if (meetLink && meetLink.trim() !== '') {
+                          const esLinkValido =
+                            meetLink &&
+                            meetLink.trim() !== '' &&
+                            meetLink !== 'undefined' &&
+                            !meetLink.includes('meet.google.com/new');
+
+                          if (esLinkValido) {
                             window.open(meetLink, '_blank');
                           } else {
-                            alert('No hay enlace de Meet disponible para esta clase.');
+                            alert('No hay enlace de videoconferencia configurado para esta clase. Edita la clase y agrega el enlace (Zoom, Meet, Teams, etc.).');
                           }
                         }}
                       >

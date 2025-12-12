@@ -67,8 +67,12 @@ urlpatterns = [
     # Endpoints para Clubs (CLB)
     # path('clubs/', views.clubs_list_view, name='clubs_list'),  # ❌ Comentado - Conflicto con endpoint móvil
     path('clubs/create/', views.club_create_view, name='club_create'),
+    path('clubs/<int:club_id>/update/', views.club_update_view, name='club_update'),
+    path('clubs/<int:club_id>/delete/', views.club_delete_view, name='club_delete'),
     path('clubs/<int:club_id>/materials/', views.club_materials_list_view, name='club_materials_list'),
     path('clubs/<int:club_id>/materials/create/', views.club_material_create_view, name='club_material_create'),
+    path('clubs/materials/<int:material_id>/update/', views.club_material_update_view, name='club_material_update'),
+    path('clubs/materials/<int:material_id>/delete/', views.club_material_delete_view, name='club_material_delete'),
     # Students management in clubs
     path('clubs/<int:club_id>/students/', views.club_students_list_view, name='club_students_list'),
     path('clubs/<int:club_id>/students/add/', views.club_add_student_view, name='club_student_add'),
@@ -166,6 +170,11 @@ urlpatterns = [
     path('notificaciones/estudiante/<int:notificacion_id>/marcar-leida/', notificacion_estudiante_views.marcar_notificacion_leida_view, name='marcar_notificacion_leida_estudiante'),
     path('notificaciones/estudiante/marcar-todas-leidas/', notificacion_estudiante_views.marcar_todas_leidas_view, name='marcar_todas_leidas_estudiante'),
     path('notificaciones/estudiante/contador-no-leidas/', notificacion_estudiante_views.contador_no_leidas_view, name='contador_no_leidas_estudiante'),
+    
+    # Endpoints de gamificación (dulces, XP, retos diarios y misiones)
+    path('gamificacion/estado/', views.gamificacion_estado_view, name='gamificacion_estado'),
+    path('gamificacion/reto-diario/', views.gamificacion_reto_diario_view, name='gamificacion_reto_diario'),
+    path('gamificacion/mision/', views.gamificacion_mision_view, name='gamificacion_mision'),
     
     # Endpoints para retos diarios (Daily Challenge)
     path('daily-challenges/', views.daily_challenges_view, name='daily_challenges'),  # Para estudiantes (solo lectura)

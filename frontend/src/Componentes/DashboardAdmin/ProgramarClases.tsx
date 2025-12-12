@@ -252,8 +252,7 @@ export default function ProgramarClases() {
    * @returns {string} El enlace de Google Meet generado.
    */
   const generateMeetLink = (): string => {
-    // Usar enlace directo de Google Meet que abre inmediatamente la reunión
-    return 'https://meet.google.com/new';
+    return formData.meet_link || '';
   };
 
   /**
@@ -292,7 +291,7 @@ export default function ProgramarClases() {
       // Generar enlace de Meet automáticamente si no existe
       const dataToSend = {
         ...formData,
-        meet_link: formData.meet_link || generateMeetLink(),
+        meet_link: generateMeetLink(),
         estado: 'programada' // Asegurar que las clases nuevas se creen como programadas
       };
       
@@ -480,7 +479,7 @@ export default function ProgramarClases() {
             </div>
 
             <div className="form-group">
-              <label htmlFor="meet_link">Enlace de Google Meet</label>
+              <label htmlFor="meet_link">Enlace de Videoconferencia</label>
               <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                 <input
                   type="url"
@@ -488,29 +487,12 @@ export default function ProgramarClases() {
                   name="meet_link"
                   value={formData.meet_link || ''}
                   onChange={handleChange}
-                  placeholder="https://meet.google.com/abc-defg-hij"
+                  placeholder="https://tu-plataforma.com/tu-reunion"
                   style={{ flex: 1 }}
                 />
-                <button
-                  type="button"
-                  onClick={generarEnlaceMeetAsync}
-                  disabled={isLoading}
-                  style={{
-                    padding: '8px 16px',
-                    backgroundColor: '#4285f4',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: isLoading ? 'not-allowed' : 'pointer',
-                    fontSize: '14px',
-                    whiteSpace: 'nowrap'
-                  }}
-                >
-                  {isLoading ? '🔄 Generando...' : '🎥 Generar Meet'}
-                </button>
               </div>
               <small style={{ color: '#6c757d', fontSize: '0.875rem', marginTop: '5px', display: 'block' }}>
-                💡 Puedes generar un enlace único de Google Meet o ingresar tu propio enlace
+                💡 Pega aquí el enlace de la reunión que usarás (Zoom, Meet, Teams, etc.)
               </small>
             </div>
 

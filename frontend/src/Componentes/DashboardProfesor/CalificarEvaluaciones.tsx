@@ -104,6 +104,14 @@ export default function CalificarEvaluaciones({}: CalificarEvaluacionesProps) {
   const itemsPorCalificar = itemsFiltrados.filter((i) => i.calificacion === null);
   const itemsCalificadas = itemsFiltrados.filter((i) => i.calificacion !== null);
 
+  const getTipoLabel = (tipo?: string | null) => {
+    if (!tipo) return '—';
+    if (tipo === 'quiz') return 'Quiz';
+    if (tipo === 'examen') return 'Proyectos';
+    if (tipo === 'tarea') return 'Tarea';
+    return tipo;
+  };
+
   return (
     <div className="calificar-evaluaciones">
       <div className="calificar-header">
@@ -168,11 +176,7 @@ export default function CalificarEvaluaciones({}: CalificarEvaluacionesProps) {
                         <td>{item.estudiante_nombre}</td>
                         <td>{item.evaluacion_titulo}</td>
                         <td>
-                          {item.evaluacion_tipo === 'tarea' ? (
-                            <span className="tipo-evaluacion">Tarea</span>
-                          ) : (
-                            item.evaluacion_tipo || '—'
-                          )}
+                          <span className="tipo-evaluacion">{getTipoLabel(item.evaluacion_tipo)}</span>
                         </td>
                         <td>
                           <div className="celda-nota">
@@ -249,11 +253,7 @@ export default function CalificarEvaluaciones({}: CalificarEvaluacionesProps) {
                         <td>{item.estudiante_nombre}</td>
                         <td>{item.evaluacion_titulo}</td>
                         <td>
-                          {item.evaluacion_tipo === 'tarea' ? (
-                            <span className="tipo-evaluacion">Tarea</span>
-                          ) : (
-                            item.evaluacion_tipo || '—'
-                          )}
+                          <span className="tipo-evaluacion">{getTipoLabel(item.evaluacion_tipo)}</span>
                         </td>
                         <td>
                           <div className="celda-nota">

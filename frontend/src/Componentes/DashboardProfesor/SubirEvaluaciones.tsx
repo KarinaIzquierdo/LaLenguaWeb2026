@@ -214,7 +214,7 @@ export default function SubirEvaluaciones() {
   const getTipoBadge = (tipo: string) => {
     const badges = {
       'quiz': { class: 'badge-quiz', text: 'Quiz', icon: '📝' },
-      'examen': { class: 'badge-exam', text: 'Examen', icon: '📋' },
+      'examen': { class: 'badge-exam', text: 'Proyectos', icon: '📋' },
       'tarea': { class: 'badge-task', text: 'Tarea', icon: '📚' }
     };
     return badges[tipo as keyof typeof badges] || badges.quiz;
@@ -314,7 +314,7 @@ export default function SubirEvaluaciones() {
                     onChange={handleInputChange}
                   >
                     <option value="quiz">Quiz</option>
-                    <option value="examen">Examen</option>
+                    <option value="examen">Proyectos</option>
                     <option value="tarea">Tarea</option>
                   </select>
                 </div>

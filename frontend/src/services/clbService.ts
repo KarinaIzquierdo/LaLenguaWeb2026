@@ -60,6 +60,27 @@ export const clbService = {
     return data.data as Club;
   },
 
+  async updateClub(clubId: number, payload: { name?: string; description?: string }): Promise<Club> {
+    const res = await fetch(`${API_BASE_URL}/clubs/${clubId}/update/`, {
+      method: 'PUT',
+      headers: jsonHeaders(),
+      body: JSON.stringify(payload),
+    });
+    const text = await res.text();
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${text}`);
+    const data = JSON.parse(text);
+    return (data.data || data) as Club;
+  },
+
+  async deleteClub(clubId: number): Promise<void> {
+    const res = await fetch(`${API_BASE_URL}/clubs/${clubId}/delete/`, {
+      method: 'DELETE',
+      headers: jsonHeaders(),
+    });
+    const text = await res.text();
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${text}`);
+  },
+
   async getClubMaterials(clubId: number): Promise<ClubMaterial[]> {
     const res = await fetch(`${API_BASE_URL}/clubs/${clubId}/materials/`, { headers: jsonHeaders() });
     const text = await res.text();
@@ -81,6 +102,27 @@ export const clbService = {
     if (!res.ok) throw new Error(`HTTP ${res.status}: ${text}`);
     const data = JSON.parse(text);
     return data.data as ClubMaterial;
+  },
+
+  async updateClubMaterial(materialId: number, payload: { week?: string; title?: string; description?: string; url?: string; }): Promise<ClubMaterial> {
+    const res = await fetch(`${API_BASE_URL}/clubs/materials/${materialId}/update/`, {
+      method: 'PUT',
+      headers: jsonHeaders(),
+      body: JSON.stringify(payload),
+    });
+    const text = await res.text();
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${text}`);
+    const data = JSON.parse(text);
+    return (data.data || data) as ClubMaterial;
+  },
+
+  async deleteClubMaterial(materialId: number): Promise<void> {
+    const res = await fetch(`${API_BASE_URL}/clubs/materials/${materialId}/delete/`, {
+      method: 'DELETE',
+      headers: jsonHeaders(),
+    });
+    const text = await res.text();
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${text}`);
   },
 
   async listStudents(clubId: number): Promise<any[]> {

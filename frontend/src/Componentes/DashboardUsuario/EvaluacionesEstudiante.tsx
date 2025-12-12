@@ -83,7 +83,7 @@ export default function EvaluacionesEstudiante() {
   const getTipoBadge = (tipo: string) => {
     const badges = {
       'quiz': { class: 'badge-quiz', text: 'Quiz', icon: '📝' },
-      'examen': { class: 'badge-exam', text: 'Examen', icon: '📋' },
+      'examen': { class: 'badge-exam', text: 'Proyectos', icon: '📋' },
       'tarea': { class: 'badge-task', text: 'Tarea', icon: '📚' }
     };
     return badges[tipo as keyof typeof badges] || badges.quiz;
@@ -208,7 +208,7 @@ export default function EvaluacionesEstudiante() {
                       <td>
                         <span className={`tipo-badge tipo-${evaluacion.tipo}`}>
                           {evaluacion.tipo === 'quiz' && '🎯 Quiz'}
-                          {evaluacion.tipo === 'examen' && '📋 Examen'}
+                          {evaluacion.tipo === 'examen' && '📋 Proyectos'}
                           {evaluacion.tipo === 'tarea' && '📚 Tarea'}
                         </span>
                       </td>
@@ -225,13 +225,23 @@ export default function EvaluacionesEstudiante() {
                       <td>
                         {evaluacion.tipo === 'tarea' ? (
                           <div className="acciones-tarea">
-                            <button
-                              className="btn-acceder-evaluacion"
-                              onClick={() => descargarEvaluacion(evaluacion)}
-                              disabled={overdue}
-                            >
-                              📥 Descargar Tarea
-                            </button>
+                            {evaluacion.archivo_url ? (
+                              <button
+                                className="btn-acceder-evaluacion"
+                                onClick={() => descargarEvaluacion(evaluacion)}
+                                disabled={overdue}
+                              >
+                                📥 Descargar Tarea
+                              </button>
+                            ) : evaluacion.enlace ? (
+                              <button
+                                className="btn-acceder-evaluacion"
+                                onClick={() => window.open(evaluacion.enlace, '_blank')}
+                                disabled={overdue}
+                              >
+                                🔗 Abrir Tarea
+                              </button>
+                            ) : null}
                             <button
                               className="btn-subir-tarea"
                               onClick={() => subirRespuesta(evaluacion)}

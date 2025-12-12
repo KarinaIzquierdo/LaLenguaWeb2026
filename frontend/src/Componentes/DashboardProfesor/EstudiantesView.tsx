@@ -69,12 +69,14 @@ export default function EstudiantesView() {
         return;
       }
       
-      // Obtener todas las clases desde el backend
-      const todasLasClases = await ClaseService.getClases();
+      // Obtener solo las clases del profesor actual desde el backend
+      const todasLasClases = await ClaseService.getClasesPorProfesor(currentUser.id);
       
-      // Filtrar solo clases programadas o en curso (no completadas ni canceladas)
+      // Filtrar solo clases activas para el profesor (programadas o en curso/en vivo)
       const clasesActivas = todasLasClases.filter((c: any) => 
-        c.estado === 'programada' || c.estado === 'en_curso'
+        c.estado === 'programada' ||
+        c.estado === 'activa' ||      // estado usado por el backend PHP/servicio de cambio de estado
+        c.estado === 'en_curso'       // compatibilidad con posibles valores legacy
       );
       
       // Ordenar por fecha (más recientes primero)
@@ -206,10 +208,37 @@ export default function EstudiantesView() {
     }
   ]);
 
+  const estudiantePerteneceAClaseSeleccionada = (estudiante: Estudiante) => {
+    if (!claseSeleccionada) return true;
+    const asignados = (claseSeleccionada as any).estudiantes;
+    if (!asignados) return false;
+
+    const estudianteIdNum = Number(estudiante.id);
+
+    if (Array.isArray(asignados)) {
+      return asignados.includes(estudianteIdNum);
+    }
+
+    if (typeof asignados === 'string') {
+      try {
+        const ids = asignados
+          .split(',')
+          .map((id: string) => parseInt(id.trim(), 10))
+          .filter((id: number) => !isNaN(id));
+        return ids.includes(estudianteIdNum);
+      } catch {
+        return false;
+      }
+    }
+
+    return false;
+  };
+
   const estudiantesFiltrados = estudiantes.filter(estudiante => {
+    const cumpleClase = estudiantePerteneceAClaseSeleccionada(estudiante);
     const cumpleFiltroNivel = filtroNivel === 'todos' || estudiante.nivel.toLowerCase() === filtroNivel.toLowerCase();
     const cumpleFiltroEstado = filtroEstado === 'todos' || estudiante.estado === filtroEstado;
-    return cumpleFiltroNivel && cumpleFiltroEstado;
+    return cumpleClase && cumpleFiltroNivel && cumpleFiltroEstado;
   });
 
   const verDetallesEstudiante = async (estudiante: Estudiante) => {
@@ -222,10 +251,20 @@ export default function EstudiantesView() {
 
   const cargarAsistenciasEstudiante = async (estudianteId: string) => {
     try {
-      // Obtener todas las clases
-      const todasLasClases = await ClaseService.getClases();
+      // Obtener solo las clases del profesor actual
+      const userStr = localStorage.getItem('user');
+      let todasLasClases: any[] = [];
+      if (userStr) {
+        try {
+          const currentUser = JSON.parse(userStr);
+          todasLasClases = await ClaseService.getClasesPorProfesor(currentUser.id);
+        } catch (e) {
+          console.error('Error parseando usuario en cargarAsistenciasEstudiante:', e);
+          todasLasClases = [];
+        }
+      }
       
-      // Filtrar clases donde el estudiante está asignado
+      // Filtrar clases (del profesor) donde el estudiante está asignado
       const clasesDelEstudiante = todasLasClases.filter((clase: any) => {
         return clase.estudiantes && clase.estudiantes.includes(parseInt(estudianteId));
       });

@@ -11,6 +11,7 @@ from django.contrib.auth import authenticate
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
+from datetime import date, timedelta
 from .models import CustomUser, Profesor, Clase, Evaluation, MediaItem, Club, ClubMaterial, Especializacion, Evaluacion, Notificacion, NotificacionEstudiante, RespuestaEvaluacion, DailyChallengeQuestion, RegistroEliminacion, Asistencia, Suscripcion
 from .serializers import (
     UserSerializer, LoginSerializer, ChangePasswordSerializer, ClaseSerializer,
@@ -1192,6 +1193,113 @@ def daily_challenges_view(request):
     }, status=status.HTTP_200_OK)
 
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def gamificacion_estado_view(request):
+    user = request.user
+
+    return Response({
+        'success': True,
+        'data': {
+            'total_dulces': getattr(user, 'total_dulces', 0) or 0,
+            'total_xp': getattr(user, 'total_xp', 0) or 0,
+            'reto_racha_actual': getattr(user, 'reto_racha_actual', 0) or 0,
+            'reto_mejor_racha': getattr(user, 'reto_mejor_racha', 0) or 0,
+            'reto_ultima_fecha': user.reto_ultima_fecha.isoformat() if getattr(user, 'reto_ultima_fecha', None) else None,
+        }
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def gamificacion_reto_diario_view(request):
+    user = request.user
+
+    hoy = timezone.localdate()
+    ultima_fecha = getattr(user, 'reto_ultima_fecha', None)
+    racha_actual = getattr(user, 'reto_racha_actual', 0) or 0
+    mejor_racha = getattr(user, 'reto_mejor_racha', 0) or 0
+
+    if ultima_fecha == hoy:
+        return Response({
+            'success': False,
+            'message': 'Ya reclamaste la recompensa del reto diario hoy',
+            'data': {
+                'total_dulces': user.total_dulces,
+                'total_xp': user.total_xp,
+                'reto_racha_actual': racha_actual,
+                'reto_mejor_racha': mejor_racha,
+                'reto_ultima_fecha': ultima_fecha.isoformat() if ultima_fecha else None,
+            }
+        }, status=status.HTTP_200_OK)
+
+    if ultima_fecha == hoy - timedelta(days=1):
+        racha_actual += 1
+    else:
+        racha_actual = 1
+
+    if racha_actual > mejor_racha:
+        mejor_racha = racha_actual
+
+    dulces_base = 5
+    xp_base = 15
+    dulces_bonus = 0
+    xp_bonus = 0
+    completó_ciclo = False
+
+    if racha_actual >= 15:
+        dulces_bonus += 25
+        xp_bonus += 80
+        racha_actual = 0
+        completó_ciclo = True
+
+    user.total_dulces = (getattr(user, 'total_dulces', 0) or 0) + dulces_base + dulces_bonus
+    user.total_xp = (getattr(user, 'total_xp', 0) or 0) + xp_base + xp_bonus
+    user.reto_racha_actual = racha_actual
+    user.reto_mejor_racha = mejor_racha
+    user.reto_ultima_fecha = hoy
+    user.save(update_fields=['total_dulces', 'total_xp', 'reto_racha_actual', 'reto_mejor_racha', 'reto_ultima_fecha'])
+
+    return Response({
+        'success': True,
+        'message': 'Recompensa de reto diario aplicada',
+        'data': {
+            'total_dulces': user.total_dulces,
+            'total_xp': user.total_xp,
+            'reto_racha_actual': user.reto_racha_actual,
+            'reto_mejor_racha': user.reto_mejor_racha,
+            'reto_ultima_fecha': user.reto_ultima_fecha.isoformat() if user.reto_ultima_fecha else None,
+            'dulces_ganados': dulces_base + dulces_bonus,
+            'xp_ganado': xp_base + xp_bonus,
+            'bonus_aplicado': completó_ciclo,
+        }
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def gamificacion_mision_view(request):
+    user = request.user
+
+    dulces_mision = 20
+    xp_mision = 30
+
+    user.total_dulces = (getattr(user, 'total_dulces', 0) or 0) + dulces_mision
+    user.total_xp = (getattr(user, 'total_xp', 0) or 0) + xp_mision
+    user.save(update_fields=['total_dulces', 'total_xp'])
+
+    return Response({
+        'success': True,
+        'message': 'Recompensa de misión aplicada',
+        'data': {
+            'total_dulces': user.total_dulces,
+            'total_xp': user.total_xp,
+            'dulces_ganados': dulces_mision,
+            'xp_ganado': xp_mision,
+        }
+    }, status=status.HTTP_200_OK)
+
+
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def daily_challenges_admin_list_create_view(request):
@@ -1720,6 +1828,49 @@ def club_create_view(request):
     return Response({'success': False, 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
 
+@api_view(['PUT', 'PATCH'])
+@permission_classes([IsAuthenticated])
+def club_update_view(request, club_id):
+    """Actualizar datos de un club (nombre, descripción).
+
+    Solo puede hacerlo el profesor dueño del club o un administrador.
+    """
+    try:
+        club = Club.objects.get(pk=club_id)
+    except Club.DoesNotExist:
+        return Response({'success': False, 'message': 'Club no encontrado'}, status=status.HTTP_404_NOT_FOUND)
+
+    user = request.user
+    if not (user == club.profesor or getattr(user, 'role', None) == 'admin'):
+        return Response({'success': False, 'message': 'No autorizado'}, status=status.HTTP_403_FORBIDDEN)
+
+    serializer = ClubSerializer(club, data=request.data, partial=True, context={'request': request})
+    if serializer.is_valid():
+        club = serializer.save()
+        return Response({'success': True, 'data': ClubSerializer(club, context={'request': request}).data}, status=status.HTTP_200_OK)
+    return Response({'success': False, 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def club_delete_view(request, club_id):
+    """Eliminar completamente un club.
+
+    Solo el profesor dueño o un admin pueden eliminarlo.
+    """
+    try:
+        club = Club.objects.get(pk=club_id)
+    except Club.DoesNotExist:
+        return Response({'success': False, 'message': 'Club no encontrado'}, status=status.HTTP_404_NOT_FOUND)
+
+    user = request.user
+    if not (user == club.profesor or getattr(user, 'role', None) == 'admin'):
+        return Response({'success': False, 'message': 'No autorizado'}, status=status.HTTP_403_FORBIDDEN)
+
+    club.delete()
+    return Response({'success': True, 'message': 'Club eliminado correctamente'}, status=status.HTTP_200_OK)
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def club_students_list_view(request, club_id):
@@ -1860,6 +2011,56 @@ def club_material_create_view(request, club_id):
         'success': False, 
         'errors': serializer.errors
     }, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['PUT', 'PATCH'])
+@permission_classes([IsAuthenticated])
+def club_material_update_view(request, material_id):
+    """Actualizar datos de un material de club.
+
+    Permite editar semana, título, descripción y, para recursos de tipo URL,
+    la propia URL. No cambia el archivo físico existente.
+    """
+    try:
+        material = ClubMaterial.objects.get(pk=material_id)
+    except ClubMaterial.DoesNotExist:
+        return Response({'success': False, 'message': 'Material no encontrado'}, status=status.HTTP_404_NOT_FOUND)
+
+    user = request.user
+    if not (user == material.club.profesor or getattr(user, 'role', None) == 'admin'):
+        return Response({'success': False, 'message': 'No autorizado'}, status=status.HTTP_403_FORBIDDEN)
+
+    data = request.data.copy()
+    serializer = ClubMaterialSerializer(material, data=data, partial=True, context={'request': request})
+    if serializer.is_valid():
+        mat = serializer.save()
+        return Response({
+            'success': True,
+            'data': ClubMaterialSerializer(mat, context={'request': request}).data
+        }, status=status.HTTP_200_OK)
+
+    return Response({'success': False, 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def club_material_delete_view(request, material_id):
+    """Eliminar (desactivar) un material de club.
+
+    Se marca is_active = False para mantener historial, pero deja de mostrarse.
+    """
+    try:
+        material = ClubMaterial.objects.get(pk=material_id)
+    except ClubMaterial.DoesNotExist:
+        return Response({'success': False, 'message': 'Material no encontrado'}, status=status.HTTP_404_NOT_FOUND)
+
+    user = request.user
+    if not (user == material.club.profesor or getattr(user, 'role', None) == 'admin'):
+        return Response({'success': False, 'message': 'No autorizado'}, status=status.HTTP_403_FORBIDDEN)
+
+    material.is_active = False
+    material.save()
+    return Response({'success': True, 'message': 'Material eliminado correctamente'}, status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])

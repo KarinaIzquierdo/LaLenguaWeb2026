@@ -327,17 +327,17 @@ const RetosDiariosAdmin: React.FC = () => {
                       {item.activo ? 'Activo' : 'Inactivo'}
                     </button>
                   </td>
-                  <td className="actions-cell">
+                  <td className="actions-cell daily-actions-cell">
                     <button
                       type="button"
-                      className="action-btn edit-btn"
+                      className="daily-action-btn daily-edit-btn"
                       onClick={() => handleEdit(item)}
                     >
                       Editar
                     </button>
                     <button
                       type="button"
-                      className="action-btn delete-btn"
+                      className="daily-action-btn daily-delete-btn"
                       onClick={() => handleDelete(item)}
                     >
                       Eliminar

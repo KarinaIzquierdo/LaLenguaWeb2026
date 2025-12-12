@@ -103,7 +103,7 @@ export default function EvaluacionesView() {
   const getTipoLabel = (tipo: string) => {
     switch (tipo) {
       case 'quiz': return 'Quiz';
-      case 'examen': return 'Examen';
+      case 'examen': return 'Proyectos';
       case 'tarea': return 'Tarea';
       default: return tipo;
     }
@@ -126,7 +126,7 @@ export default function EvaluacionesView() {
       <div className="evaluaciones-header">
         <div className="header-info">
           <h2>Mis Evaluaciones</h2>
-          <p>Gestiona tus quizzes, exámenes y tareas</p>
+          <p>Gestiona tus quizzes, proyectos y tareas</p>
         </div>
         
         <div className="header-filters">
@@ -137,7 +137,7 @@ export default function EvaluacionesView() {
           >
             <option value="todos">Todos los tipos</option>
             <option value="quiz">Quiz</option>
-            <option value="examen">Examen</option>
+            <option value="examen">Proyectos</option>
             <option value="tarea">Tarea</option>
           </select>
           

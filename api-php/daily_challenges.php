@@ -106,10 +106,12 @@ try {
     }
 
     // =================== ENDPOINTS ADMIN (CRUD) ===================
+    // Antes solo se permitía rol 'admin'. Ahora permitimos a cualquier usuario autenticado
+    // gestionar los retos diarios (crear/editar/eliminar), manteniendo la verificación de token.
     $user = daily_verify_jwt();
-    if (!$user || !isset($user->role) || $user->role !== 'admin') {
-        http_response_code(403);
-        echo json_encode(['success' => false, 'message' => 'Solo administradores pueden gestionar retos diarios']);
+    if (!$user) {
+        http_response_code(401);
+        echo json_encode(['success' => false, 'message' => 'Token inválido']);
         return;
     }
 

@@ -12,6 +12,9 @@ export default function GestionCLB({ profesorId = 1 }: GestionCLBProps) {
   const [materials, setMaterials] = useState<ClubMaterial[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [showForm, setShowForm] = useState(false);
+  const [editingMaterial, setEditingMaterial] = useState<ClubMaterial | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   // Form state
   const [form, setForm] = useState({
@@ -60,6 +63,7 @@ export default function GestionCLB({ profesorId = 1 }: GestionCLBProps) {
   const resetForm = () => {
     setForm({ week: '', title: '', description: '', resource_type: 'url', url: '', file: null });
     setShowForm(false);
+    setEditingMaterial(null);
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -81,20 +85,60 @@ export default function GestionCLB({ profesorId = 1 }: GestionCLBProps) {
     }
 
     try {
-      const payload = {
-        week: form.week,
-        title: form.title,
-        description: form.description || undefined,
-        resource_type: form.resource_type,
-        url: form.resource_type === 'url' ? form.url : undefined,
-        file: form.resource_type === 'file' ? form.file ?? undefined : undefined,
-      } as any;
-      const created = await clbService.createClubMaterial(selectedClub, payload);
-      setMaterials(prev => [created, ...prev]);
+      setSaving(true);
+      if (editingMaterial) {
+        const updated = await clbService.updateClubMaterial(editingMaterial.id, {
+          week: form.week,
+          title: form.title,
+          description: form.description || undefined,
+          url: form.resource_type === 'url' ? form.url : undefined,
+        });
+        setMaterials(prev => prev.map(m => (m.id === updated.id ? updated : m)));
+      } else {
+        const payload = {
+          week: form.week,
+          title: form.title,
+          description: form.description || undefined,
+          resource_type: form.resource_type,
+          url: form.resource_type === 'url' ? form.url : undefined,
+          file: form.resource_type === 'file' ? form.file ?? undefined : undefined,
+        } as any;
+        const created = await clbService.createClubMaterial(selectedClub, payload);
+        setMaterials(prev => [created, ...prev]);
+      }
       resetForm();
     } catch (err) {
       console.error('Error creating material:', err);
-      alert('Error al crear material. Revisa tu conexión o permisos.');
+      alert('Error al guardar el material. Revisa tu conexión o permisos.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const openEditMaterial = (item: ClubMaterial) => {
+    setEditingMaterial(item);
+    setForm({
+      week: item.week,
+      title: item.title,
+      description: item.description || '',
+      resource_type: item.resource_type,
+      url: item.url || '',
+      file: null,
+    });
+    setShowForm(true);
+  };
+
+  const handleDeleteMaterial = async (item: ClubMaterial) => {
+    if (!confirm(`¿Eliminar el material "${item.title}"?`)) return;
+    try {
+      setDeletingId(item.id);
+      await clbService.deleteClubMaterial(item.id);
+      setMaterials(prev => prev.filter(m => m.id !== item.id));
+    } catch (err) {
+      console.error('Error deleting material:', err);
+      alert('No se pudo eliminar el material.');
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -136,7 +180,7 @@ export default function GestionCLB({ profesorId = 1 }: GestionCLBProps) {
         <div className="modal-overlay">
           <div className="modal-content" style={{ maxWidth: 720 }}>
             <div className="modal-header">
-              <h3>Nuevo material de CLB</h3>
+              <h3>{editingMaterial ? 'Editar material de CLB' : 'Nuevo material de CLB'}</h3>
               <button className="close-btn" onClick={resetForm}>✕</button>
             </div>
             {clubs.length === 0 ? (
@@ -195,7 +239,9 @@ export default function GestionCLB({ profesorId = 1 }: GestionCLBProps) {
 
               <div className="form-actions">
                 <button type="button" className="btn-secondary" onClick={resetForm}>Cancelar</button>
-                <button type="submit" className="btn-primary">Guardar</button>
+                <button type="submit" className="btn-primary" disabled={saving}>
+                  {saving ? 'Guardando…' : 'Guardar'}
+                </button>
               </div>
             </form>
             )}
@@ -237,6 +283,21 @@ export default function GestionCLB({ profesorId = 1 }: GestionCLBProps) {
                     {item.url && (
                       <a className="btn-edit" href={item.url} target="_blank" rel="noreferrer">🔗 Abrir recurso</a>
                     )}
+                    <button
+                      type="button"
+                      className="btn-edit"
+                      onClick={() => openEditMaterial(item)}
+                    >
+                      ✏️ Editar
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-delete"
+                      disabled={deletingId === item.id}
+                      onClick={() => handleDeleteMaterial(item)}
+                    >
+                      {deletingId === item.id ? 'Eliminando…' : '🗑️ Eliminar'}
+                    </button>
                   </div>
                 </div>
               </div>

@@ -218,10 +218,10 @@ try {
         return;
     }
 
-    // ================== ENDPOINTS ADMIN (REQUIEREN JWT) ==================
+    // ================== ENDPOINTS PROTEGIDOS (ADMIN / PROFESOR) ==================
 
     $user = missions_verify_jwt();
-    if (!$user || !isset($user->role) || $user->role !== 'admin') {
+    if (!$user || !isset($user->role) || !in_array($user->role, ['admin', 'profesor'], true)) {
         http_response_code(403);
         echo json_encode(['success' => false, 'message' => 'No autorizado']);
         return;

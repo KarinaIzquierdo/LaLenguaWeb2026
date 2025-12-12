@@ -4,6 +4,9 @@ import PiePagina from '../Layout/PiePagina';
 import EvaluationModal from './EvaluationModal';
 import ResultsModal from './ResultsModal';
 import NotesModal from './NotesModal';
+import AchievementsModal from './AchievementsModal';
+import AvatarModal from './AvatarModal';
+import AdventureModal from './AdventureModal';
 import OnboardingTour from "../Onboarding/OnboardingTour";
 import ProfileModal from "../Profile/ProfileModal";
 import ChallengeModal from "./ChallengeModal";
@@ -15,6 +18,7 @@ import { authService } from '../../services/authService';
 import { ClaseService } from '../../services/claseService';
 import { clbService, type Club, type ClubMaterial } from '../../services/clbService';
 import EvaluacionesEstudiante from '../DashboardUsuario/EvaluacionesEstudiante';
+import { gamificationService } from '../../services/gamificationService';
 
 interface DashboardProps {
   onLogout?: () => void;
@@ -22,8 +26,8 @@ interface DashboardProps {
 
 export default function LingoLearn({ onLogout }: DashboardProps = {}) {
   
-  const [candies, setCandies] = useState(42); // Dulces acumulados
-  const [experience, setExperience] = useState(1250); // XP acumulado
+  const [candies, setCandies] = useState(0); // Dulces acumulados (desde backend)
+  const [experience, setExperience] = useState(0); // XP acumulado (desde backend)
   const [showPrizeModal, setShowPrizeModal] = useState(false);
   const [currentPrize, setCurrentPrize] = useState<{title: string, description: string, icon: string} | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -64,6 +68,8 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
   const [isLoadingClases, setIsLoadingClases] = useState(true);
   const [userId, setUserId] = useState<string>('');
 
+  const [avatarSrc, setAvatarSrc] = useState<string | null>(null);
+
   // CLB (Club) states
   const [clubs, setClubs] = useState<Club[]>([]);
   const [selectedClubId, setSelectedClubId] = useState<number | null>(null);
@@ -73,6 +79,11 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
   // Evaluaciones states
   const [evaluaciones, setEvaluaciones] = useState<any[]>([]);
   const [isLoadingEvaluaciones, setIsLoadingEvaluaciones] = useState(false);
+
+  // Título del estudiante basado en XP (desde backend de gamificación)
+  const [userTitle, setUserTitle] = useState<string>('');
+  const [userTitleCode, setUserTitleCode] = useState<string | null>(null);
+  const [nextTitleXp, setNextTitleXp] = useState<number | null>(null);
 
   // Misiones dinámicas states
   const [availableMissions, setAvailableMissions] = useState<Array<{mission_key: string; title: string; description: string; platform: string; xp: number}>>([]);
@@ -84,6 +95,13 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
 
   // Modal de notas y asistencia
   const [showNotesModal, setShowNotesModal] = useState(false);
+
+  // Modal de logros
+  const [showAchievementsModal, setShowAchievementsModal] = useState(false);
+  const [achievements, setAchievements] = useState<any[]>([]);
+
+  const [showAvatarModal, setShowAvatarModal] = useState(false);
+  const [showAdventureModal, setShowAdventureModal] = useState(false);
 
   // API base para consultar enlaces de misiones (router PHP legacy)
   const PHP_API_BASE_URL = 'https://lalenguacolombia.co/api/index.php';
@@ -139,6 +157,52 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
       if (data?.url) {
         const finalUrl: string = data.url.startsWith('http') ? data.url : `https://${data.url}`;
         window.open(finalUrl, '_blank', 'noopener');
+
+        // Registrar recompensa de misión en el backend de gamificación
+        try {
+          const reward = await gamificationService.claimMissionReward();
+          if (reward.success && reward.data) {
+            const d = reward.data;
+            const newCandies = d.total_dulces ?? candies;
+            const newXp = d.total_xp ?? experience;
+            setCandies(newCandies);
+            setExperience(newXp);
+
+            // Actualizar título si el backend envía nuevos datos
+            if (d.title) setUserTitle(d.title);
+            if (typeof d.title_code === 'string') setUserTitleCode(d.title_code);
+            if (typeof d.next_title_xp !== 'undefined') setNextTitleXp(d.next_title_xp ?? null);
+
+            // Actualizar lista de logros acumulados
+            if (Array.isArray(d.achievements)) {
+              setAchievements(d.achievements);
+            }
+
+            // Verificar premios por nivel de dulces usando el total actualizado
+            setTimeout(() => checkForPrize(newCandies), 500);
+
+            // Notificar nuevos logros desbloqueados (si los hay)
+            if (Array.isArray(d.new_achievements) && d.new_achievements.length > 0) {
+              const names = d.new_achievements.map((a: any) => a.name).join(', ');
+              showNotification(
+                'success',
+                '🏅 Nuevo logro',
+                `Has desbloqueado: ${names}`
+              );
+            }
+
+            const dulcesGan = d.dulces_ganados ?? 20;
+            const xpGan = d.xp_ganado ?? 30;
+            showNotification(
+              'success',
+              '¡Misión registrada! 🎮',
+              `Has ganado ${dulcesGan} dulces y ${xpGan} XP por esta misión.`,
+              { candies: dulcesGan, xp: xpGan }
+            );
+          }
+        } catch (e) {
+          console.error('Error al registrar recompensa de misión:', e);
+        }
       } else {
         showNotification('info', 'Misión no disponible', 'No hay enlace configurado por ahora.');
       }
@@ -289,7 +353,7 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
 
   // Usar hook de eventos DOM con función de notificación
   useDashboardEvents(showNotification);
-
+  
   // Función para acceder a una clase
   const accederClase = (clase: any) => {
     // Verificar que la clase esté activa
@@ -298,13 +362,17 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
       return;
     }
     
-    // Obtener el enlace de Meet
+    // Obtener el enlace de Meet / videoconferencia
     const meetLink = clase.meet_link || clase.meetLink;
+
+    const esLinkInvalido =
+      !meetLink ||
+      meetLink.trim() === '' ||
+      meetLink === 'undefined' ||
+      meetLink.includes('meet.google.com/new');
     
-    if (!meetLink || meetLink.trim() === '' || meetLink === 'undefined') {
-      // Para clases del bloque sin enlace, generar uno nuevo
-      const enlaceGenerado = 'https://meet.google.com/new';
-      window.open(enlaceGenerado, '_blank');
+    if (esLinkInvalido) {
+      alert('Esta clase aún no tiene enlace de videoconferencia configurado. Pide a tu profesor que agregue el enlace (Zoom, Meet, Teams, etc.).');
       return;
     }
     
@@ -317,40 +385,91 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
   };
 
   // Función para verificar respuesta del reto
-  const checkChallengeAnswer = (selectedAnswer: number) => {
-    const today = new Date().toDateString();
+  const checkChallengeAnswer = async (selectedAnswer: number) => {
+    const todayStr = new Date().toDateString();
     setHasCompletedToday(true);
-    localStorage.setItem(`lastCompletedDate_${userId}`, today);
-    
+    localStorage.setItem(`lastCompletedDate_${userId}`, todayStr);
+
     if (currentChallenge && selectedAnswer === currentChallenge.correctAnswer) {
-      // Respuesta correcta - continúa la racha
-      const newProgress = challengeProgress + 1;
-      setChallengeProgress(newProgress);
-      localStorage.setItem(`challengeProgress_${userId}`, newProgress.toString());
-      
-      // Si completa los 7 días, dar recompensa especial y reiniciar
-      if (newProgress >= 7) {
-        const newStreakLevel = streakLevel + 1;
-        setStreakLevel(newStreakLevel);
-        localStorage.setItem(`streakLevel_${userId}`, newStreakLevel.toString());
-        setCandies(prev => prev + 15); // 15 dulces por completar semana
-        setExperience(prev => prev + 50); // 50 XP por completar semana
-        setChallengeProgress(0); // Reiniciar racha
-        localStorage.setItem(`challengeProgress_${userId}`, '0');
-        showNotification('success', '¡Felicidades! 🎉', `¡Increíble! Completaste 7 días de racha!\n🌟 ¡Nivel de racha: ${newStreakLevel}!\n¡La tarjeta evoluciona!`, { candies: 15, xp: 50 });
-      } else {
-        setCandies(prev => prev + 3); // 3 dulces por día
-        setExperience(prev => prev + 10); // 10 XP por día
-        showNotification('success', '¡Correcto! ✅', `¡Excelente! Día ${newProgress} de racha`, { candies: 3, xp: 10 });
+      // Respuesta correcta: pedir al backend que aplique la recompensa
+      try {
+        const resp = await gamificationService.claimDailyChallenge();
+
+        if (!resp.success) {
+          // Ya reclamó hoy u otra condición de negocio
+          showNotification(
+            'info',
+            'Reto diario',
+            resp.message || 'Ya reclamaste la recompensa del reto diario hoy.'
+          );
+        } else if (resp.data) {
+          const d = resp.data;
+
+          const newCandies = d.total_dulces ?? 0;
+          const newXp = d.total_xp ?? 0;
+          setCandies(newCandies);
+          setExperience(newXp);
+
+          // Actualizar título si el backend envía nuevos datos
+          if (d.title) setUserTitle(d.title);
+          if (typeof d.title_code === 'string') setUserTitleCode(d.title_code);
+          if (typeof d.next_title_xp !== 'undefined') setNextTitleXp(d.next_title_xp ?? null);
+
+          // Actualizar racha local con el valor del backend
+          const serverStreak = d.reto_racha_actual ?? challengeProgress + 1;
+          setChallengeProgress(serverStreak);
+          localStorage.setItem(`challengeProgress_${userId}`, serverStreak.toString());
+
+          // Si el backend indica que se aplicó bonus (15 días seguidos), subir nivel de racha visual
+          if (d.bonus_aplicado) {
+            const newStreakLevel = streakLevel + 1;
+            setStreakLevel(newStreakLevel);
+            localStorage.setItem(`streakLevel_${userId}`, newStreakLevel.toString());
+          }
+
+          // Actualizar lista de logros acumulados
+          if (Array.isArray(d.achievements)) {
+            setAchievements(d.achievements);
+          }
+
+          // Verificar premios por niveles de dulces usando el total actualizado
+          setTimeout(() => checkForPrize(newCandies), 500);
+
+          // Notificar nuevos logros desbloqueados (si los hay)
+          if (Array.isArray(d.new_achievements) && d.new_achievements.length > 0) {
+            const names = d.new_achievements.map((a: any) => a.name).join(', ');
+            showNotification(
+              'success',
+              '🏅 Nuevo logro',
+              `Has desbloqueado: ${names}`
+            );
+          }
+
+          const dulcesGan = d.dulces_ganados ?? 5;
+          const xpGan = d.xp_ganado ?? 15;
+          showNotification(
+            'success',
+            '¡Correcto! ✅',
+            `Has ganado ${dulcesGan} dulces y ${xpGan} XP.`,
+            { candies: dulcesGan, xp: xpGan }
+          );
+        }
+      } catch (error) {
+        console.error('Error registrando reto diario:', error);
+        showNotification('error', 'Error', 'No se pudo registrar tu reto diario. Intenta más tarde.');
       }
-      
+
       closeChallengeModal();
     } else {
-      // Respuesta incorrecta - reiniciar racha a cero y mostrar respuesta correcta
+      // Respuesta incorrecta - reiniciar racha a cero y mostrar respuesta correcta (solo a nivel visual)
       setChallengeProgress(0);
       localStorage.setItem(`challengeProgress_${userId}`, '0');
       const correctOption = currentChallenge?.options[currentChallenge.correctAnswer];
-      showNotification('error', 'Respuesta incorrecta ❌', `Tu racha se reinicia a 0.\n\nRespuesta correcta: ${correctOption}\n\n${currentChallenge?.explanation}`);
+      showNotification(
+        'error',
+        'Respuesta incorrecta ❌',
+        `Tu racha se reinicia a 0.\n\nRespuesta correcta: ${correctOption}\n\n${currentChallenge?.explanation}`
+      );
       closeChallengeModal();
     }
   };
@@ -384,6 +503,29 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
         const profile = await authService.getUserProfile();
         const userIdStr = profile.id?.toString() || '';
         setUserId(userIdStr);
+
+        if (userIdStr) {
+          const storedAvatar = localStorage.getItem(`avatar_${userIdStr}`);
+          if (storedAvatar) {
+            setAvatarSrc(storedAvatar);
+          }
+        }
+
+        // Cargar estado inicial de gamificación (dulces, XP, títulos y logros) desde PHP
+        try {
+          const estado = await gamificationService.getEstado();
+          if (estado.success && estado.data) {
+            const { total_dulces, total_xp, title, title_code, next_title_xp, achievements: allAchievements } = estado.data as any;
+            setCandies(total_dulces ?? 0);
+            setExperience(total_xp ?? 0);
+            if (title) setUserTitle(title);
+            if (typeof title_code === 'string') setUserTitleCode(title_code);
+            if (typeof next_title_xp !== 'undefined') setNextTitleXp(next_title_xp);
+            if (Array.isArray(allAchievements)) setAchievements(allAchievements);
+          }
+        } catch (e) {
+          console.error('Error cargando estado de gamificación:', e);
+        }
         
         // Cargar datos específicos del usuario desde localStorage
         const todayStr = new Date().toDateString();
@@ -611,7 +753,8 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
       <NavUsu 
         candies={candies} 
         experience={experience} 
-        onLogout={onLogout} 
+        onLogout={onLogout}
+        onOpenAchievements={() => setShowAchievementsModal(true)}
       />
       
       <div className="container">
@@ -621,16 +764,21 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
       {/* Hero */}
       <section className="hero">
         <div className="hero-content">
-          <h1>¡Bienvenido a tu aventura con Lingo! 🦩</h1>
-          <p>Acompaña a nuestro flamenco en su viaje migratorio mientras aprendes inglés</p>
-          <button className="btn-adventure">¡Comenzar aventura!</button>
+          <h1>¡Bienvenido a tu aventura con la Lengua! </h1>
+          <p>Acompaña a nuestra lengua en su aventura mientras aprendes inglés</p>
+          <button
+            className="btn-adventure"
+            onClick={() => setShowAdventureModal(true)}
+          >
+            ¡Comenzar aventura!
+          </button>
         </div>
 
       <div className="hero-image">
         <div className="flamingo">
           <img
-            src="/Image/flamingo.png"
-            alt="Flamingo"
+            src="/Lengua-logo.png"
+            alt="Lengua"
             className="flamingo-img"
           />
         </div>
@@ -648,18 +796,22 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
             <h3>Tu Avatar</h3>
           </div>
           <div className="card-description">
-            Personaliza tu avatar para acompañar a Lingo en su viaje migratorio.
+            Personaliza tu avatar para acompañar a Lengua en su viaje al mundo del ingles .
           </div>
 
-          <div className="avatar-preview">👤</div>
-
-          <div className="color-palette">
-            <div className="color-option color-red active"></div>
-            <div className="color-option color-green"></div>
-            <div className="color-option color-purple"></div>
-            <div className="color-option color-yellow"></div>
+          <div className="avatar-preview">
+            {avatarSrc ? (
+              <img src={avatarSrc} alt="Avatar" className="avatar-preview-img" />
+            ) : (
+              '👤'
+            )}
           </div>
-          <button className="btn-primary personalizar">Personalizar</button>
+          <button
+            className="btn-primary personalizar"
+            onClick={() => setShowAvatarModal(true)}
+          >
+            Personalizar
+          </button>
         </div>
 
         {/* Progress Card */}
@@ -671,12 +823,78 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
             <h3>Tu Progreso</h3>
           </div>
           <div className="level-info">
-            <div className="level-text">Nivel actual: Principiante</div>
+            <div className="level-text">
+              Nivel actual: {userTitle || 'Principiante'}
+            </div>
             <div className="progress-container">
               <div className="progress-bar">
-                <div className="progress-fill"></div>
+                <div
+                  className="progress-fill"
+                  style={{
+                    width: `${(() => {
+                      if (!nextTitleXp || nextTitleXp <= 0) return 100;
+                      const code = userTitleCode || '';
+                      let minXp = 0;
+                      switch (code) {
+                        case 'word_builder':
+                          minXp = 100;
+                          break;
+                        case 'grammar_adventurer':
+                          minXp = 250;
+                          break;
+                        case 'conversation_starter':
+                          minXp = 500;
+                          break;
+                        case 'fluent_traveler':
+                          minXp = 1000;
+                          break;
+                        case 'english_master':
+                          minXp = 2000;
+                          break;
+                        default:
+                          minXp = 0;
+                          break;
+                      }
+                      const span = nextTitleXp - minXp;
+                      if (span <= 0) return 100;
+                      const value = ((experience - minXp) / span) * 100;
+                      return Math.max(0, Math.min(100, Math.round(value)));
+                    })()}%`,
+                  }}
+                ></div>
               </div>
-              <div className="progress-percentage">35%</div>
+              <div className="progress-percentage">
+                {(() => {
+                  if (!nextTitleXp || nextTitleXp <= 0) return '100%';
+                  const code = userTitleCode || '';
+                  let minXp = 0;
+                  switch (code) {
+                    case 'word_builder':
+                      minXp = 100;
+                      break;
+                    case 'grammar_adventurer':
+                      minXp = 250;
+                      break;
+                    case 'conversation_starter':
+                      minXp = 500;
+                      break;
+                    case 'fluent_traveler':
+                      minXp = 1000;
+                      break;
+                    case 'english_master':
+                      minXp = 2000;
+                      break;
+                    default:
+                      minXp = 0;
+                      break;
+                  }
+                  const span = nextTitleXp - minXp;
+                  if (span <= 0) return '100%';
+                  const value = ((experience - minXp) / span) * 100;
+                  const pct = Math.max(0, Math.min(100, Math.round(value)));
+                  return `${pct}%`;
+                })()}
+              </div>
             </div>
           </div>
           <ul className="skills-list">
@@ -799,11 +1017,11 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
                   <div className="mission-stats">
                     <div className="stat">
                       <span className="stat-icon">🍬</span>
-                      <span>+10 Dulces</span>
+                      <span>+20 Dulces</span>
                     </div>
                     <div className="stat">
                       <span className="stat-icon">⭐</span>
-                      <span>+{mission.xp} XP</span>
+                      <span>+30 XP</span>
                     </div>
                   </div>
                 </div>
@@ -1046,6 +1264,24 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
         onClose={() => setShowNotesModal(false)}
       />
 
+      {/* Modal de logros */}
+      <AchievementsModal
+        isOpen={showAchievementsModal}
+        onClose={() => setShowAchievementsModal(false)}
+        achievements={achievements}
+      />
+
+      <AvatarModal
+        isOpen={showAvatarModal}
+        onClose={() => setShowAvatarModal(false)}
+        onSelect={(src: string) => {
+          setAvatarSrc(src);
+          if (userId) {
+            localStorage.setItem(`avatar_${userId}`, src);
+          }
+        }}
+      />
+
       {/* Modal de Reto Diario */}
       {showChallengeModal && currentChallenge && (
         <ChallengeModal
@@ -1091,6 +1327,10 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
       
       {/* Pie de Página */}
       <PiePagina />
+      <AdventureModal
+        isOpen={showAdventureModal}
+        onClose={() => setShowAdventureModal(false)}
+      />
     </>
   );
 }

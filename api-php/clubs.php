@@ -5,7 +5,7 @@
 
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS');
+header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -67,6 +67,101 @@ try {
     if ($urow) {
         $profesorNombre = trim(($urow['first_name'] ?? '') . ' ' . ($urow['last_name'] ?? ''));
         if ($profesorNombre === '') $profesorNombre = $urow['username'] ?? '';
+    }
+
+    // Endpoints a nivel de material: /clubs/materials/{material_id}/update|delete/
+    if ($seg1 === 'materials' && is_numeric($seg2)) {
+        $materialId = intval($seg2);
+
+        $stmtMat = $pdo->prepare('SELECT m.*, c.profesor_id FROM api_clubmaterial m JOIN api_club c ON m.club_id = c.id WHERE m.id = ?');
+        $stmtMat->execute([$materialId]);
+        $matRow = $stmtMat->fetch(PDO::FETCH_ASSOC);
+        if (!$matRow) {
+            http_response_code(404);
+            echo json_encode(['success' => false, 'message' => 'Material no encontrado']);
+            return;
+        }
+
+        $esAdmin = isset($user->role) && $user->role === 'admin';
+        $esProfesorClub = (int)$matRow['profesor_id'] === (int)$user->user_id;
+        if (!$esAdmin && !$esProfesorClub) {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'message' => 'No autorizado']);
+            return;
+        }
+
+        if (($method === 'POST' || $method === 'PUT') && $seg3 === 'update') {
+            $body = json_decode(file_get_contents('php://input'), true) ?: [];
+
+            $fields = [];
+            $params = [];
+
+            if (array_key_exists('week', $body)) {
+                $week = trim($body['week']);
+                if ($week === '') {
+                    http_response_code(400);
+                    echo json_encode(['success' => false, 'message' => 'La semana no puede estar vacía']);
+                    return;
+                }
+                $fields[] = 'week = ?';
+                $params[] = $week;
+            }
+
+            if (array_key_exists('title', $body)) {
+                $title = trim($body['title']);
+                if ($title === '') {
+                    http_response_code(400);
+                    echo json_encode(['success' => false, 'message' => 'El título no puede estar vacío']);
+                    return;
+                }
+                $fields[] = 'title = ?';
+                $params[] = $title;
+            }
+
+            if (array_key_exists('description', $body)) {
+                $description = $body['description'];
+                $fields[] = 'description = ?';
+                $params[] = $description;
+            }
+
+            if (array_key_exists('url', $body) && $matRow['resource_type'] === 'url') {
+                $url = $body['url'];
+                $fields[] = 'url = ?';
+                $params[] = $url;
+            }
+
+            if (empty($fields)) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => 'No hay campos para actualizar']);
+                return;
+            }
+
+            $fields[] = 'updated_at = NOW()';
+            $sql = 'UPDATE api_clubmaterial SET ' . implode(', ', $fields) . ' WHERE id = ?';
+            $params[] = $materialId;
+
+            $stmtUpd = $pdo->prepare($sql);
+            $stmtUpd->execute($params);
+
+            $stmtGet = $pdo->prepare('SELECT * FROM api_clubmaterial WHERE id = ?');
+            $stmtGet->execute([$materialId]);
+            $mat = $stmtGet->fetch(PDO::FETCH_ASSOC);
+
+            echo json_encode(['success' => true, 'data' => $mat]);
+            return;
+        }
+
+        if ($method === 'DELETE' && $seg3 === 'delete') {
+            $stmtDel = $pdo->prepare('UPDATE api_clubmaterial SET is_active = 0, updated_at = NOW() WHERE id = ?');
+            $stmtDel->execute([$materialId]);
+
+            echo json_encode(['success' => true, 'message' => 'Material eliminado correctamente']);
+            return;
+        }
+
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'Ruta o método no soportado para materials']);
+        return;
     }
 
     if ($method === 'GET' && ($seg1 === null || $seg1 === '')) {
@@ -233,6 +328,89 @@ try {
 
     $esAdmin = isset($user->role) && $user->role === 'admin';
     $esProfesorClub = (int)$clubRow['profesor_id'] === (int)$user->user_id;
+
+    // Actualizar club: /clubs/{id}/update/
+    if (($method === 'POST' || $method === 'PUT') && $seg2 === 'update') {
+        if (!$esAdmin && !$esProfesorClub) {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'message' => 'No autorizado']);
+            return;
+        }
+
+        $body = json_decode(file_get_contents('php://input'), true) ?: [];
+
+        $fields = [];
+        $params = [];
+
+        if (array_key_exists('name', $body)) {
+            $name = trim($body['name']);
+            if ($name === '') {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => 'El nombre es obligatorio']);
+                return;
+            }
+            $fields[] = 'name = ?';
+            $params[] = $name;
+        }
+
+        if (array_key_exists('description', $body)) {
+            $description = $body['description'];
+            $fields[] = 'description = ?';
+            $params[] = $description;
+        }
+
+        if (empty($fields)) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'No hay campos para actualizar']);
+            return;
+        }
+
+        $fields[] = 'updated_at = NOW()';
+        $sql = 'UPDATE api_club SET ' . implode(', ', $fields) . ' WHERE id = ?';
+        $params[] = $clubId;
+
+        $stmtUpd = $pdo->prepare($sql);
+        $stmtUpd->execute($params);
+
+        $stmtGet = $pdo->prepare('SELECT c.*, u.first_name, u.last_name, u.username FROM api_club c LEFT JOIN api_customuser u ON c.profesor_id = u.id WHERE c.id = ?');
+        $stmtGet->execute([$clubId]);
+        $c = $stmtGet->fetch(PDO::FETCH_ASSOC);
+        if (!$c) {
+            http_response_code(404);
+            echo json_encode(['success' => false, 'message' => 'Club no encontrado tras actualizar']);
+            return;
+        }
+
+        $nombreProf = trim(($c['first_name'] ?? '') . ' ' . ($c['last_name'] ?? ''));
+        if ($nombreProf === '') $nombreProf = $c['username'] ?? '';
+
+        echo json_encode([
+            'success' => true,
+            'data' => [
+                'id' => (int)$c['id'],
+                'name' => $c['name'],
+                'description' => $c['description'],
+                'profesor' => (int)$c['profesor_id'],
+                'profesor_name' => $nombreProf,
+            ],
+        ]);
+        return;
+    }
+
+    // Eliminar club: /clubs/{id}/delete/
+    if ($method === 'DELETE' && $seg2 === 'delete') {
+        if (!$esAdmin && !$esProfesorClub) {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'message' => 'No autorizado']);
+            return;
+        }
+
+        $stmtDel = $pdo->prepare('DELETE FROM api_club WHERE id = ?');
+        $stmtDel->execute([$clubId]);
+
+        echo json_encode(['success' => true, 'message' => 'Club eliminado correctamente']);
+        return;
+    }
 
     if ($method === 'GET' && $seg2 === 'students') {
         // GET /clubs/{id}/students/

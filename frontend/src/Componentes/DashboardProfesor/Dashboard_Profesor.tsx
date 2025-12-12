@@ -6,6 +6,8 @@ import ProgramarClase from './ProgramarClase';
 import DriveEvaluaciones from './DriveEvaluaciones';
 import { userService } from '../../services/userService';
 import { authService } from '../../services/authService';
+import { ClaseService } from '../../services/claseService';
+import { calificacionService } from '../../services/calificacionService';
 import GestionCLB from './GestionCLB';
 import MisClubs from './MisClubs';
 import ReportesProgreso from './ReportesProgreso';
@@ -13,6 +15,7 @@ import NotificacionesProfesor from './NotificacionesProfesor';
 import EstudiantesView from './EstudiantesView';
 import HistorialAsistencias from './HistorialAsistencias';
 import CalificarEvaluaciones from './CalificarEvaluaciones';
+import MisionesAdmin from '../DashboardAdmin/MisionesAdmin';
 
 interface DashboardProfesorProps {
   onLogout?: () => void;
@@ -53,17 +56,64 @@ export default function DashboardProfesor({ onLogout }: DashboardProfesorProps =
             nombre: `Prof. ${fullName}`,
             initials,
           }));
-          return;
+        } else {
+          // 2) Fallback: intentar obtener el perfil desde el backend si el endpoint existe
+          const response = await userService.getCurrentUser();
+          if (response.success && response.user) {
+            setProfessorData(prev => ({
+              ...prev,
+              nombre: `Prof. ${response.user.full_name}`,
+              initials: response.user.initials,
+            }));
+          }
         }
 
-        // 2) Fallback: intentar obtener el perfil desde el backend si el endpoint existe
-        const response = await userService.getCurrentUser();
-        if (response.success && response.user) {
+        try {
+          const clasesProfesor: any[] = await ClaseService.getClasesPorProfesor(0);
+          const clasesArray = Array.isArray(clasesProfesor) ? clasesProfesor : [];
+
+          const estudiantesIds = new Set<number>();
+          clasesArray.forEach((clase: any) => {
+            const est = clase.estudiantes;
+            if (Array.isArray(est)) {
+              est.forEach((id: any) => {
+                const parsed = typeof id === 'string' ? parseInt(id, 10) : id;
+                if (!Number.isNaN(parsed)) {
+                  estudiantesIds.add(parsed);
+                }
+              });
+            } else if (typeof est === 'string') {
+              est.split(',').forEach((idStr: string) => {
+                const parsed = parseInt(idStr.trim(), 10);
+                if (!Number.isNaN(parsed)) {
+                  estudiantesIds.add(parsed);
+                }
+              });
+            }
+          });
+
+          let evaluacionesPendientes = 0;
+          try {
+            const pendientes = await calificacionService.obtenerRespuestasPorCalificar();
+            if (pendientes.success) {
+              if (typeof pendientes.total === 'number') {
+                evaluacionesPendientes = pendientes.total;
+              } else if (Array.isArray(pendientes.respuestas)) {
+                evaluacionesPendientes = pendientes.respuestas.length;
+              }
+            }
+          } catch (e) {
+            console.error('Error loading pending evaluations:', e);
+          }
+
           setProfessorData(prev => ({
             ...prev,
-            nombre: `Prof. ${response.user.full_name}`,
-            initials: response.user.initials,
+            clasesTotales: clasesArray.length,
+            estudiantesActivos: estudiantesIds.size,
+            evaluacionesPendientes,
           }));
+        } catch (e) {
+          console.error('Error loading professor stats:', e);
         }
       } catch (error) {
         console.error('Error loading professor data:', error);
@@ -132,6 +182,7 @@ export default function DashboardProfesor({ onLogout }: DashboardProfesorProps =
           {activeView === 'mis-clubs' && <MisClubs />}
           {activeView === 'estudiantes' && <EstudiantesView />}
           {activeView === 'reportes' && <ReportesProgreso />}
+          {activeView === 'misiones' && <MisionesAdmin />}
           {activeView === 'historial-asistencias' && <HistorialAsistencias />}
           {activeView === 'calificar-evaluaciones' && <CalificarEvaluaciones />}
           {activeView === 'notificaciones' && <NotificacionesProfesor />}

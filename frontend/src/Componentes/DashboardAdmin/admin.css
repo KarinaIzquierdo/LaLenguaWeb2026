@@ -1058,7 +1058,7 @@
   text-align: right;
 }
 
-/* Botones de acción en tabla */
+/* Botones de acción en tabla (estilo general para admin: Programar Clase, gestión, etc.) */
 .action-btn {
   padding: 0.625rem 1rem;
   border-radius: 8px;
@@ -1114,6 +1114,38 @@
   gap: 0.5rem;
   justify-content: center;
   align-items: center;
+}
+
+/* Estilo específico y más pequeño para los botones del listado de Retos Diarios */
+.daily-actions-cell {
+  gap: 0.75rem;
+}
+
+.daily-action-btn {
+  padding: 0.2rem 0.65rem;
+  border-radius: 9999px;
+  border: none;
+  background: transparent;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.daily-action-btn.daily-edit-btn {
+  color: var(--primary-blue);
+}
+
+.daily-action-btn.daily-edit-btn:hover {
+  background: rgba(37, 99, 235, 0.08);
+}
+
+.daily-action-btn.daily-delete-btn {
+  color: var(--danger);
+}
+
+.daily-action-btn.daily-delete-btn:hover {
+  background: rgba(220, 38, 38, 0.08);
 }
 
 .view-btn {

@@ -45,6 +45,11 @@ class CustomUser(AbstractUser):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True)
+    total_dulces = models.IntegerField(default=0)
+    total_xp = models.IntegerField(default=0)
+    reto_racha_actual = models.IntegerField(default=0)
+    reto_mejor_racha = models.IntegerField(default=0)
+    reto_ultima_fecha = models.DateField(null=True, blank=True)
     
     def __str__(self):
         return f"{self.username} - {self.first_name} {self.last_name}"

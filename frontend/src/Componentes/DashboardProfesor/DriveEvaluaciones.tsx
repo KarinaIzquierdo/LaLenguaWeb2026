@@ -446,14 +446,20 @@ export default function DriveEvaluaciones() {
             </div>
 
             <div className="evaluacion-enlace">
-              <a 
-                href={evaluacion.enlace} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="enlace-evaluacion"
-              >
-                🔗 Abrir Evaluación
-              </a>
+              {evaluacion.enlace ? (
+                <a 
+                  href={evaluacion.enlace} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="enlace-evaluacion"
+                >
+                  🔗 Abrir Evaluación
+                </a>
+              ) : (
+                <span className="enlace-evaluacion sin-enlace">
+                  Sin enlace asignado (solo archivo)
+                </span>
+              )}
             </div>
 
             <div className="evaluacion-actions">
@@ -528,7 +534,7 @@ export default function DriveEvaluaciones() {
                     required
                   >
                     <option value="quiz">Quiz</option>
-                    <option value="examen">Examen</option>
+                    <option value="examen">Proyectos</option>
                     <option value="tarea">Tarea</option>
                   </select>
                 </div>
@@ -587,13 +593,13 @@ export default function DriveEvaluaciones() {
               <div className="form-group">
                 <label htmlFor="enlace">Enlace de la Evaluación</label>
                 <input
-                  type="url"
+                  type="text"
                   id="enlace"
                   value={formData.enlace}
                   onChange={(e) => setFormData(prev => ({ ...prev, enlace: e.target.value }))}
-                  placeholder="https://docs.google.com/forms/d/..."
+                  placeholder="https://... (Gimkit, Kahoot, Quizizz, Google Forms, etc.)"
                 />
-                <small>Pega aquí el enlace de Google Forms, Docs, o cualquier plataforma de evaluación (opcional si adjuntas archivo)</small>
+                <small>Pega aquí el enlace de cualquier plataforma de evaluación (Gimkit, Kahoot, Quizizz, Google Forms, etc.). Este campo es opcional si adjuntas un archivo.</small>
               </div>
 
               {!editingEvaluacion && (

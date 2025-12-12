@@ -70,7 +70,7 @@ function PiePagina() {
         <div className="footer-contact">
           <h3>Contacto</h3>
           <div className="contact-info">
-            <p>fernandaIuis@lalenguacolombia.com</p>
+            <p>academico@lalenguacolombia.co</p>
             <p>+57 316 4844819</p>
             <p> Bogotá, Colombia</p>
           </div>

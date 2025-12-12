@@ -17,9 +17,16 @@ function gallery_verificar_jwt() {
         return null;
     }
     $headers = getallheaders();
+
+    // Normalizar posible header en minúsculas, como en otros endpoints
+    if (!isset($headers['Authorization']) && isset($headers['authorization'])) {
+        $headers['Authorization'] = $headers['authorization'];
+    }
+
     if (!isset($headers['Authorization'])) {
         return null;
     }
+
     $token = str_replace('Bearer ', '', $headers['Authorization']);
     $payload = jwt_decode_simple($token);
     if ($payload === false || $payload === null) {
@@ -287,7 +294,7 @@ try {
         return;
     }
 
-    // ELIMINAR (soft delete): DELETE /gallery/{id}/delete/
+    // ELIMINAR DEFINITIVO: DELETE /gallery/{id}/delete/
     if ($method === 'DELETE' && $idSegment !== null && ctype_digit($idSegment) && $extra === 'delete') {
         $user = gallery_verificar_jwt();
         if (!$user) {
@@ -298,17 +305,32 @@ try {
 
         $id = (int)$idSegment;
 
-        $stmt = $pdo->prepare('UPDATE api_mediaitem SET is_active = 0, updated_at = NOW() WHERE id = ? AND is_active = 1');
+        // Obtener registro actual para conocer la ruta del archivo
+        $stmt = $pdo->prepare('SELECT * FROM api_mediaitem WHERE id = ?');
         $stmt->execute([$id]);
-        if ($stmt->rowCount() === 0) {
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$row) {
             http_response_code(404);
             echo json_encode(['success' => false, 'message' => 'Elemento no encontrado']);
             return;
         }
 
+        // Intentar borrar el archivo físico si existe
+        if (!empty($row['file'])) {
+            $filePath = $row['file'];
+            $absolutePath = __DIR__ . '/' . ltrim($filePath, '/');
+            if (file_exists($absolutePath) && is_file($absolutePath)) {
+                @unlink($absolutePath);
+            }
+        }
+
+        // Eliminar definitivamente el registro de la tabla
+        $stmt = $pdo->prepare('DELETE FROM api_mediaitem WHERE id = ?');
+        $stmt->execute([$id]);
+
         echo json_encode([
             'success' => true,
-            'message' => 'Elemento eliminado exitosamente',
+            'message' => 'Elemento eliminado definitivamente',
         ]);
         return;
     }

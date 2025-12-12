@@ -39,7 +39,6 @@ export default function ProgramarClase() {
 
   const [mostrarEstudiantes, setMostrarEstudiantes] = useState(false);
   const [filtroNivel, setFiltroNivel] = useState('todos');
-  const [generandoMeet, setGenerandoMeet] = useState(false);
   const [seleccionarTodos, setSeleccionarTodos] = useState(false);
 
   const temasComunes = [
@@ -242,32 +241,6 @@ export default function ProgramarClase() {
     return estudiantesDisponibles.find(e => e.id === id)?.nombre || '';
   };
 
-  const generarEnlaceMeet = async () => {
-    setGenerandoMeet(true);
-    try {
-      // Opciones de enlaces de Meet válidos para pruebas
-      const enlacesPrueba = [
-        'https://meet.google.com/new',
-        'https://meet.google.com/landing',
-        'https://zoom.us/j/123456789',
-        'https://teams.microsoft.com/l/meetup-join/19%3ameeting_example'
-      ];
-      
-      // Simular tiempo de generación
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Usar enlace de Meet nuevo (siempre funcional)
-      const meetLink = 'https://meet.google.com/new';
-      
-      setFormulario(prev => ({ ...prev, meetLink }));
-    } catch (error) {
-      console.error('Error generando enlace de Meet:', error);
-      alert('Error al generar el enlace de Meet. Intenta nuevamente.');
-    } finally {
-      setGenerandoMeet(false);
-    }
-  };
-
   return (
     <div className="programar-clase">
       <div className="programar-header">
@@ -373,28 +346,11 @@ export default function ProgramarClase() {
                 <div className="meet-container">
                   {!formulario.meetLink ? (
                     <div className="meet-options">
-                      <button
-                        type="button"
-                        className="btn-generar-meet"
-                        onClick={generarEnlaceMeet}
-                        disabled={generandoMeet}
-                      >
-                        {generandoMeet ? (
-                          <>
-                            <span className="spinner"></span>
-                            Generando enlace...
-                          </>
-                        ) : (
-                          <>
-                            📹 Crear Meet Instantáneo
-                          </>
-                        )}
-                      </button>
                       <div className="meet-manual">
-                        <label>O ingresa tu propio enlace:</label>
+                        <label>Ingresa el enlace de la clase (Zoom, Meet, Teams, etc.):</label>
                         <input
                           type="url"
-                          placeholder="https://meet.google.com/abc-defg-hij"
+                          placeholder="https://tu-plataforma.com/tu-reunion"
                           onChange={(e) => setFormulario(prev => ({ ...prev, meetLink: e.target.value }))}
                           className="meet-input"
                         />
@@ -419,7 +375,7 @@ export default function ProgramarClase() {
                   )}
                 </div>
                 <small className="meet-help">
-                  💡 Tip: "Crear Meet Instantáneo" abre Google Meet para crear una reunión nueva al momento de la clase
+                  💡 Tip: Pega aquí el enlace de la reunión que usarás (Zoom, Meet, Teams, etc.)
                 </small>
               </div>
             )}

@@ -332,8 +332,8 @@ try {
                     exit();
                 }
 
-                // Verificar permisos (mismo profesor o admin)
-                if ($evaluacion['profesor_id'] != $user->user_id && $user->role !== 'admin') {
+                // Verificar permisos: solo admin o profesor pueden publicar/cambiar estado
+                if (!isset($user->role) || !in_array($user->role, ['admin', 'profesor'], true)) {
                     http_response_code(403);
                     echo json_encode(['success' => false, 'message' => 'Sin permisos para publicar esta evaluación']);
                     exit();
@@ -342,8 +342,16 @@ try {
                 // Toggle de estado: borrador/publicada
                 $nuevoEstado = ($evaluacion['estado'] === 'publicada') ? 'borrador' : 'publicada';
 
-                $stmt = $pdo->prepare("UPDATE api_evaluacion SET estado = ?, updated_at = NOW() WHERE id = ?");
-                $stmt->execute([$nuevoEstado, $id]);
+                // Determinar el profesor propietario cuando se publica/despublica
+                // Regla: si quien publica es profesor, la evaluación pasa a ser suya
+                //        si es admin, se mantiene el profesor_id actual
+                $profesorId = isset($evaluacion['profesor_id']) ? (int)$evaluacion['profesor_id'] : 0;
+                if (isset($user->role) && $user->role === 'profesor') {
+                    $profesorId = isset($user->user_id) ? (int)$user->user_id : $profesorId;
+                }
+
+                $stmt = $pdo->prepare("UPDATE api_evaluacion SET estado = ?, profesor_id = ?, updated_at = NOW() WHERE id = ?");
+                $stmt->execute([$nuevoEstado, $profesorId, $id]);
 
                 // Devolver evaluación actualizada
                 $stmt = $pdo->prepare("SELECT * FROM api_evaluacion WHERE id = ?");
@@ -636,16 +644,24 @@ try {
                 exit();
             }
             
-            // Verificar permisos (solo el profesor que la creó o admin)
-            if ($evaluacion['profesor_id'] != $user->user_id && $user->role !== 'admin') {
+            // Verificar permisos: solo admin o profesor pueden editar
+            if (!isset($user->role) || !in_array($user->role, ['admin', 'profesor'], true)) {
                 http_response_code(403);
                 echo json_encode(['success' => false, 'message' => 'Sin permisos para editar esta evaluación']);
                 exit();
             }
-            
+
+            // Determinar el profesor propietario de la evaluación después de la edición
+            // Regla: si quien edita es un profesor, esa evaluación pasa a ser suya (profesor_id = user_id)
+            //       si es admin, se mantiene el profesor_id existente
+            $profesorId = isset($evaluacion['profesor_id']) ? (int)$evaluacion['profesor_id'] : 0;
+            if (isset($user->role) && $user->role === 'profesor') {
+                $profesorId = isset($user->user_id) ? (int)$user->user_id : $profesorId;
+            }
+
             $stmt = $pdo->prepare("
                 UPDATE api_evaluacion 
-                SET titulo = ?, descripcion = ?, tipo = ?, estado = ?, archivo = ?, fecha_limite = ?, updated_at = NOW()
+                SET titulo = ?, descripcion = ?, tipo = ?, estado = ?, archivo = ?, fecha_limite = ?, profesor_id = ?, updated_at = NOW()
                 WHERE id = ?
             ");
             
@@ -656,6 +672,7 @@ try {
                 $input['estado'] ?? $evaluacion['estado'],
                 $input['archivo'] ?? $evaluacion['archivo'],
                 $input['fecha_limite'] ?? $evaluacion['fecha_limite'],
+                $profesorId,
                 $id
             ]);
 
@@ -705,8 +722,8 @@ try {
                 exit();
             }
             
-            // Verificar permisos (solo el profesor que la creó o admin)
-            if ($evaluacion['profesor_id'] != $user->user_id && $user->role !== 'admin') {
+            // Verificar permisos: solo admin o profesor pueden eliminar
+            if (!isset($user->role) || !in_array($user->role, ['admin', 'profesor'], true)) {
                 http_response_code(403);
                 echo json_encode(['success' => false, 'message' => 'Sin permisos para eliminar esta evaluación']);
                 exit();

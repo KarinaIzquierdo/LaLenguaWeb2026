@@ -41,10 +41,6 @@ export const ClaseService = {
 
   // Obtener clases por profesor
   getClasesPorProfesor: async (profesorId: number) => {
-    // Obtener todas las clases del backend
-    const res = await axios.get(`${API_URL}/clases/`, { headers: getAuthHeaders() });
-    const todasLasClases: any[] = Array.isArray(res.data) ? res.data : (res.data.data || []);
-
     // Intentar obtener el nombre completo del profesor desde localStorage
     let nombreCompleto = '';
     const userStr = localStorage.getItem('user');
@@ -57,23 +53,14 @@ export const ClaseService = {
       }
     }
 
-    if (!nombreCompleto) {
-      // Si no se pudo obtener el nombre, devolver todas las clases como fallback
-      return todasLasClases;
-    }
+    const url = nombreCompleto
+      ? `${API_URL}/clases/?profesor=${encodeURIComponent(nombreCompleto)}`
+      : `${API_URL}/clases/`;
 
-    // Filtrar clases donde el campo "profesor" coincide exactamente con el nombre completo
-    let clasesDelProfesor = todasLasClases.filter((clase: any) => {
-      const profesorNombre = (clase.profesor || '').trim().toLowerCase();
-      return profesorNombre === nombreCompleto.toLowerCase();
-    });
+    const res = await axios.get(url, { headers: getAuthHeaders() });
+    const todasLasClases: any[] = Array.isArray(res.data) ? res.data : (res.data.data || []);
 
-    // Si no se encontró ninguna coincidencia, devolver todas las clases como respaldo
-    if (clasesDelProfesor.length === 0) {
-      clasesDelProfesor = todasLasClases;
-    }
-
-    return clasesDelProfesor;
+    return todasLasClases;
   },
 
   // Obtener clases por usuario

@@ -16,16 +16,19 @@ export default function MisClubs(_props: MisClubsProps) {
   const [levelFilter, setLevelFilter] = useState<string>('');
   const [search, setSearch] = useState('');
   const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
-  
-  // Paginación para lista de estudiantes disponibles
   const [currentPageUsers, setCurrentPageUsers] = useState(1);
   const usersPerPage = 12;
-  
-  // Paginación para tabla de estudiantes asignados
-  const [currentPageTable, setCurrentPageTable] = useState(1);
-  const studentsPerPage = 10;
 
   const [form, setForm] = useState({ name: '', description: '' });
+
+  const [showEditClub, setShowEditClub] = useState(false);
+  const [editForm, setEditForm] = useState<{ id: number | null; name: string; description: string }>({
+    id: null,
+    name: '',
+    description: '',
+  });
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [deletingClubId, setDeletingClubId] = useState<number | null>(null);
 
   const loadClubs = async () => {
     try {
@@ -108,6 +111,61 @@ export default function MisClubs(_props: MisClubsProps) {
     }
   };
 
+  const openEditClub = (club: Club) => {
+    setEditForm({ id: club.id, name: club.name, description: club.description || '' });
+    setShowEditClub(true);
+  };
+
+  const handleUpdateClub = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editForm.id) return;
+    if (!editForm.name.trim()) {
+      alert('El nombre es obligatorio');
+      return;
+    }
+    try {
+      setSavingEdit(true);
+      const updated = await clbService.updateClub(editForm.id, {
+        name: editForm.name.trim(),
+        description: editForm.description.trim() || undefined,
+      });
+      setClubs(prev => prev.map(c => (c.id === updated.id ? updated : c)));
+      setSelectedClub(prev => (prev && prev.id === updated.id ? updated : prev));
+      setShowEditClub(false);
+    } catch (e) {
+      console.error('Error updating club:', e);
+      alert('No se pudo actualizar el club');
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const handleDeleteClub = async (club: Club) => {
+    if (!confirm(`¿Eliminar el club "${club.name}"? Esta acción no se puede deshacer.`)) return;
+    try {
+      setDeletingClubId(club.id);
+      await clbService.deleteClub(club.id);
+      setClubs(prev => {
+        const updated = prev.filter(c => c.id !== club.id);
+        if (selectedClub?.id === club.id) {
+          setSelectedClub(updated[0] || null);
+          setStudents([]);
+        }
+        return updated;
+      });
+      setAllClubsStudents(prev => {
+        const copy = { ...prev };
+        delete copy[club.id];
+        return copy;
+      });
+    } catch (e) {
+      console.error('Error deleting club:', e);
+      alert('No se pudo eliminar el club');
+    } finally {
+      setDeletingClubId(null);
+    }
+  };
+
   const filteredUsers = useMemo(() => {
     const q = search.trim().toLowerCase();
     // Helper para normalizar niveles a etiquetas A1–C2
@@ -157,15 +215,6 @@ export default function MisClubs(_props: MisClubsProps) {
   }, [filteredUsers, currentPageUsers, usersPerPage]);
 
   const totalPagesUsers = Math.ceil(filteredUsers.length / usersPerPage);
-
-  // Paginación de estudiantes asignados
-  const paginatedStudents = useMemo(() => {
-    const startIndex = (currentPageTable - 1) * studentsPerPage;
-    const endIndex = startIndex + studentsPerPage;
-    return students.slice(startIndex, endIndex);
-  }, [students, currentPageTable, studentsPerPage]);
-
-  const totalPagesTable = Math.ceil(students.length / studentsPerPage);
 
   const toggleSelectUser = (id: number) => {
     setSelectedUserIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
@@ -259,6 +308,29 @@ export default function MisClubs(_props: MisClubsProps) {
                   <p className="club-description">{c.description || 'Sin descripción'}</p>
                   <div className="club-card-footer">
                     <span className="club-profesor">👤 {c.profesor_name ?? 'Yo'}</span>
+                    <div className="club-card-actions">
+                      <button
+                        type="button"
+                        className="btn-edit"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openEditClub(c);
+                        }}
+                      >
+                        ✏️ Editar
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-delete"
+                        disabled={deletingClubId === c.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteClub(c);
+                        }}
+                      >
+                        {deletingClubId === c.id ? 'Eliminando…' : '🗑️ Eliminar'}
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -375,6 +447,52 @@ export default function MisClubs(_props: MisClubsProps) {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {showEditClub && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: 640 }}>
+            <div className="modal-header">
+              <h3>Editar club</h3>
+              <button className="close-btn" onClick={() => setShowEditClub(false)}>✕</button>
+            </div>
+            <form onSubmit={handleUpdateClub} className="galeria-form">
+              <div className="form-group">
+                <label>Nombre</label>
+                <input
+                  type="text"
+                  value={editForm.name}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Descripción</label>
+                <textarea
+                  rows={3}
+                  value={editForm.description}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
+                />
+              </div>
+              <div className="form-actions">
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setShowEditClub(false)}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  disabled={savingEdit}
+                >
+                  {savingEdit ? 'Guardando…' : 'Guardar cambios'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

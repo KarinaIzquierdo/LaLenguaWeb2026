@@ -186,6 +186,38 @@
   padding-right: 12px;
 }
 
+.achievements-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 8px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+  box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+  transition: all 0.25s ease;
+}
+
+.achievements-pill:hover {
+  background: rgba(255, 255, 255, 0.22);
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.18);
+}
+
+.achievements-icon {
+  font-size: 1rem;
+}
+
+.achievements-label {
+  white-space: nowrap;
+}
+
 .rewards-section:hover {
   transform: translateY(-2px) scale(1.02);
   box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5);

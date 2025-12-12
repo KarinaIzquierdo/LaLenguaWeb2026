@@ -73,7 +73,12 @@ try {
             break;
 
         case 'clases':
-            require_once 'clases.php';
+            // Usar la nueva implementación con soporte de estudiantes (many-to-many)
+            if (file_exists(__DIR__ . '/clases_v2.php')) {
+                require_once 'clases_v2.php';
+            } else {
+                require_once 'clases.php';
+            }
             break;
 
         case 'planes':
@@ -91,6 +96,10 @@ try {
 
         case 'missions':
             require_once 'missions.php';
+            break;
+
+        case 'gamificacion':
+            require_once 'gamificacion.php';
             break;
 
         case 'daily-challenges':
