@@ -26,6 +26,7 @@ import RegistroVentas from './Componentes/DashboardAdmin/RegistroVentas';
 import GestionSuscripciones from './Componentes/DashboardAdmin/GestionSuscripciones';
 import MisionesAdmin from './Componentes/DashboardAdmin/MisionesAdmin';
 import RetosDiariosAdmin from './Componentes/DashboardAdmin/RetosDiariosAdmin';
+import RankingRetosAdmin from './Componentes/DashboardAdmin/RankingRetosAdmin';
 import RegistrosEliminacion from './Componentes/DashboardAdmin/RegistrosEliminacion';
 
 function App() {
@@ -247,6 +248,7 @@ function App() {
               <Route path="gestion-suscripciones" element={<GestionSuscripciones />} />
               <Route path="misiones" element={<MisionesAdmin />} />
               <Route path="retos-diarios" element={<RetosDiariosAdmin />} />
+              <Route path="ranking-retos" element={<RankingRetosAdmin />} />
             </Route>
             
             {/* Ruta de login - redirige al home */}

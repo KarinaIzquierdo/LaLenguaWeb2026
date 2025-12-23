@@ -175,6 +175,7 @@ urlpatterns = [
     path('gamificacion/estado/', views.gamificacion_estado_view, name='gamificacion_estado'),
     path('gamificacion/reto-diario/', views.gamificacion_reto_diario_view, name='gamificacion_reto_diario'),
     path('gamificacion/mision/', views.gamificacion_mision_view, name='gamificacion_mision'),
+    path('gamificacion/ranking-retos/', views.gamificacion_ranking_retos_view, name='gamificacion_ranking_retos'),
     
     # Endpoints para retos diarios (Daily Challenge)
     path('daily-challenges/', views.daily_challenges_view, name='daily_challenges'),  # Para estudiantes (solo lectura)

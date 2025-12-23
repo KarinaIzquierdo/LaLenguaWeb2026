@@ -241,7 +241,7 @@ try {
 
     // ============ GET /gamificacion/estado/ ============
     if ($method === 'GET' && $seg1 === 'estado') {
-        $stmt = $pdo->prepare('SELECT total_dulces, total_xp, reto_racha_actual, reto_mejor_racha, reto_ultima_fecha FROM api_customuser WHERE id = ?');
+        $stmt = $pdo->prepare('SELECT total_dulces, total_xp, reto_racha_actual, reto_mejor_racha, reto_ultima_fecha, reto_completados_total, reto_fallidos_total FROM api_customuser WHERE id = ?');
         $stmt->execute([$userId]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -256,6 +256,8 @@ try {
         $rachaActual = (int)($row['reto_racha_actual'] ?? 0);
         $mejorRacha = (int)($row['reto_mejor_racha'] ?? 0);
         $ultimaFecha = $row['reto_ultima_fecha'] ?: null;
+        $retosCompletados = (int)($row['reto_completados_total'] ?? 0);
+        $retosFallidos = (int)($row['reto_fallidos_total'] ?? 0);
 
         $titleInfo = gamif_get_title_for_xp($totalXp);
         $achievements = gamif_get_achievements($totalDulces, $mejorRacha);
@@ -268,6 +270,8 @@ try {
                 'reto_racha_actual' => $rachaActual,
                 'reto_mejor_racha' => $mejorRacha,
                 'reto_ultima_fecha' => $ultimaFecha,
+                'reto_completados_total' => $retosCompletados,
+                'reto_fallidos_total' => $retosFallidos,
                 'title' => $titleInfo['name'],
                 'title_code' => $titleInfo['code'],
                 'next_title_xp' => $titleInfo['next_xp'],
@@ -277,9 +281,71 @@ try {
         return;
     }
 
+    // ============ GET /gamificacion/ranking-retos/ ============
+    if ($method === 'GET' && $seg1 === 'ranking-retos') {
+        // Ranking global de estudiantes por retos diarios
+        // Opcionalmente filtra por nivel de inglés (?nivel=A1, A2+, etc.)
+
+        $nivel = isset($_GET['nivel']) ? trim($_GET['nivel']) : '';
+
+        $sql = "SELECT
+                    id,
+                    first_name,
+                    last_name,
+                    email,
+                    english_level,
+                    total_dulces,
+                    total_xp,
+                    reto_mejor_racha,
+                    COALESCE(reto_completados_total, 0) AS reto_completados_total,
+                    COALESCE(reto_fallidos_total, 0)   AS reto_fallidos_total
+                FROM api_customuser
+                WHERE role = 'student'
+                  AND is_active = 1";
+
+        $params = [];
+        if ($nivel !== '') {
+            $sql .= " AND english_level = ?";
+            $params[] = $nivel;
+        }
+
+        $sql .= " ORDER BY
+                    reto_completados_total DESC,
+                    reto_mejor_racha DESC,
+                    total_xp DESC,
+                    last_name ASC,
+                    first_name ASC
+                  LIMIT 100";
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $ranking = [];
+        foreach ($rows as $row) {
+            $ranking[] = [
+                'id' => (int)($row['id'] ?? 0),
+                'full_name' => trim(($row['first_name'] ?? '') . ' ' . ($row['last_name'] ?? '')),
+                'email' => $row['email'] ?? '',
+                'nivel' => $row['english_level'] ?? '',
+                'total_dulces' => (int)($row['total_dulces'] ?? 0),
+                'total_xp' => (int)($row['total_xp'] ?? 0),
+                'reto_mejor_racha' => (int)($row['reto_mejor_racha'] ?? 0),
+                'reto_completados_total' => (int)($row['reto_completados_total'] ?? 0),
+                'reto_fallidos_total' => (int)($row['reto_fallidos_total'] ?? 0),
+            ];
+        }
+
+        echo json_encode([
+            'success' => true,
+            'data' => $ranking,
+        ]);
+        return;
+    }
+
     // ============ POST /gamificacion/reto-diario/ ============
     if ($method === 'POST' && $seg1 === 'reto-diario') {
-        $stmt = $pdo->prepare('SELECT total_dulces, total_xp, reto_racha_actual, reto_mejor_racha, reto_ultima_fecha FROM api_customuser WHERE id = ? FOR UPDATE');
+        $stmt = $pdo->prepare('SELECT total_dulces, total_xp, reto_racha_actual, reto_mejor_racha, reto_ultima_fecha, reto_completados_total, reto_fallidos_total FROM api_customuser WHERE id = ? FOR UPDATE');
         $pdo->beginTransaction();
         $stmt->execute([$userId]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -365,14 +431,16 @@ try {
 
         $totalDulces += $ganados;
         $totalXp += $ganadosXp;
+        $retosCompletados += 1;
 
-        $update = $pdo->prepare('UPDATE api_customuser SET total_dulces = ?, total_xp = ?, reto_racha_actual = ?, reto_mejor_racha = ?, reto_ultima_fecha = ? WHERE id = ?');
+        $update = $pdo->prepare('UPDATE api_customuser SET total_dulces = ?, total_xp = ?, reto_racha_actual = ?, reto_mejor_racha = ?, reto_ultima_fecha = ?, reto_completados_total = ? WHERE id = ?');
         $update->execute([
             $totalDulces,
             $totalXp,
             $rachaActual,
             $mejorRacha,
             $hoyStr,
+            $retosCompletados,
             $userId,
         ]);
 
@@ -391,6 +459,8 @@ try {
                 'reto_racha_actual' => $rachaActual,
                 'reto_mejor_racha' => $mejorRacha,
                 'reto_ultima_fecha' => $hoyStr,
+                'reto_completados_total' => $retosCompletados,
+                'reto_fallidos_total' => $retosFallidos,
                 'dulces_ganados' => $ganados,
                 'xp_ganado' => $ganadosXp,
                 'bonus_aplicado' => $bonusAplicado,
@@ -399,6 +469,39 @@ try {
                 'next_title_xp' => $titleInfo['next_xp'],
                 'achievements' => $achievements,
                 'new_achievements' => $newAchievements,
+            ],
+        ]);
+        return;
+    }
+
+    // ============ POST /gamificacion/reto-diario-fallo/ ============
+    if ($method === 'POST' && $seg1 === 'reto-diario-fallo') {
+        // Solo incrementa el contador de fallos, no modifica racha ni dulces/XP
+        $stmt = $pdo->prepare('SELECT reto_fallidos_total FROM api_customuser WHERE id = ? FOR UPDATE');
+        $pdo->beginTransaction();
+        $stmt->execute([$userId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$row) {
+            $pdo->rollBack();
+            http_response_code(404);
+            echo json_encode(['success' => false, 'message' => 'Usuario no encontrado']);
+            return;
+        }
+
+        $retosFallidos = (int)($row['reto_fallidos_total'] ?? 0);
+        $retosFallidos += 1;
+
+        $update = $pdo->prepare('UPDATE api_customuser SET reto_fallidos_total = ? WHERE id = ?');
+        $update->execute([$retosFallidos, $userId]);
+
+        $pdo->commit();
+
+        echo json_encode([
+            'success' => true,
+            'message' => 'Fallo de reto diario registrado',
+            'data' => [
+                'reto_fallidos_total' => $retosFallidos,
             ],
         ]);
         return;

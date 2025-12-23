@@ -12,6 +12,8 @@ interface GamificacionEstadoResponse {
     reto_racha_actual: number;
     reto_mejor_racha: number;
     reto_ultima_fecha: string | null;
+    reto_completados_total?: number;
+    reto_fallidos_total?: number;
     title?: string;
     title_code?: string;
     next_title_xp?: number | null;
@@ -64,6 +66,19 @@ export const gamificationService = {
     // El backend puede devolver success=false pero 200 si ya reclamó hoy
     if (!res.ok) {
       throw new Error(json.message || 'Error al reclamar recompensa de reto diario');
+    }
+    return json;
+  },
+
+  async registerDailyChallengeFailure(): Promise<GamificacionAccionResponse> {
+    const res = await fetch(`${PHP_API_BASE_URL}/gamificacion/reto-diario-fallo/`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+
+    const json = (await res.json()) as GamificacionAccionResponse;
+    if (!res.ok) {
+      throw new Error(json.message || 'Error al registrar fallo de reto diario');
     }
     return json;
   },

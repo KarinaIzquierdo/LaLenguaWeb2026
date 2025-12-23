@@ -30,6 +30,82 @@ else {
     $path = str_replace('/index.php', '', $path);
     $path = trim($path, '/');
 }
+// Normalizar separadores de directorio en la ruta capturada
+$normalizedPath = str_replace('\\', '/', $path);
+
+// Atender directamente archivos subidos: /api/uploads/... (por ejemplo PDFs de clubs)
+if (strpos($normalizedPath, 'uploads/') === 0) {
+    $relativePath = substr($normalizedPath, strlen('uploads/'));
+    $relativePath = urldecode($relativePath);
+    $relativePath = str_replace('..', '', $relativePath); // evitar path traversal
+
+    $candidates = [];
+    $candidates[] = __DIR__ . '/uploads/' . $relativePath;
+
+    // Fallback: algunas instalaciones guardan el archivo en /uploads/ aunque el path incluya clubs/
+    if (strpos($relativePath, 'clubs/') === 0) {
+        $altRelativePath = substr($relativePath, strlen('clubs/'));
+        $candidates[] = __DIR__ . '/uploads/' . $altRelativePath;
+    }
+
+    // Resolver el primer candidato existente (o buscar por extensión si no hay)
+    $resolved = null;
+    foreach ($candidates as $candidate) {
+        if (file_exists($candidate) && is_file($candidate)) {
+            $resolved = $candidate;
+            break;
+        }
+
+        $ext = pathinfo($candidate, PATHINFO_EXTENSION);
+        if ($ext === '') {
+            // 1) Intento rápido con .pdf
+            $pdfPath = $candidate . '.pdf';
+            if (file_exists($pdfPath) && is_file($pdfPath)) {
+                $resolved = $pdfPath;
+                break;
+            }
+
+            // 2) Buscar cualquier extensión (pdf, docx, jpg, etc.) con el mismo basename
+            $dir = dirname($candidate);
+            $base = basename($candidate);
+            $matches = glob($dir . '/' . $base . '.*') ?: [];
+            foreach ($matches as $m) {
+                if (file_exists($m) && is_file($m)) {
+                    $resolved = $m;
+                    break 2;
+                }
+            }
+
+            // 3) Fallback tolerante: buscar por prefijo (manejar nombres recortados / variaciones)
+            $matches2 = glob($dir . '/' . $base . '*') ?: [];
+            foreach ($matches2 as $m2) {
+                if (file_exists($m2) && is_file($m2)) {
+                    $resolved = $m2;
+                    break 2;
+                }
+            }
+        }
+    }
+
+    if ($resolved === null) {
+        http_response_code(404);
+        echo 'File not found: uploads/' . $relativePath;
+        exit();
+    }
+
+    $filePath = $resolved;
+
+    $mimeType = function_exists('mime_content_type') ? mime_content_type($filePath) : 'application/octet-stream';
+    if (!$mimeType) {
+        $mimeType = 'application/octet-stream';
+    }
+
+    header('Content-Type: ' . $mimeType);
+    header('Content-Length: ' . filesize($filePath));
+    header('Content-Disposition: attachment; filename="' . basename($filePath) . '"');
+    readfile($filePath);
+    exit();
+}
 
 // Debug: mostrar la ruta capturada
 error_log("DEBUG - Ruta capturada: '$path' - REQUEST_URI: $request_uri");

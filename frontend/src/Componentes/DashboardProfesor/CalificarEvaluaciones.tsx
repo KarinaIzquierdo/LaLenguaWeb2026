@@ -10,6 +10,7 @@ export default function CalificarEvaluaciones({}: CalificarEvaluacionesProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notas, setNotas] = useState<Record<string, string>>({});
+  const [comentarios, setComentarios] = useState<Record<string, string>>({});
   const [guardando, setGuardando] = useState(false);
   const [filtro, setFiltro] = useState('');
 
@@ -31,15 +32,20 @@ export default function CalificarEvaluaciones({}: CalificarEvaluacionesProps) {
 
       setItems(response.items);
 
-      // Inicializar notas con las calificaciones existentes
-      const inicial: Record<string, string> = {};
+      // Inicializar notas y comentarios con los valores existentes
+      const inicialNotas: Record<string, string> = {};
+      const inicialComentarios: Record<string, string> = {};
       response.items.forEach((item) => {
+        const key = `${item.evaluacion_id}-${item.estudiante_id}`;
         if (item.calificacion !== null) {
-          const key = `${item.evaluacion_id}-${item.estudiante_id}`;
-          inicial[key] = item.calificacion.toString();
+          inicialNotas[key] = item.calificacion.toString();
+        }
+        if ((item as any).comentarios_profesor) {
+          inicialComentarios[key] = (item as any).comentarios_profesor as string;
         }
       });
-      setNotas(inicial);
+      setNotas(inicialNotas);
+      setComentarios(inicialComentarios);
     } catch (err) {
       console.error('💥 Error de conexión en panel:', err);
       setError('Error de conexión');
@@ -50,6 +56,10 @@ export default function CalificarEvaluaciones({}: CalificarEvaluacionesProps) {
 
   const handleNotaChange = (key: string, value: string) => {
     setNotas((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleComentarioChange = (key: string, value: string) => {
+    setComentarios((prev) => ({ ...prev, [key]: value }));
   };
 
   const guardarCalificacion = async (item: PanelCalificacionItem) => {
@@ -71,7 +81,7 @@ export default function CalificarEvaluaciones({}: CalificarEvaluacionesProps) {
     try {
       const calificacionData = {
         calificacion: calificacionNum,
-        comentarios_profesor: '', // interfaz simplificada: sin comentarios por ahora
+        comentarios_profesor: comentarios[rowKey] ?? '',
       };
 
       // Usar el endpoint de panel que crea o actualiza la respuesta según sea necesario
@@ -167,6 +177,7 @@ export default function CalificarEvaluaciones({}: CalificarEvaluacionesProps) {
                       <th>Evaluación</th>
                       <th>Tipo</th>
                       <th>Calificación (0-100)</th>
+                      <th>Comentario</th>
                       <th>Acciones</th>
                     </tr>
                   </thead>
@@ -216,6 +227,22 @@ export default function CalificarEvaluaciones({}: CalificarEvaluacionesProps) {
                           </div>
                         </td>
                         <td>
+                          <textarea
+                            className="comentario-input"
+                            rows={2}
+                            placeholder="Comentario para el estudiante (opcional)"
+                            value={
+                              comentarios[`${item.evaluacion_id}-${item.estudiante_id}`] ?? ''
+                            }
+                            onChange={(e) =>
+                              handleComentarioChange(
+                                `${item.evaluacion_id}-${item.estudiante_id}`,
+                                e.target.value
+                              )
+                            }
+                          />
+                        </td>
+                        <td>
                           <button
                             className="btn-calificar"
                             disabled={
@@ -245,6 +272,7 @@ export default function CalificarEvaluaciones({}: CalificarEvaluacionesProps) {
                       <th>Evaluación</th>
                       <th>Tipo</th>
                       <th>Calificación</th>
+                      <th>Comentario</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -273,6 +301,13 @@ export default function CalificarEvaluaciones({}: CalificarEvaluacionesProps) {
                                 : '—'}
                             </div>
                           </div>
+                        </td>
+                        <td>
+                          {item.comentarios_profesor && item.comentarios_profesor.trim() !== '' ? (
+                            <span>{item.comentarios_profesor}</span>
+                          ) : (
+                            <span style={{ fontSize: '0.8rem', color: '#9ca3af' }}>Sin comentario</span>
+                          )}
                         </td>
                       </tr>
                     ))}

@@ -203,6 +203,7 @@ try {
                     r.id AS respuesta_id,
                     r.completado,
                     r.calificacion,
+                    r.comentarios_profesor,
                     r.fecha_envio,
                     r.archivo_respuesta
                 FROM api_evaluacion e
@@ -248,6 +249,7 @@ try {
                 'respuesta_id' => $respuestaId,
                 'tiene_respuesta' => $tieneRespuesta,
                 'calificacion' => $calificacion,
+                'comentarios_profesor' => $row['comentarios_profesor'] ?? null,
                 'fecha_envio' => $row['fecha_envio'],
                 'archivo_respuesta_url' => $archivoUrl,
             ];

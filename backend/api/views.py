@@ -22,6 +22,7 @@ from .serializers import (
 from .especializacion_serializer import EspecializacionSerializer
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from django.db import connection
 from django.db.models import Sum, Count, Q
 from django.db.models.functions import TruncMonth
 
@@ -1297,6 +1298,78 @@ def gamificacion_mision_view(request):
             'dulces_ganados': dulces_mision,
             'xp_ganado': xp_mision,
         }
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def gamificacion_ranking_retos_view(request):
+    """Ranking global de estudiantes por retos diarios.
+
+    Permite filtrar por nivel de inglés usando ?nivel=A1, A1+, etc.
+    Lee directamente de la tabla api_customuser para evitar depender
+    de campos adicionales en el modelo CustomUser.
+    """
+
+    nivel = request.query_params.get('nivel') or request.query_params.get('level')
+
+    params = ['student', True]
+    nivel_filter_sql = ''
+    if nivel:
+        nivel_filter_sql = 'AND (english_level = %s)'  # nivel exacto
+        params.append(nivel)
+
+    with connection.cursor() as cursor:
+        cursor.execute(
+            f"""
+            SELECT
+                id,
+                first_name,
+                last_name,
+                email,
+                english_level,
+                total_dulces,
+                total_xp,
+                reto_mejor_racha,
+                COALESCE(reto_completados_total, 0) AS reto_completados_total,
+                COALESCE(reto_fallidos_total, 0)   AS reto_fallidos_total
+            FROM api_customuser
+            WHERE role = %s
+              AND is_active = %s
+              {nivel_filter_sql}
+            ORDER BY
+              reto_completados_total DESC,
+              reto_mejor_racha DESC,
+              total_xp DESC,
+              last_name ASC,
+              first_name ASC
+            LIMIT 100
+            """,
+            params,
+        )
+
+        columns = [col[0] for col in cursor.description]
+        rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+    # Normalizar datos para el frontend
+    ranking = [
+        {
+            'id': row['id'],
+            'full_name': f"{row.get('first_name') or ''} {row.get('last_name') or ''}".strip(),
+            'email': row.get('email') or '',
+            'nivel': row.get('english_level') or '',
+            'total_dulces': row.get('total_dulces') or 0,
+            'total_xp': row.get('total_xp') or 0,
+            'reto_mejor_racha': row.get('reto_mejor_racha') or 0,
+            'reto_completados_total': row.get('reto_completados_total') or 0,
+            'reto_fallidos_total': row.get('reto_fallidos_total') or 0,
+        }
+        for row in rows
+    ]
+
+    return Response({
+        'success': True,
+        'data': ranking,
     }, status=status.HTTP_200_OK)
 
 

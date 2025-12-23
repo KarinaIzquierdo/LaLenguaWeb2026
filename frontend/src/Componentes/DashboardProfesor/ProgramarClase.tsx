@@ -53,6 +53,39 @@ export default function ProgramarClase() {
     'Inglés para Viajes'
   ];
 
+  const nivelesSistema = ['A1', 'A1+', 'A2', 'A2+', 'B1', 'B1+', 'B2', 'B2+', 'C1', 'C1+', 'C2'];
+  const nivelesBaseOrden = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+
+  const normalizarNivel = (nivel: string | null | undefined) => {
+    const v = (nivel ?? '').trim();
+    return v === '' ? 'Sin nivel' : v;
+  };
+
+  const ordenarNiveles = (a: string, b: string) => {
+    const na = normalizarNivel(a);
+    const nb = normalizarNivel(b);
+
+    if (na === 'Sin nivel' && nb !== 'Sin nivel') return 1;
+    if (nb === 'Sin nivel' && na !== 'Sin nivel') return -1;
+
+    const ra = /^([ABC][12])(\+*)$/.exec(na);
+    const rb = /^([ABC][12])(\+*)$/.exec(nb);
+
+    const baseA = ra ? ra[1] : na;
+    const baseB = rb ? rb[1] : nb;
+    const idxA = nivelesBaseOrden.indexOf(baseA);
+    const idxB = nivelesBaseOrden.indexOf(baseB);
+    const orderA = idxA >= 0 ? idxA : 999;
+    const orderB = idxB >= 0 ? idxB : 999;
+    if (orderA !== orderB) return orderA - orderB;
+
+    const plusA = ra ? ra[2].length : 0;
+    const plusB = rb ? rb[2].length : 0;
+    if (plusA !== plusB) return plusA - plusB;
+
+    return na.localeCompare(nb, 'es', { sensitivity: 'base' });
+  };
+
   // Cargar estudiantes reales de la base de datos
   useEffect(() => {
     const cargarEstudiantes = async () => {
@@ -167,16 +200,26 @@ export default function ProgramarClase() {
     setSeleccionarTodos(!seleccionarTodos);
   };
 
+  const nivelesDisponibles = Array.from(
+    new Set(estudiantesDisponibles.map(e => normalizarNivel(e.nivel)))
+  );
+
+  const nivelesExtra = nivelesDisponibles
+    .filter(n => n !== 'Sin nivel' && !nivelesSistema.includes(n))
+    .sort(ordenarNiveles);
+
+  const nivelesDisponiblesOrdenados = [
+    ...nivelesSistema,
+    ...nivelesExtra,
+    'Sin nivel'
+  ];
+
   const estudiantesFiltrados = estudiantesDisponibles.filter(estudiante => {
     if (filtroNivel === 'todos') return true;
-    
-    // Filtrar por nivel específico (A1, A2, B1, B2, C1, C2)
-    if (['A1', 'A2', 'B1', 'B2', 'C1', 'C2'].includes(filtroNivel)) {
-      return estudiante.nivel === filtroNivel;
-    }
-    
-    // Filtros legacy para compatibilidad
-    return estudiante.nivel.toLowerCase() === filtroNivel.toLowerCase();
+
+    const nivelEst = normalizarNivel(estudiante.nivel);
+    const nivelFiltro = normalizarNivel(filtroNivel);
+    return nivelEst.toLowerCase() === nivelFiltro.toLowerCase();
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -423,13 +466,9 @@ export default function ProgramarClase() {
                       className="nivel-filter"
                     >
                       <option value="todos">Todos los niveles</option>
-                      <option value="A1">A1</option>
-                      <option value="A2">A2</option>
-                      <option value="B1">B1</option>
-                      <option value="B2">B2</option>
-                      <option value="C1">C1</option>
-                      <option value="C2">C2</option>
-                      <option value="Sin nivel">Sin nivel</option>
+                      {nivelesDisponiblesOrdenados.map(nivel => (
+                        <option key={nivel} value={nivel}>{nivel}</option>
+                      ))}
                     </select>
                     
                     <button

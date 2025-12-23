@@ -24,9 +24,11 @@ export default function EvaluacionesEstudiante() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [subiendoRespuesta, setSubiendoRespuesta] = useState<string | null>(null);
+  const [evaluacionesConRespuesta, setEvaluacionesConRespuesta] = useState<string[]>([]);
 
   useEffect(() => {
     loadEvaluaciones();
+    loadRespuestas();
   }, []);
 
   const loadEvaluaciones = async () => {
@@ -77,6 +79,28 @@ export default function EvaluacionesEstudiante() {
       console.error('Error loading student evaluaciones:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadRespuestas = async () => {
+    try {
+      const respuestasResp = await evaluacionService.getStudentRespuestas();
+
+      let respuestasList: any[] = [];
+      if (Array.isArray(respuestasResp)) {
+        respuestasList = respuestasResp;
+      } else if (respuestasResp && Array.isArray(respuestasResp.data)) {
+        respuestasList = respuestasResp.data;
+      }
+
+      const ids = respuestasList
+        .filter((resp: any) => resp.evaluacion)
+        .map((resp: any) => String(resp.evaluacion));
+
+      const uniqueIds = Array.from(new Set(ids));
+      setEvaluacionesConRespuesta(uniqueIds);
+    } catch (err) {
+      console.error('Error cargando respuestas del estudiante:', err);
     }
   };
 
@@ -135,6 +159,7 @@ export default function EvaluacionesEstudiante() {
           if (response.success) {
             alert('Respuesta subida exitosamente');
             loadEvaluaciones(); // Recargar evaluaciones
+            loadRespuestas();   // Actualizar estado de tareas enviadas
           } else {
             alert('Error al subir respuesta: ' + response.message);
           }
@@ -154,6 +179,7 @@ export default function EvaluacionesEstudiante() {
     return new Date(fechaLimite) < new Date();
   };
 
+  const respuestasSet = new Set(evaluacionesConRespuesta);
 
   return (
     <div className="evaluaciones-section">
@@ -200,6 +226,7 @@ export default function EvaluacionesEstudiante() {
             <tbody>
               {evaluaciones.map((evaluacion) => {
                 const overdue = isOverdue(evaluacion.fecha_limite);
+                const hasRespuesta = respuestasSet.has(evaluacion.id);
                 
                 return (
                   <React.Fragment key={evaluacion.id}>
@@ -243,11 +270,15 @@ export default function EvaluacionesEstudiante() {
                               </button>
                             ) : null}
                             <button
-                              className="btn-subir-tarea"
+                              className={`btn-subir-tarea ${hasRespuesta ? 'btn-tarea-enviada' : ''}`}
                               onClick={() => subirRespuesta(evaluacion)}
                               disabled={subiendoRespuesta === evaluacion.id || overdue}
                             >
-                              {subiendoRespuesta === evaluacion.id ? '⏳ Subiendo...' : '📤 Subir Tarea'}
+                              {subiendoRespuesta === evaluacion.id
+                                ? '⏳ Subiendo...'
+                                : hasRespuesta
+                                  ? '✅ Tarea enviada'
+                                  : '📤 Subir Tarea'}
                             </button>
                           </div>
                         ) : (

@@ -265,6 +265,7 @@ def panel_calificaciones_view(request):
                 'calificacion': float(respuesta.calificacion)
                 if respuesta and respuesta.calificacion is not None
                 else None,
+                'comentarios_profesor': respuesta.comentarios_profesor if respuesta else None,
                 'fecha_envio': (
                     respuesta.fecha_envio.isoformat()
                     if respuesta and respuesta.fecha_envio

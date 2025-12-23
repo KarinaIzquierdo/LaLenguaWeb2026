@@ -385,6 +385,48 @@
   background: linear-gradient(135deg, #fff 0%, #fdf2f2 100%);
 }
 
+/* Acciones de tarea (descargar / subir) */
+.acciones-tarea {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.btn-subir-tarea {
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: #eef2ff;
+  color: #3730a3;
+  transition: all 0.2s ease;
+}
+
+.btn-subir-tarea:hover:not(:disabled) {
+  background: #e0e7ff;
+  transform: translateY(-1px);
+}
+
+.btn-subir-tarea:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Estado cuando la tarea ya fue enviada */
+.btn-tarea-enviada {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #16a34a;
+}
+
+.btn-tarea-enviada:hover:not(:disabled) {
+  background: #bbf7d0;
+}
+
 /* Card Header */
 .card-header {
   padding: 20px 20px 15px;

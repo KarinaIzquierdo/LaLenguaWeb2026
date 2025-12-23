@@ -545,13 +545,28 @@ try {
                 return;
             }
 
-            // Guardar archivo en una carpeta básica dentro de api-php/uploads/clubs
+            // Guardar archivo dentro de api-php/uploads/clubs (o fallback a api-php/uploads si no es escribible)
+            $relativeFolder = 'uploads/clubs/';
             $uploadDir = __DIR__ . '/uploads/clubs/';
             if (!is_dir($uploadDir)) {
                 @mkdir($uploadDir, 0775, true);
             }
+            if (!is_dir($uploadDir) || !is_writable($uploadDir)) {
+                $relativeFolder = 'uploads/';
+                $uploadDir = __DIR__ . '/uploads/';
+                if (!is_dir($uploadDir)) {
+                    @mkdir($uploadDir, 0775, true);
+                }
+            }
 
-            $filename = basename($_FILES['file']['name']);
+            $original = basename($_FILES['file']['name']);
+            $filename = preg_replace('/[^A-Za-z0-9._-]+/', '_', $original);
+            $filename = trim($filename, '._-');
+            if ($filename === '') {
+                $filename = 'archivo';
+            }
+            $filename = time() . '_' . $filename;
+
             $targetPath = $uploadDir . $filename;
             if (!move_uploaded_file($_FILES['file']['tmp_name'], $targetPath)) {
                 http_response_code(500);
@@ -560,7 +575,7 @@ try {
             }
 
             // Guardar ruta relativa
-            $filePath = 'uploads/clubs/' . $filename;
+            $filePath = $relativeFolder . $filename;
 
             $stmt = $pdo->prepare('INSERT INTO api_clubmaterial (club_id, week, title, description, resource_type, url, file, created_by_id, created_at, updated_at, is_active) VALUES (?, ?, ?, ?, ?, NULL, ?, ?, NOW(), NOW(), 1)');
             $createdBy = $user->user_id;

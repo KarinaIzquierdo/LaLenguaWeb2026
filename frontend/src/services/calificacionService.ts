@@ -31,6 +31,7 @@ interface PanelCalificacionItem {
   calificacion: number | null;
   fecha_envio: string | null;
   archivo_respuesta_url?: string | null;
+  comentarios_profesor?: string | null;
 }
 
 interface CalificacionData {

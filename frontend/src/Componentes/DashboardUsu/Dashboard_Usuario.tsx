@@ -105,6 +105,8 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
 
   // API base para consultar enlaces de misiones (router PHP legacy)
   const PHP_API_BASE_URL = 'https://lalenguacolombia.co/api/index.php';
+  // Raíz pública para construir URLs de archivos (ej: uploads/...) devueltos por PHP
+  const PHP_PUBLIC_API_ROOT = PHP_API_BASE_URL.replace('/index.php', '');
 
   // Utilidad para crear mission_key a partir del título mostrado en la card
   const slugify = (text: string): string => {
@@ -114,6 +116,28 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
       .replace(/[\u0300-\u036f]/g, '') // quitar tildes
       .replace(/[^a-z0-9]+/g, '_')
       .replace(/^_|_$/g, '');
+  };
+
+  const downloadResource = async (url: string, filename: string) => {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        window.location.href = url;
+        return;
+      }
+
+      const blob = await response.blob();
+      const objectUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = objectUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(objectUrl);
+    } catch (e) {
+      window.location.href = url;
+    }
   };
 
   // Cargar misiones disponibles desde el backend
@@ -461,9 +485,16 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
 
       closeChallengeModal();
     } else {
-      // Respuesta incorrecta - reiniciar racha a cero y mostrar respuesta correcta (solo a nivel visual)
+      // Respuesta incorrecta - reiniciar racha a cero, registrar fallo en backend y mostrar respuesta correcta
       setChallengeProgress(0);
       localStorage.setItem(`challengeProgress_${userId}`, '0');
+
+      try {
+        await gamificationService.registerDailyChallengeFailure();
+      } catch (error) {
+        console.error('Error registrando fallo de reto diario:', error);
+      }
+
       const correctOption = currentChallenge?.options[currentChallenge.correctAnswer];
       showNotification(
         'error',
@@ -1059,26 +1090,62 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
           <div className="no-classes-message">No hay material publicado aún.</div>
         ) : (
           <div className="club-materials-grid">
-            {clubMaterials.map((item) => (
-              <div key={item.id} className="club-material-card">
-                <div className="material-header">
-                  <div className="material-icon">📎</div>
-                  <div className="material-info">
-                    <h3>{item.title}</h3>
-                    <span className="material-week">Semana {item.week}</span>
+            {clubMaterials.map((item) => {
+              // Determinar URL del recurso según el tipo (URL externa o archivo subido)
+              let resourceUrl: string | null = null;
+              let isFileResource = false;
+              let downloadFilename = item.title ? `${item.title}` : 'recurso';
+
+              if (item.url && item.url.trim() !== '') {
+                // Recurso tipo URL
+                const trimmed = item.url.trim();
+                resourceUrl = trimmed.startsWith('http://') || trimmed.startsWith('https://')
+                  ? trimmed
+                  : `https://${trimmed}`;
+              } else if (item.file && item.file.trim() !== '') {
+                // Recurso tipo archivo subido, construir URL pública a partir de la ruta relativa
+                const normalizedFile = item.file.replace(/\\/g, '/');
+                const rawPath = normalizedFile.startsWith('/') ? normalizedFile.slice(1) : normalizedFile;
+                resourceUrl = `${PHP_PUBLIC_API_ROOT}/${rawPath}`;
+                isFileResource = true;
+
+                const base = rawPath.split('/').pop();
+                if (base && base.trim() !== '') {
+                  downloadFilename = base;
+                }
+              }
+
+              return (
+                <div key={item.id} className="club-material-card">
+                  <div className="material-header">
+                    <div className="material-icon">📎</div>
+                    <div className="material-info">
+                      <h3>{item.title}</h3>
+                      <span className="material-week">Semana {item.week}</span>
+                    </div>
+                    <div className="material-date">{new Date(item.created_at).toLocaleDateString('es-ES')}</div>
                   </div>
-                  <div className="material-date">{new Date(item.created_at).toLocaleDateString('es-ES')}</div>
+                  <div className="material-content">
+                    <p>{item.description || 'Recurso del club'}</p>
+                  </div>
+                  {resourceUrl && (
+                    isFileResource ? (
+                      <button
+                        type="button"
+                        className="material-button"
+                        onClick={() => downloadResource(resourceUrl, downloadFilename)}
+                      >
+                        Descargar
+                      </button>
+                    ) : (
+                      <a className="material-button" href={resourceUrl} target="_blank" rel="noreferrer">
+                        Abrir recurso
+                      </a>
+                    )
+                  )}
                 </div>
-                <div className="material-content">
-                  <p>{item.description || 'Recurso del club'}</p>
-                </div>
-                {item.url && (
-                  <a className="material-button" href={item.url} target="_blank" rel="noreferrer">
-                    Abrir recurso
-                  </a>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

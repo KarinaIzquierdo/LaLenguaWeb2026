@@ -14,6 +14,7 @@ interface EvaluationNote {
   correctAnswers: number;
   timeSpent: string;
   status: 'completed' | 'in_progress';
+  teacherComment?: string;
 }
 
 interface AsistenciaStats {
@@ -73,6 +74,7 @@ const NotesModal: React.FC<NotesModalProps> = ({ isVisible, onClose }) => {
             correctAnswers: 0,
             timeSpent: resp.tiempo_gastado ? `${Math.round(resp.tiempo_gastado / 60)} min` : '--',
             status: resp.completado ? (resp.calificacion != null ? 'completed' : 'in_progress') : 'in_progress',
+            teacherComment: resp.comentarios_profesor || '',
           };
         });
 
@@ -211,6 +213,14 @@ const NotesModal: React.FC<NotesModalProps> = ({ isVisible, onClose }) => {
                       <span className={`stat-badge ${note.status}`}>
                         {note.status === 'completed' ? 'Completado' : 'En Progreso'}
                       </span>
+                    </div>
+                    <div className="note-comment">
+                      <span className="stat-label">Comentario del profesor:</span>
+                      <p className="comment-text">
+                        {note.teacherComment && note.teacherComment.trim() !== ''
+                          ? note.teacherComment
+                          : 'Aún no hay comentario del profesor.'}
+                      </p>
                     </div>
                   </div>
                 </div>
