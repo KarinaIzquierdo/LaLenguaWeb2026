@@ -1,6 +1,6 @@
 import { authService } from './authService';
 
-const API_BASE_URL = 'https://lalenguacolombia.co/api/index.php';
+const API_BASE_URL = 'http://localhost:8000/api';
 
 export interface Plan {
   id: number;

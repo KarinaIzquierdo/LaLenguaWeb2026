@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './DriveEvaluaciones.css';
 import { evaluacionProfesorService, type Estudiante } from '../../services/evaluacionProfesorService';
+import { userService } from '../../services/userService';
 
 interface Evaluacion {
   id: number;
@@ -10,8 +11,10 @@ interface Evaluacion {
   clase: string;
   enlace: string;
   fecha_creacion: string;
+  fecha_limite?: string;
   activa: boolean;
   tipo?: string;
+  dirigidaA?: 'individual' | 'grupo';
   estudiantes_asignados?: number[];
 }
 
@@ -22,19 +25,31 @@ export default function DriveEvaluaciones() {
   const [editingEvaluacion, setEditingEvaluacion] = useState<Evaluacion | null>(null);
   const [assigningEvaluacion, setAssigningEvaluacion] = useState<Evaluacion | null>(null);
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    titulo: string;
+    nivel: string;
+    unidad: string;
+    clase: string;
+    enlace: string;
+    tipo: string;
+    dirigidaA: 'individual' | 'grupo';
+    fecha_limite: string;
+  }>({
     titulo: '',
     nivel: '',
     unidad: '',
     clase: '',
     enlace: '',
     tipo: 'quiz',
-    archivo: null as File | null,
+    dirigidaA: 'grupo',
+    fecha_limite: '',
   });
 
   // Lista de estudiantes (cargada desde el backend)
   const [estudiantes, setEstudiantes] = useState<Estudiante[]>([]);
   const [loadingStudents, setLoadingStudents] = useState(false);
+  const [availableStudents, setAvailableStudents] = useState<Array<{id: number; nombre: string}>>([]);
+  const [selectedStudentId, setSelectedStudentId] = useState<string>('');
 
   // Cargar evaluaciones existentes
   useEffect(() => {
@@ -54,11 +69,13 @@ export default function DriveEvaluaciones() {
             const nivel = desc.match(/Nivel: ([^|]+)/)?.[1]?.trim() || 'A1';
             const unidad = desc.match(/Unidad: ([^|]+)/)?.[1]?.trim() || 'Unit 1';
             const clase = desc.match(/Clase: ([^|]+)/)?.[1]?.trim() || 'Class 1';
+            const dirigidaARaw = desc.match(/Dirigida a: ([^|]+)/)?.[1]?.trim() || 'grupo';
+            const dirigidaA = (dirigidaARaw === 'individual' || dirigidaARaw === 'grupo') ? dirigidaARaw : 'grupo';
             const enlace = desc.match(/Enlace: (.+)/)?.[1]?.trim() || '';
-            return { nivel, unidad, clase, enlace };
+            return { nivel, unidad, clase, dirigidaA, enlace };
           };
           
-          const { nivel, unidad, clase, enlace } = parseDescripcion(descripcion);
+          const { nivel, unidad, clase, dirigidaA, enlace } = parseDescripcion(descripcion);
           
           return {
             id: evalBackend.id,
@@ -67,7 +84,9 @@ export default function DriveEvaluaciones() {
             unidad,
             clase,
             enlace,
+            dirigidaA: dirigidaA as 'individual' | 'grupo',
             fecha_creacion: evalBackend.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
+            fecha_limite: evalBackend.fecha_limite ? evalBackend.fecha_limite.slice(0, 16) : undefined,
             activa: evalBackend.estado === 'publicada',
             tipo: evalBackend.tipo || 'quiz',
             estudiantes_asignados: evalBackend.estudiantes_asignados || []
@@ -98,24 +117,57 @@ export default function DriveEvaluaciones() {
     }
   };
 
+  const loadAvailableStudents = async (nivelFiltro: string = '') => {
+    try {
+      const users = await userService.getAll();
+      const students = (users || [])
+        .filter((u: any) => (u.rol === 'student' || u.role === 'student') && u.activo !== false)
+        .filter((u: any) => !nivelFiltro || (u.nivel || '').toLowerCase() === nivelFiltro.toLowerCase())
+        .map((u: any) => ({
+          id: u.id,
+          nombre: `${u.nombres || ''} ${u.apellidos || ''}`.trim() || u.username || `ID ${u.id}`,
+        }))
+        .sort((a: any, b: any) => a.nombre.localeCompare(b.nombre));
+      setAvailableStudents(students);
+    } catch (error) {
+      console.error('Error cargando estudiantes disponibles:', error);
+      setAvailableStudents([]);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     try {
-      // Validar que haya al menos un enlace o un archivo adjunto
-      if (!formData.enlace && !formData.archivo) {
-        alert('Debes ingresar un enlace de evaluación o adjuntar un archivo (PDF, Word, etc.).');
+      // Validar que haya un enlace
+      if (!formData.enlace.trim()) {
+        alert('Debes ingresar un enlace de evaluación.');
         return;
       }
 
+      // Construir lista de estudiantes asignados
+      let estudiantesAsignados: number[] = [];
+      if (formData.dirigidaA === 'individual') {
+        if (!selectedStudentId) {
+          alert('Debes seleccionar un estudiante para una evaluación individual.');
+          return;
+        }
+        estudiantesAsignados = [parseInt(selectedStudentId, 10)];
+      } else {
+        // Grupo: asignar todos los estudiantes disponibles filtrados por nivel
+        estudiantesAsignados = availableStudents.map(s => s.id);
+      }
+
+      const payload = { ...formData, estudiantes_asignados: estudiantesAsignados };
+
       if (editingEvaluacion) {
         // Actualizar evaluación existente en el backend
-        const result = await evaluacionProfesorService.actualizarEvaluacion(editingEvaluacion.id, formData);
+        const result = await evaluacionProfesorService.actualizarEvaluacion(editingEvaluacion.id, payload);
         
         if (result.success) {
           // Actualizar en el estado local
           setEvaluaciones(prev => 
-            prev.map(ev => ev.id === editingEvaluacion.id ? { ...ev, ...formData } : ev)
+            prev.map(ev => ev.id === editingEvaluacion.id ? { ...ev, ...formData, dirigidaA: formData.dirigidaA as 'individual' | 'grupo', estudiantes_asignados: estudiantesAsignados } : ev)
           );
           alert('Evaluación actualizada correctamente');
         } else {
@@ -124,7 +176,7 @@ export default function DriveEvaluaciones() {
         }
       } else {
         // Crear nueva evaluación en el backend
-        const result = await evaluacionProfesorService.crearEvaluacion(formData);
+        const result = await evaluacionProfesorService.crearEvaluacion(payload);
         
         if (result.success && result.data) {
           // Parsear la descripción para extraer nivel, unidad, clase, enlace
@@ -133,11 +185,13 @@ export default function DriveEvaluaciones() {
             const nivel = desc.match(/Nivel: ([^|]+)/)?.[1]?.trim() || formData.nivel;
             const unidad = desc.match(/Unidad: ([^|]+)/)?.[1]?.trim() || formData.unidad;
             const clase = desc.match(/Clase: ([^|]+)/)?.[1]?.trim() || formData.clase;
-            const enlace = desc.match(/Enlace: (.+)/)?.[1]?.trim() || formData.enlace;
-            return { nivel, unidad, clase, enlace };
+            const enlace = desc.match(/Enlace: ([^|]+)/)?.[1]?.trim() || formData.enlace;
+            const dirigidaARaw = desc.match(/Dirigida a: ([^|]+)/)?.[1]?.trim() || formData.dirigidaA;
+            const dirigidaA = (dirigidaARaw === 'individual' || dirigidaARaw === 'grupo') ? dirigidaARaw : 'grupo';
+            return { nivel, unidad, clase, enlace, dirigidaA };
           };
           
-          const { nivel, unidad, clase, enlace } = parseDescripcion(descripcion);
+          const { nivel, unidad, clase, enlace, dirigidaA } = parseDescripcion(descripcion);
           
           // Agregar al estado local con los datos del backend
           const nuevaEvaluacion: Evaluacion = {
@@ -147,7 +201,10 @@ export default function DriveEvaluaciones() {
             unidad,
             clase,
             enlace,
+            dirigidaA: dirigidaA as 'individual' | 'grupo',
+            estudiantes_asignados: estudiantesAsignados,
             fecha_creacion: result.data.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
+            fecha_limite: result.data.fecha_limite ? result.data.fecha_limite.slice(0, 16) : formData.fecha_limite || undefined,
             activa: result.data.estado === 'publicada'
           };
           
@@ -160,7 +217,8 @@ export default function DriveEvaluaciones() {
       }
       
       // Resetear formulario solo si todo salió bien
-      setFormData({ titulo: '', nivel: '', unidad: '', clase: '', enlace: '', tipo: 'quiz', archivo: null });
+      setFormData({ titulo: '', nivel: '', unidad: '', clase: '', enlace: '', tipo: 'quiz', dirigidaA: 'grupo', fecha_limite: '' });
+      setSelectedStudentId('');
       setShowModal(false);
       setEditingEvaluacion(null);
       
@@ -179,8 +237,15 @@ export default function DriveEvaluaciones() {
       clase: evaluacion.clase,
       enlace: evaluacion.enlace,
       tipo: evaluacion.tipo || 'quiz',
-      archivo: null,
+      dirigidaA: evaluacion.dirigidaA || 'grupo',
+      fecha_limite: evaluacion.fecha_limite ? evaluacion.fecha_limite.slice(0, 16) : '',
     });
+    loadAvailableStudents(evaluacion.nivel);
+    if (evaluacion.dirigidaA === 'individual' && evaluacion.estudiantes_asignados && evaluacion.estudiantes_asignados.length > 0) {
+      setSelectedStudentId(String(evaluacion.estudiantes_asignados[0]));
+    } else {
+      setSelectedStudentId('');
+    }
     setShowModal(true);
   };
 
@@ -223,10 +288,18 @@ export default function DriveEvaluaciones() {
   };
 
   const openModal = () => {
-    setFormData({ titulo: '', nivel: '', unidad: '', clase: '', enlace: '', tipo: 'quiz', archivo: null });
+    setFormData({ titulo: '', nivel: '', unidad: '', clase: '', enlace: '', tipo: 'quiz', dirigidaA: 'grupo', fecha_limite: '' });
+    setSelectedStudentId('');
     setEditingEvaluacion(null);
+    loadAvailableStudents();
     setShowModal(true);
   };
+
+  useEffect(() => {
+    if (showModal) {
+      loadAvailableStudents(formData.nivel);
+    }
+  }, [formData.nivel, showModal]);
 
   const openAssignView = (evaluacion: Evaluacion) => {
     setAssigningEvaluacion(evaluacion);
@@ -435,8 +508,28 @@ export default function DriveEvaluaciones() {
               </div>
               <div className="info-item">
                 <span className="label">📅 Creada:</span>
-                <span className="value">{new Date(evaluacion.fecha_creacion).toLocaleDateString()}</span>
+                <span className="value">
+                  {new Date(evaluacion.fecha_creacion + 'T12:00:00').toLocaleDateString('es-ES', {
+                    day: '2-digit',
+                    month: 'long',
+                    year: 'numeric'
+                  })}
+                </span>
               </div>
+              {evaluacion.fecha_limite && (
+                <div className="info-item">
+                  <span className="label">⏰ Fecha límite:</span>
+                  <span className="value">
+                    {new Date(evaluacion.fecha_limite + ':00').toLocaleString('es-ES', {
+                      day: '2-digit',
+                      month: 'long',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </span>
+                </div>
+              )}
               <div className="info-item">
                 <span className="label">👥 Estudiantes:</span>
                 <span className="value estudiantes-count">
@@ -591,6 +684,47 @@ export default function DriveEvaluaciones() {
               </div>
 
               <div className="form-group">
+                <label htmlFor="dirigidaA">Dirigida a *</label>
+                <select
+                  id="dirigidaA"
+                  value={formData.dirigidaA}
+                  onChange={(e) => {
+                    const value = e.target.value as 'individual' | 'grupo';
+                    setFormData(prev => ({ ...prev, dirigidaA: value }));
+                    if (value === 'grupo') {
+                      setSelectedStudentId('');
+                    }
+                  }}
+                  className="form-select"
+                  required
+                >
+                  <option value="grupo">Todo el grupo</option>
+                  <option value="individual">Un solo estudiante</option>
+                </select>
+              </div>
+
+              {formData.dirigidaA === 'individual' && (
+                <div className="form-group">
+                  <label htmlFor="estudiante">Estudiante *</label>
+                  <select
+                    id="estudiante"
+                    value={selectedStudentId}
+                    onChange={(e) => setSelectedStudentId(e.target.value)}
+                    className="form-select"
+                    required
+                  >
+                    <option value="">Selecciona un estudiante</option>
+                    {availableStudents.map(est => (
+                      <option key={est.id} value={est.id}>{est.nombre}</option>
+                    ))}
+                  </select>
+                  {availableStudents.length === 0 && (
+                    <small>No hay estudiantes disponibles para este nivel.</small>
+                  )}
+                </div>
+              )}
+
+              <div className="form-group">
                 <label htmlFor="enlace">Enlace de la Evaluación</label>
                 <input
                   type="text"
@@ -599,24 +733,19 @@ export default function DriveEvaluaciones() {
                   onChange={(e) => setFormData(prev => ({ ...prev, enlace: e.target.value }))}
                   placeholder="https://... (Gimkit, Kahoot, Quizizz, Google Forms, etc.)"
                 />
-                <small>Pega aquí el enlace de cualquier plataforma de evaluación (Gimkit, Kahoot, Quizizz, Google Forms, etc.). Este campo es opcional si adjuntas un archivo.</small>
+                <small>Pega aquí el enlace de cualquier plataforma de evaluación (Gimkit, Kahoot, Quizizz, Google Forms, etc.).</small>
               </div>
 
-              {!editingEvaluacion && (
-                <div className="form-group">
-                  <label htmlFor="archivo">Archivo de la Evaluación (PDF, Word, etc.)</label>
-                  <input
-                    type="file"
-                    id="archivo"
-                    accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.odt,.odp,.ods,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                    onChange={(e) => {
-                      const file = e.currentTarget.files && e.currentTarget.files[0] ? e.currentTarget.files[0] : null;
-                      setFormData(prev => ({ ...prev, archivo: file }));
-                    }}
-                  />
-                  <small>Puedes subir un archivo en lugar de un enlace. Los estudiantes podrán descargarlo desde su panel.</small>
-                </div>
-              )}
+              <div className="form-group">
+                <label htmlFor="fecha_limite">Fecha y hora límite</label>
+                <input
+                  type="datetime-local"
+                  id="fecha_limite"
+                  value={formData.fecha_limite}
+                  onChange={(e) => setFormData(prev => ({ ...prev, fecha_limite: e.target.value }))}
+                />
+                <small>Fecha y hora hasta la cual los estudiantes pueden realizar la evaluación.</small>
+              </div>
 
               <div className="form-actions">
                 <button type="button" className="btn-cancel" onClick={() => setShowModal(false)}>

@@ -120,6 +120,21 @@
   transition: all 0.3s ease;
 }
 
+.user-name-pill {
+  display: flex;
+  align-items: center;
+  padding-right: 12px;
+  border-right: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.user-name-label {
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  white-space: nowrap;
+}
+
 .rewards-section::before {
   content: '';
   position: absolute;

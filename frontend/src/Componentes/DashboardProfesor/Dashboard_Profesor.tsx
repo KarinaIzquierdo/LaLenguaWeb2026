@@ -26,10 +26,10 @@ export default function DashboardProfesor({ onLogout }: DashboardProfesorProps =
   const [profesorData, setProfessorData] = useState({
     nombre: 'Cargando...',
     especialidad: 'Inglés Conversacional',
-    clasesTotales: 24,
-    estudiantesActivos: 18,
-    evaluacionesPendientes: 5,
-    initials: 'CG'
+    clasesTotales: 0,
+    estudiantesActivos: 0,
+    evaluacionesPendientes: 0,
+    initials: 'P'
   });
   const [loading, setLoading] = useState(true);
 

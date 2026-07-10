@@ -16,7 +16,7 @@ interface ModalEliminarEstudianteProps {
 export interface EliminacionData {
   razon: string;
   descripcion_adicional: string;
-  deuda_pendiente: number;
+  deuda_pendiente: number | '';
   plan_activo: string;
   notas: string;
 }
@@ -25,7 +25,7 @@ export default function ModalEliminarEstudiante({ estudiante, onClose, onConfirm
   const [formData, setFormData] = useState<EliminacionData>({
     razon: 'otro',
     descripcion_adicional: '',
-    deuda_pendiente: 0,
+    deuda_pendiente: '',
     plan_activo: '',
     notas: ''
   });
@@ -42,7 +42,11 @@ export default function ModalEliminarEstudiante({ estudiante, onClose, onConfirm
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onConfirm(formData);
+    const submitData = {
+      ...formData,
+      deuda_pendiente: formData.deuda_pendiente === '' ? 0 : formData.deuda_pendiente
+    };
+    onConfirm(submitData as EliminacionData);
   };
 
   return (
@@ -108,7 +112,10 @@ export default function ModalEliminarEstudiante({ estudiante, onClose, onConfirm
                   step="0.01"
                   min="0"
                   value={formData.deuda_pendiente}
-                  onChange={(e) => setFormData({ ...formData, deuda_pendiente: parseFloat(e.target.value) || 0 })}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setFormData({ ...formData, deuda_pendiente: value === '' ? '' : parseFloat(value) });
+                  }}
                   placeholder="0.00"
                 />
               </div>

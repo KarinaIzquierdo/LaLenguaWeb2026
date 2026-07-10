@@ -26,6 +26,8 @@ interface Clase {
   nombre: string;
   profesor: string;
   fecha: string;
+  hora: string;
+  meet_link?: string;
   estudiantes?: string[];
 }
 
@@ -87,6 +89,7 @@ export default function ProgramarClases() {
    * @state {Object} formErrors - Almacena los errores de validación del formulario.
    */
   const [formErrors, setFormErrors] = useState<FormErrors>({});
+  const [submitError, setSubmitError] = useState<string>('');
 
   /**
    * @state {Array<EstudianteDisponible>} estudiantesDisponibles - Lista de estudiantes disponibles.
@@ -207,6 +210,7 @@ export default function ProgramarClases() {
     setEditingClass(null);
     setFormData({ nombre: '', profesor: '', fecha: '', hora: '', estudiantes: [], meet_link: '' });
     setFormErrors({});
+    setSubmitError('');
   };
 
   /**
@@ -221,11 +225,12 @@ export default function ProgramarClases() {
       nombre: clase.nombre,
       profesor: clase.profesor,
       fecha: clase.fecha,
-      hora: '',
+      hora: clase.hora || '',
       estudiantes: clase.estudiantes || [],
-      meet_link: ''
+      meet_link: clase.meet_link || ''
     });
     setFormErrors({});
+    setSubmitError('');
   };
 
   /**
@@ -287,6 +292,7 @@ export default function ProgramarClases() {
       return;
     }
     setIsLoading(true);
+    setSubmitError('');
     try {
       // Generar enlace de Meet automáticamente si no existe
       const dataToSend = {
@@ -306,8 +312,10 @@ export default function ProgramarClases() {
       setShowForm(false);
       setEditingClass(null);
       setFormErrors({});
-    } catch (err) {
-      // Puedes mostrar un error aquí si lo deseas
+    } catch (err: any) {
+      console.error('Error guardando clase:', err);
+      const errorMsg = err?.response?.data?.message || err?.response?.data?.detail || err?.message || 'Error al guardar la clase. Intenta nuevamente.';
+      setSubmitError(errorMsg);
     }
     setIsLoading(false);
   };
@@ -320,6 +328,7 @@ export default function ProgramarClases() {
     setShowForm(false);
     setEditingClass(null);
     setFormErrors({});
+    setSubmitError('');
   };
 
   // Cargar estudiantes reales de la base de datos
@@ -418,6 +427,11 @@ export default function ProgramarClases() {
         <div className="form-container">
           <h3>{editingClass ? 'Editar Clase' : 'Agregar Nueva Clase'}</h3>
           <form onSubmit={handleSubmit} noValidate>
+            {submitError && (
+              <div className="form-group" style={{ backgroundColor: '#fee2e2', border: '1px solid #ef4444', borderRadius: '8px', padding: '12px', marginBottom: '16px', color: '#991b1b' }}>
+                {submitError}
+              </div>
+            )}
             <div className={`form-group ${formErrors.nombre ? 'error' : ''}`}>
               <label htmlFor="nombre">Nombre de la Clase *</label>
               <input
@@ -596,6 +610,7 @@ export default function ProgramarClases() {
                 <th>Nombre de la Clase</th>
                 <th>Profesor</th>
                 <th>Fecha</th>
+                <th>Hora</th>
                 <th>Acciones</th>
               </tr>
             </thead>
@@ -606,6 +621,7 @@ export default function ProgramarClases() {
                   <td>{clase.nombre}</td>
                   <td>{clase.profesor}</td>
                   <td>{clase.fecha}</td>
+                  <td>{clase.hora || 'N/A'}</td>
                   <td className="actions-cell">
                     <button onClick={() => handleEditClass(clase)} className="action-btn edit-btn" disabled={isLoading}>
                       <FaEdit />
@@ -618,7 +634,7 @@ export default function ProgramarClases() {
               ))}
               {clases.length === 0 && (
                 <tr>
-                  <td colSpan={5} style={{ textAlign: 'center', padding: '2rem' }}>
+                  <td colSpan={6} style={{ textAlign: 'center', padding: '2rem' }}>
                     No hay clases registradas.
                   </td>
                 </tr>

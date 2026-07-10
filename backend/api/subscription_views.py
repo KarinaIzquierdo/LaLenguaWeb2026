@@ -8,7 +8,18 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 from .models import CustomUser, Plan, Venta, Notificacion, Suscripcion, Especializacion, NotificacionEstudiante
 from .serializers import VentaSerializer, UserSerializer, SuscripcionSerializer
+from .email_utils import send_plan_expiration_notification
 import json
+
+
+def add_months(fecha, meses):
+    """Suma meses calendario a una fecha, ajustando el día si el mes destino tiene menos días."""
+    mes = fecha.month - 1 + meses
+    anio = fecha.year + mes // 12
+    mes = mes % 12 + 1
+    dias_en_mes = [31, 29 if (anio % 4 == 0 and (anio % 100 != 0 or anio % 400 == 0)) else 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    dia = min(fecha.day, dias_en_mes[mes - 1])
+    return fecha.replace(year=anio, month=mes, day=dia)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -44,7 +55,7 @@ def asignar_plan_usuario_view(request):
         
         # Calcular fechas
         fecha_inicio = timezone.now().date()
-        fecha_fin = fecha_inicio + timedelta(days=plan.duracion_meses * 30)
+        fecha_fin = add_months(fecha_inicio, plan.duracion_meses)
         
         # Calcular precios
         precio_plan = plan.precio_base
@@ -131,8 +142,8 @@ def asignar_plan_usuario_view(request):
         try:
             NotificacionEstudiante.objects.create(
                 estudiante=usuario,
-                tipo='plan_vencimiento',
-                mensaje=f'¡Bienvenido! Se te ha asignado el plan {plan.nombre}. Tienes {clases_totales} clases disponibles hasta el {fecha_fin.strftime("%d/%m/%Y")}.',
+                tipo='plan_asignado',
+                mensaje=f'¡Bienvenido! Se te ha asignado el plan {plan.nombre}. Tienes {clases_totales} clases disponibles hasta el {fecha_fin.strftime("%d/%m/%Y")}',
                 datos_adicionales={
                     'venta_id': venta.id,
                     'suscripcion_id': suscripcion.id,
@@ -216,7 +227,15 @@ def planes_por_vencer_view(request):
             fecha_fin_plan__gte=timezone.now().date()
         ).select_related('estudiante', 'plan')
         
-        # Crear notificaciones para estudiantes con planes por vencer
+        # Crear notificaciones para estudiantes, admins y profesores con planes por vencer
+        admin_emails = list(CustomUser.objects.filter(
+            role='admin'
+        ).exclude(email='').values_list('email', flat=True).distinct())
+        
+        usuarios_admin_profesor = CustomUser.objects.filter(
+            role__in=['admin', 'profesor']
+        )
+        
         for venta in planes_por_vencer:
             # Verificar si ya existe una notificación reciente (últimas 24 horas)
             notificacion_existente = NotificacionEstudiante.objects.filter(
@@ -227,6 +246,9 @@ def planes_por_vencer_view(request):
             
             if not notificacion_existente:
                 dias_restantes = (venta.fecha_fin_plan - timezone.now().date()).days
+                fecha_str = venta.fecha_fin_plan.strftime('%d/%m/%Y')
+                
+                # Notificación in-app para estudiante
                 NotificacionEstudiante.objects.create(
                     estudiante=venta.estudiante,
                     tipo='plan_vencimiento',
@@ -238,6 +260,41 @@ def planes_por_vencer_view(request):
                         'dias_restantes': dias_restantes
                     }
                 )
+                
+                # Email al estudiante
+                if venta.estudiante.email:
+                    send_plan_expiration_notification(
+                        venta.estudiante.email,
+                        venta.estudiante.get_full_name() or venta.estudiante.username,
+                        venta.plan.nombre,
+                        fecha_str,
+                        dias_restantes,
+                        is_admin=False
+                    )
+                
+                # Email a los admins
+                for admin_email in admin_emails:
+                    send_plan_expiration_notification(
+                        admin_email,
+                        'Admin',
+                        venta.plan.nombre,
+                        fecha_str,
+                        dias_restantes,
+                        is_admin=True
+                    )
+                
+                # Notificaciones in-app para admins y profesores
+                for usuario in usuarios_admin_profesor:
+                    Notificacion.objects.get_or_create(
+                        profesor=usuario,
+                        tipo='plan_vencimiento',
+                        titulo=f'Plan por vencer: {venta.plan.nombre}',
+                        mensaje=f'El plan {venta.plan.nombre} de {venta.estudiante.get_full_name() or venta.estudiante.username} vence en {dias_restantes} días ({fecha_str}).',
+                        prioridad='alta',
+                        defaults={
+                            'estudiante_relacionado': venta.estudiante,
+                        }
+                    )
         
         serializer = VentaSerializer(planes_por_vencer, many=True)
         return Response({
@@ -342,7 +399,7 @@ def renovar_plan_view(request):
         if fecha_inicio < timezone.now().date():
             fecha_inicio = timezone.now().date()
         
-        fecha_fin = fecha_inicio + timedelta(days=plan.duracion_meses * 30)
+        fecha_fin = add_months(fecha_inicio, plan.duracion_meses)
         
         # Crear nueva venta/renovación
         nueva_venta = Venta.objects.create(

@@ -6,7 +6,7 @@ export const API_CONFIG = {
   // URL base del API - Usa variables de entorno con fallback
   BASE_URL: import.meta.env.VITE_API_URL || 
            import.meta.env.VITE_API_BASE_URL || 
-           'https://lalenguacolombia.co/api', // Fallback por defecto
+           (isDevelopment ? 'http://localhost:8000/api' : 'https://lalenguacolombia.co/api'),
   
   // Timeout para requests
   TIMEOUT: 10000,

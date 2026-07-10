@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import './RegistrosEliminacion.css';
+import { registroEliminacionService } from '../../services/registroEliminacionService';
 
 const ITEMS_PER_PAGE = 20;
 interface RegistroEliminacion {
@@ -49,34 +50,23 @@ export default function RegistrosEliminacion() {
   const cargarDatos = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      
-      // Construir URL con filtros
-      let url = 'https://lalenguacolombia.co/api/index.php/registros-eliminacion/';
-      const params = new URLSearchParams();
-      if (filtroRazon) params.append('razon', filtroRazon);
-      if (busqueda) params.append('search', busqueda);
-      if (params.toString()) url += `?${params.toString()}`;
 
-      const [registrosRes, estadisticasRes] = await Promise.all([
-        fetch(url, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        }),
-        fetch('https://lalenguacolombia.co/api/index.php/registros-eliminacion/estadisticas/', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        })
+      const [registrosData, estadisticasData] = await Promise.all([
+        registroEliminacionService.getRegistros(filtroRazon || undefined, busqueda || undefined),
+        registroEliminacionService.getEstadisticas()
       ]);
-
-      const registrosData = await registrosRes.json();
-      const estadisticasData = await estadisticasRes.json();
 
       if (registrosData.success) {
         setRegistros(registrosData.registros);
         setPaginaActual(1);
+      } else {
+        console.error('Error al cargar registros:', registrosData.message);
       }
 
       if (estadisticasData.success) {
         setEstadisticas(estadisticasData.estadisticas);
+      } else {
+        console.error('Error al cargar estadísticas:', estadisticasData.message);
       }
     } catch (error) {
       console.error('Error al cargar registros:', error);

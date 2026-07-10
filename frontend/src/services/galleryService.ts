@@ -1,4 +1,4 @@
-const API_BASE_URL = 'https://lalenguacolombia.co/api/index.php';
+import { API_BASE_URL } from '../config/api';
 
 export interface MediaItem {
   id?: number;
@@ -115,12 +115,13 @@ class GalleryService {
     }
   }
 
-  async updateMedia(id: number, mediaData: UpdateMediaData): Promise<MediaItem> {
+  async updateMedia(id: number, mediaData: UpdateMediaData | FormData): Promise<MediaItem> {
     try {
+      const isForm = typeof FormData !== 'undefined' && mediaData instanceof FormData;
       const response = await fetch(`${API_BASE_URL}/gallery/${id}/update/`, {
         method: 'PUT',
-        headers: this.getHeaders(),
-        body: JSON.stringify(mediaData),
+        headers: isForm ? this.getAuthHeaders() : this.getHeaders(),
+        body: isForm ? (mediaData as FormData) : JSON.stringify(mediaData as UpdateMediaData),
       });
 
       if (!response.ok) {

@@ -19,6 +19,7 @@ import { ClaseService } from '../../services/claseService';
 import { clbService, type Club, type ClubMaterial } from '../../services/clbService';
 import EvaluacionesEstudiante from '../DashboardUsuario/EvaluacionesEstudiante';
 import { gamificationService } from '../../services/gamificationService';
+import { API_BASE_URL } from '../../config/api';
 
 interface DashboardProps {
   onLogout?: () => void;
@@ -85,6 +86,17 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
   const [userTitleCode, setUserTitleCode] = useState<string | null>(null);
   const [nextTitleXp, setNextTitleXp] = useState<number | null>(null);
 
+  // Niveles de habilidades (0-3 estrellas)
+  const [skillVocabulario, setSkillVocabulario] = useState(0);
+  const [skillGramatica, setSkillGramatica] = useState(0);
+  const [skillConversacion, setSkillConversacion] = useState(0);
+
+  // Progreso semanal de retos (0-7 segmentos visuales)
+  const [weeklyProgress, setWeeklyProgress] = useState(0);
+
+  // Nombre del estudiante para mostrar en la barra superior
+  const [userFirstName, setUserFirstName] = useState<string>('');
+
   // Misiones dinámicas states
   const [availableMissions, setAvailableMissions] = useState<Array<{mission_key: string; title: string; description: string; platform: string; xp: number}>>([]);
   const [isLoadingMissions, setIsLoadingMissions] = useState(true);
@@ -103,10 +115,15 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
   const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [showAdventureModal, setShowAdventureModal] = useState(false);
 
-  // API base para consultar enlaces de misiones (router PHP legacy)
-  const PHP_API_BASE_URL = 'https://lalenguacolombia.co/api/index.php';
-  // Raíz pública para construir URLs de archivos (ej: uploads/...) devueltos por PHP
-  const PHP_PUBLIC_API_ROOT = PHP_API_BASE_URL.replace('/index.php', '');
+  // Raíz pública para construir URLs de archivos de clubs (materiales aún vienen del backend legacy)
+  const PHP_PUBLIC_API_ROOT = 'https://lalenguacolombia.co/api';
+
+  // Renderizar estrellas de habilidad según nivel (0-3)
+  const renderStars = (level: number): string => {
+    const filled = Math.max(0, Math.min(3, level));
+    const empty = 3 - filled;
+    return '⭐'.repeat(filled) + '☆'.repeat(empty);
+  };
 
   // Utilidad para crear mission_key a partir del título mostrado en la card
   const slugify = (text: string): string => {
@@ -146,7 +163,7 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
       setIsLoadingMissions(true);
       const params = new URLSearchParams();
       if (userId) params.append('user_id', userId);
-      const url = `${PHP_API_BASE_URL}/missions/available/${params.toString() ? `?${params.toString()}` : ''}`;
+      const url = `${API_BASE_URL}/missions/available/${params.toString() ? `?${params.toString()}` : ''}`;
       const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
@@ -168,7 +185,7 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
       const missionKey = slugify(missionTitle);
       const params = new URLSearchParams();
       if (userId) params.append('user_id', userId);
-      const url = `${PHP_API_BASE_URL}/missions/${missionKey}/link/${params.toString() ? `?${params.toString()}` : ''}`;
+      const url = `${API_BASE_URL}/missions/${missionKey}/link/${params.toString() ? `?${params.toString()}` : ''}`;
       const res = await fetch(url);
       if (res.status === 204) {
         showNotification('info', 'Misión no disponible', 'Esta misión no tiene un enlace vigente.');
@@ -184,9 +201,20 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
 
         // Registrar recompensa de misión en el backend de gamificación
         try {
-          const reward = await gamificationService.claimMissionReward();
+          const reward = await gamificationService.claimMissionReward(missionKey);
           if (reward.success && reward.data) {
             const d = reward.data;
+
+            // Si ya fue completada antes, solo informar sin duplicar recompensas
+            if (d.already_completed) {
+              showNotification(
+                'info',
+                'Misión ya completada',
+                'Ya reclamaste la recompensa de esta misión. ¡Sigue con otra!'
+              );
+              return;
+            }
+
             const newCandies = d.total_dulces ?? candies;
             const newXp = d.total_xp ?? experience;
             setCandies(newCandies);
@@ -444,6 +472,16 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
           setChallengeProgress(serverStreak);
           localStorage.setItem(`challengeProgress_${userId}`, serverStreak.toString());
 
+          // Actualizar progreso semanal (0-7 segmentos)
+          if (typeof d.reto_semana_progreso === 'number') {
+            setWeeklyProgress(d.reto_semana_progreso);
+          } else {
+            setWeeklyProgress(prev => {
+              const next = prev >= 7 ? 1 : prev + 1;
+              return next;
+            });
+          }
+
           // Si el backend indica que se aplicó bonus (15 días seguidos), subir nivel de racha visual
           if (d.bonus_aplicado) {
             const newStreakLevel = streakLevel + 1;
@@ -487,6 +525,7 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
     } else {
       // Respuesta incorrecta - reiniciar racha a cero, registrar fallo en backend y mostrar respuesta correcta
       setChallengeProgress(0);
+      setWeeklyProgress(0);
       localStorage.setItem(`challengeProgress_${userId}`, '0');
 
       try {
@@ -534,6 +573,7 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
         const profile = await authService.getUserProfile();
         const userIdStr = profile.id?.toString() || '';
         setUserId(userIdStr);
+        setUserFirstName(profile.first_name || profile.username || '');
 
         if (userIdStr) {
           const storedAvatar = localStorage.getItem(`avatar_${userIdStr}`);
@@ -546,13 +586,17 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
         try {
           const estado = await gamificationService.getEstado();
           if (estado.success && estado.data) {
-            const { total_dulces, total_xp, title, title_code, next_title_xp, achievements: allAchievements } = estado.data as any;
+            const { total_dulces, total_xp, title, title_code, next_title_xp, achievements: allAchievements, skill_vocabulario, skill_gramatica, skill_conversacion, reto_semana_progreso } = estado.data as any;
             setCandies(total_dulces ?? 0);
             setExperience(total_xp ?? 0);
             if (title) setUserTitle(title);
             if (typeof title_code === 'string') setUserTitleCode(title_code);
             if (typeof next_title_xp !== 'undefined') setNextTitleXp(next_title_xp);
             if (Array.isArray(allAchievements)) setAchievements(allAchievements);
+            setSkillVocabulario(skill_vocabulario ?? 0);
+            setSkillGramatica(skill_gramatica ?? 0);
+            setSkillConversacion(skill_conversacion ?? 0);
+            setWeeklyProgress(reto_semana_progreso ?? 0);
           }
         } catch (e) {
           console.error('Error cargando estado de gamificación:', e);
@@ -643,8 +687,10 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
           return prioridadA - prioridadB;
         });
         
-        // Mostrar todas las clases ordenadas por prioridad
-        const clasesRelevantes = clasesConFecha;
+        // Mostrar solo clases que no han pasado ni están completadas
+        const clasesRelevantes = clasesConFecha.filter(
+          clase => !clase.esPasada && clase.estado !== 'completada'
+        );
         
         setClases(clasesRelevantes);
       } catch (error) {
@@ -662,7 +708,7 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
         const token = authService.getToken?.() || localStorage.getItem('token');
         if (!token) return;
 
-        const res = await fetch(`${PHP_API_BASE_URL}/daily-challenges/`, {
+        const res = await fetch(`${API_BASE_URL}/daily-challenges/`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
@@ -783,7 +829,8 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
       {/* Navigation Header - Outside container for full width */}
       <NavUsu 
         candies={candies} 
-        experience={experience} 
+        experience={experience}
+        userName={userFirstName}
         onLogout={onLogout}
         onOpenAchievements={() => setShowAchievementsModal(true)}
       />
@@ -931,15 +978,15 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
           <ul className="skills-list">
             <li>
               <span>Vocabulario</span>
-              <div className="stars">☆⭐⭐</div>
+              <div className="stars">{renderStars(skillVocabulario)}</div>
             </li>
             <li>
               <span>Gramática</span>
-              <div className="stars">☆☆⭐</div>
+              <div className="stars">{renderStars(skillGramatica)}</div>
             </li>
             <li>
               <span>Conversación</span>
-              <div className="stars">⭐⭐⭐</div>
+              <div className="stars">{renderStars(skillConversacion)}</div>
             </li>
           </ul>
           <button
@@ -994,8 +1041,8 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
               <div 
                 key={index}
                 className={`challenge-segment ${
-                  index < challengeProgress ? 'completed' : 
-                  index === challengeProgress ? 'current' : ''
+                  index < weeklyProgress ? 'completed' : 
+                  index === weeklyProgress ? 'current' : ''
                 }`}
               ></div>
             ))}
@@ -1198,7 +1245,15 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
               
               return clasesActuales.map((clase, index) => (
                 <div key={clase.id || (indexOfFirstClase + index)} className="table-row">
-                  <div className="table-cell">{clase.fecha || 'Por definir'}</div>
+                  <div className="table-cell">
+                    {clase.fecha
+                      ? new Date(clase.fecha + 'T12:00:00').toLocaleDateString('es-ES', {
+                          day: '2-digit',
+                          month: 'long',
+                          year: 'numeric'
+                        })
+                      : 'Por definir'}
+                  </div>
                   <div className="table-cell">{clase.hora || 'Por definir'}</div>
                   <div className="table-cell">
                     {clase.profesor || 'Sin asignar'}

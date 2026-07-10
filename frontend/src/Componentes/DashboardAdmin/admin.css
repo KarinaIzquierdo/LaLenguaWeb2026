@@ -1845,6 +1845,27 @@
   cursor: pointer;
 }
 
+/* Estilos claros para formulario de misiones */
+.misiones-form input,
+.misiones-form select {
+  background: #ffffff;
+  color: #1f2937;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+
+.misiones-form input::placeholder {
+  color: #9ca3af;
+}
+
+.misiones-form input:focus,
+.misiones-form select:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
 .checkbox-profesor span {
   font-size: 14px;
   color: #374151;

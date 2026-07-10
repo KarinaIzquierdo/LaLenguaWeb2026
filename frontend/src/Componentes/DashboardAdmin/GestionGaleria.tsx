@@ -22,10 +22,9 @@ export default function GestionGaleria() {
     title: '',
     description: '',
     url: '',
-    thumbnail: '',
     category: 'Videos' as 'Videos' | 'Infografías' | 'Fotos',
     author: 'Admin',
-    contentSource: 'url' as 'url' | 'file',
+    contentSource: 'file' as 'file',
     file: null as File | null
   });
 
@@ -45,66 +44,28 @@ export default function GestionGaleria() {
     setLoading(true);
     
     try {
-      // Subida de archivo con FormData (backend ya soporta 'file' o 'url')
-      if (formData.contentSource === 'file') {
-        if (!formData.file) {
-          alert('Selecciona un archivo para subir.');
-          setLoading(false);
-          return;
-        }
+      // Subida de archivo con FormData
+      if (!formData.file) {
+        alert('Selecciona un archivo para subir.');
+        setLoading(false);
+        return;
+      }
 
-        const fd = new FormData();
-        fd.append('type', formData.type);
-        fd.append('title', formData.title);
-        fd.append('description', formData.description);
-        fd.append('category', formData.category);
-        fd.append('author', formData.author);
-        if (formData.thumbnail) fd.append('thumbnail', formData.thumbnail);
-        // Importante: enviar el archivo real, NO la URL blob de preview
-        fd.append('file', formData.file);
+      const fd = new FormData();
+      fd.append('type', formData.type);
+      fd.append('title', formData.title);
+      fd.append('description', formData.description);
+      fd.append('category', formData.category);
+      fd.append('author', formData.author);
+      // Importante: enviar el archivo real, NO la URL blob de preview
+      fd.append('file', formData.file);
 
-        console.log('Sending FormData (file upload)');
+      console.log('Sending FormData (file upload)');
 
-        if (editingItem && editingItem.id) {
-          // Si el backend requiere multipart también para update, habría que soportarlo en el service.
-          await galleryService.updateMedia(editingItem.id, {
-            type: formData.type,
-            title: formData.title,
-            description: formData.description,
-            category: formData.category,
-            thumbnail: formData.thumbnail || undefined,
-          });
-        } else {
-          await galleryService.createMedia(fd);
-        }
+      if (editingItem && editingItem.id) {
+        await galleryService.updateMedia(editingItem.id, fd);
       } else {
-        // Modo URL: validar que sea http(s) válido y enviar JSON
-        const isValidHttpUrl = /^https?:\/\//i.test(formData.url);
-        if (!isValidHttpUrl) {
-          alert('Ingresa una URL válida que comience con http o https.');
-          setLoading(false);
-          return;
-        }
-
-        const mediaData = {
-          type: formData.type,
-          title: formData.title,
-          description: formData.description,
-          url: formData.url,
-          thumbnail: formData.thumbnail || '',
-          author: formData.author,
-          category: formData.category
-        };
-
-        console.log('Sending media data (JSON):', mediaData);
-
-        if (editingItem && editingItem.id) {
-          // Actualizar elemento existente
-          await galleryService.updateMedia(editingItem.id, mediaData);
-        } else {
-          // Crear nuevo elemento
-          await galleryService.createMedia(mediaData);
-        }
+        await galleryService.createMedia(fd);
       }
       
       // Recargar datos del backend
@@ -121,10 +82,9 @@ export default function GestionGaleria() {
       title: '',
       description: '',
       url: '',
-      thumbnail: '',
       category: 'Videos',
       author: 'Admin',
-      contentSource: 'url',
+      contentSource: 'file',
       file: null
     });
     setShowForm(false);
@@ -139,10 +99,9 @@ export default function GestionGaleria() {
       title: item.title,
       description: item.description,
       url: item.url,
-      thumbnail: item.thumbnail || '',
       category: item.category,
       author: item.author,
-      contentSource: 'url',
+      contentSource: 'file',
       file: null
     });
     setShowForm(true);
@@ -211,10 +170,9 @@ export default function GestionGaleria() {
                     title: '',
                     description: '',
                     url: '',
-                    thumbnail: '',
                     category: 'Videos',
                     author: 'Admin',
-                    contentSource: 'url',
+                    contentSource: 'file',
                     file: null
                   });
                 }}
@@ -277,74 +235,23 @@ export default function GestionGaleria() {
 
               <div className="form-group">
                 <label>Contenido:</label>
-                <div className="content-input-options">
-                  <div className="input-option">
-                    <label>
-                      <input 
-                        type="radio" 
-                        name="contentSource" 
-                        value="url"
-                        checked={formData.contentSource === 'url'}
-                        onChange={handleInputChange}
-                      />
-                      Usar URL
-                    </label>
-                  </div>
-                  <div className="input-option">
-                    <label>
-                      <input 
-                        type="radio" 
-                        name="contentSource" 
-                        value="file"
-                        checked={formData.contentSource === 'file'}
-                        onChange={handleInputChange}
-                      />
-                      Subir archivo
-                    </label>
-                  </div>
-                </div>
-                
-                {formData.contentSource === 'url' ? (
+                <div className="file-upload-area">
                   <input 
-                    type="url" 
-                    name="url" 
-                    value={formData.url}
-                    onChange={handleInputChange}
-                    placeholder="https://ejemplo.com/video-o-imagen"
+                    type="file" 
+                    name="file"
+                    accept={formData.type === 'image' ? 'image/*' : 'video/*'}
+                    onChange={handleFileChange}
+                    className="file-input"
                     required
                   />
-                ) : (
-                  <div className="file-upload-area">
-                    <input 
-                      type="file" 
-                      name="file"
-                      accept={formData.type === 'image' ? 'image/*' : 'video/*'}
-                      onChange={handleFileChange}
-                      className="file-input"
-                      required
-                    />
-                    <div className="file-upload-hint">
-                      {formData.type === 'image' 
-                        ? 'Selecciona una imagen (JPG, PNG, GIF, etc.)'
-                        : 'Selecciona un video (MP4, AVI, MOV, etc.)'
-                      }
-                    </div>
+                  <div className="file-upload-hint">
+                    {formData.type === 'image' 
+                      ? 'Selecciona una imagen (JPG, PNG, GIF, etc.)'
+                      : 'Selecciona un video (MP4, AVI, MOV, etc.)'
+                    }
                   </div>
-                )}
-              </div>
-
-              {formData.type === 'video' && (
-                <div className="form-group">
-                  <label>URL del thumbnail (opcional):</label>
-                  <input 
-                    type="url" 
-                    name="thumbnail" 
-                    value={formData.thumbnail}
-                    onChange={handleInputChange}
-                    placeholder="https://ejemplo.com/thumbnail.jpg"
-                  />
                 </div>
-              )}
+              </div>
 
               <div className="form-group">
                 <label>Autor:</label>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { financialService, type Plan } from '../../services/financialService';
+import { especializacionService, type Especializacion as EspecializacionBackend } from '../../services/especializacionService';
 import EditPlanModal from './EditPlanModal';
 import './PlanesPrecios.css';
 
@@ -12,12 +13,7 @@ interface Especializacion {
 
 const PlanesPrecios: React.FC = () => {
   const [planes, setPlanes] = useState<Plan[]>([]);
-  const [especializaciones, setEspecializaciones] = useState<Especializacion[]>([
-    { id: 1, nombre: 'Inglés de Negocios', precio: 50000, duracion: '3 meses' },
-    { id: 2, nombre: 'Preparación TOEFL', precio: 75000, duracion: '4 meses' },
-    { id: 3, nombre: 'Conversación Avanzada', precio: 40000, duracion: '2 meses' },
-    { id: 4, nombre: 'Inglés Técnico', precio: 60000, duracion: '3 meses' },
-  ]);
+  const [especializaciones, setEspecializaciones] = useState<Especializacion[]>([]);
   const [selectedEspecializacion, setSelectedEspecializacion] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -25,18 +21,28 @@ const PlanesPrecios: React.FC = () => {
   const [showEditModal, setShowEditModal] = useState(false);
 
   useEffect(() => {
-    loadPlanes();
+    loadData();
   }, []);
 
-  const loadPlanes = async () => {
+  const loadData = async () => {
     try {
       setLoading(true);
-      const planesData = await financialService.getPlanes();
+      const [planesData, especializacionesData] = await Promise.all([
+        financialService.getPlanes(),
+        especializacionService.getEspecializacionesActivas()
+      ]);
       setPlanes(planesData);
+      // Mapear especializaciones del backend al formato esperado por el componente
+      setEspecializaciones(especializacionesData.map((esp: EspecializacionBackend) => ({
+        id: esp.id,
+        nombre: esp.nombre,
+        precio: Number(esp.precio),
+        duracion: esp.duracion
+      })));
       setError(null);
     } catch (err) {
-      console.error('Error loading planes:', err);
-      setError('Error al cargar los planes');
+      console.error('Error loading data:', err);
+      setError('Error al cargar planes y especializaciones');
     } finally {
       setLoading(false);
     }
@@ -47,10 +53,15 @@ const PlanesPrecios: React.FC = () => {
     setShowEditModal(true);
   };
 
+  const handleCreatePlan = () => {
+    setEditingPlan(null);
+    setShowEditModal(true);
+  };
+
   const handleTogglePlan = async (planId: number) => {
     try {
       await financialService.togglePlan(planId);
-      await loadPlanes(); // Recargar planes después del toggle
+      await loadData(); // Recargar datos después del toggle
     } catch (err) {
       console.error('Error toggling plan:', err);
       setError('Error al cambiar estado del plan');
@@ -61,18 +72,20 @@ const PlanesPrecios: React.FC = () => {
     try {
       if (editingPlan) {
         await financialService.updatePlan(editingPlan.id, updatedPlan);
-        await loadPlanes();
-        setShowEditModal(false);
-        setEditingPlan(null);
+      } else {
+        await financialService.createPlan(updatedPlan);
       }
+      await loadData();
+      setShowEditModal(false);
+      setEditingPlan(null);
     } catch (err) {
-      console.error('Error updating plan:', err);
-      setError('Error al actualizar el plan');
+      console.error('Error saving plan:', err);
+      setError('Error al guardar el plan');
     }
   };
 
-  const calcularPrecioConEspecializacion = (precioBase: number, precioEspecializacion: number) => {
-    return precioBase + precioEspecializacion;
+  const calcularPrecioConEspecializacion = (precioBase: number | string, precioEspecializacion: number | string) => {
+    return Number(precioBase || 0) + Number(precioEspecializacion || 0);
   };
 
   const getIconoPlan = (tipo: string) => {
@@ -83,6 +96,15 @@ const PlanesPrecios: React.FC = () => {
       default: return '📚';
     }
   };
+
+  const planBasico = planes.find(p => p.tipo === 'basico');
+  const planPremium = planes.find(p => p.tipo === 'premium');
+  const promedioEspecializacion = especializaciones.length > 0
+    ? especializaciones.reduce((sum, e) => sum + e.precio, 0) / especializaciones.length
+    : 0;
+  const precioPromedio = planes.length > 0
+    ? planes.reduce((sum, p) => sum + Number(p.precio_base), 0) / planes.length
+    : 0;
 
   if (loading) {
     return (
@@ -100,7 +122,7 @@ const PlanesPrecios: React.FC = () => {
       <div className="planes-precios-container">
         <div className="error-state">
           <p>❌ {error}</p>
-          <button onClick={loadPlanes} className="retry-button">
+          <button onClick={loadData} className="retry-button">
             Reintentar
           </button>
         </div>
@@ -111,8 +133,13 @@ const PlanesPrecios: React.FC = () => {
   return (
     <div className="planes-precios-container">
       <header className="page-header">
-        <h2>Gestión de Planes y Precios</h2>
-        <p>Administra los planes disponibles y sus precios para los estudiantes</p>
+        <div>
+          <h2>Gestión de Planes y Precios</h2>
+          <p>Administra los planes disponibles y sus precios para los estudiantes</p>
+        </div>
+        <button className="btn-primary" onClick={handleCreatePlan}>
+          + Crear Nuevo Plan
+        </button>
       </header>
 
       {/* Sección de Planes Base */}
@@ -133,34 +160,21 @@ const PlanesPrecios: React.FC = () => {
                 </div>
                 <div className="plan-price">
                   <span className="currency">$</span>
-                  <span className="amount">{plan.precio_base}</span>
+                  <span className="amount">{Number(plan.precio_base).toLocaleString('es-CO')}</span>
                   <span className="period">/mes</span>
                 </div>
               </div>
 
-              <div className="plan-content">
+              <div className="plan-content compact">
                 <p className="plan-description">{plan.descripcion}</p>
-                
-                <div className="plan-features">
-                  <h5>Características incluidas:</h5>
-                  <ul>
-                    {plan.caracteristicas.map((caracteristica, index) => (
-                      <li key={index}>
-                        <span className="check-icon">✓</span>
-                        {caracteristica}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
 
-                <div className="plan-stats">
+                <div className="plan-stats compact">
                   <div className="stat">
-                    <span className="stat-label">DURACIÓN:</span>
-                    <span className="stat-value-large">{plan.duracion_meses}</span>
-                    <span className="stat-unit">mes{plan.duracion_meses > 1 ? 'es' : ''}</span>
+                    <span className="stat-label">Duración:</span>
+                    <span className="stat-value">{plan.duracion_meses} mes{plan.duracion_meses > 1 ? 'es' : ''}</span>
                   </div>
                   <div className="stat">
-                    <span className="stat-label">ESTADO:</span>
+                    <span className="stat-label">Estado:</span>
                     <span className={`stat-badge ${plan.activo ? 'active' : 'inactive'}`}>
                       {plan.activo ? 'Activo' : 'Inactivo'}
                     </span>
@@ -196,7 +210,7 @@ const PlanesPrecios: React.FC = () => {
               <div className="esp-header">
                 <h4>{esp.nombre}</h4>
                 <div className="esp-price">
-                  <span>+${esp.precio}</span>
+                  <span>+${Number(esp.precio).toLocaleString('es-CO')}</span>
                 </div>
               </div>
               <div className="esp-content">
@@ -206,11 +220,11 @@ const PlanesPrecios: React.FC = () => {
                 <div className="esp-calculation">
                   <h5>Precio con Plan Básico:</h5>
                   <div className="calculation">
-                    <span>${planes[0]?.precio_base || 0}</span>
+                    <span>${Number(planes[0]?.precio_base || 0).toLocaleString('es-CO')}</span>
                     <span className="plus">+</span>
-                    <span>${esp.precio}</span>
+                    <span>${Number(esp.precio).toLocaleString('es-CO')}</span>
                     <span className="equals">=</span>
-                    <span className="total">${calcularPrecioConEspecializacion(planes[0]?.precio_base || 0, esp.precio)}</span>
+                    <span className="total">${Number(calcularPrecioConEspecializacion(planes[0]?.precio_base || 0, esp.precio)).toLocaleString('es-CO')}</span>
                   </div>
                 </div>
               </div>
@@ -228,15 +242,15 @@ const PlanesPrecios: React.FC = () => {
             <div className="resumen-content">
               <div className="resumen-item">
                 <span>Plan Básico (mensual):</span>
-                <span className="price">${planes[0] ? Number(planes[0].precio_base).toLocaleString('es-CO') : 0}</span>
+                <span className="price">${planBasico ? Number(planBasico.precio_base).toLocaleString('es-CO') : 0}</span>
               </div>
               <div className="resumen-item">
                 <span>Plan + Especialización (promedio):</span>
-                <span className="price">${planes[0] ? (Number(planes[0].precio_base) + 45000).toLocaleString('es-CO') : 0}</span>
+                <span className="price">${(planBasico && promedioEspecializacion > 0) ? (Number(planBasico.precio_base) + promedioEspecializacion).toLocaleString('es-CO') : 0}</span>
               </div>
               <div className="resumen-item">
                 <span>Plan Premium:</span>
-                <span className="price">${planes[2] ? Number(planes[2].precio_base).toLocaleString('es-CO') : 0}</span>
+                <span className="price">${planPremium ? Number(planPremium.precio_base).toLocaleString('es-CO') : 0}</span>
               </div>
             </div>
           </div>
@@ -254,7 +268,7 @@ const PlanesPrecios: React.FC = () => {
               </div>
               <div className="resumen-item">
                 <span>Precio promedio:</span>
-                <span className="price">${((planes.reduce((sum, p) => sum + p.precio_base, 0) / planes.length) || 0).toFixed(2)}</span>
+                <span className="price">${precioPromedio.toLocaleString('es-CO')}</span>
               </div>
             </div>
           </div>

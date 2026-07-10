@@ -30,6 +30,7 @@ router.register(r'media', MediaItemViewSet)
 
 urlpatterns = [
     # Endpoints para estudiantes
+    path('estudiantes/<int:estudiante_id>/detalle-academico/', views.estudiante_detalle_academico_view, name='estudiante_detalle_academico'),
     path('auth/login/', views.login_view, name='login'),
     path('auth/verify-token/', views.verify_token_view, name='verify_token'),
     path('auth/change-password/', views.change_password_view, name='change_password'),
@@ -174,6 +175,7 @@ urlpatterns = [
     # Endpoints de gamificación (dulces, XP, retos diarios y misiones)
     path('gamificacion/estado/', views.gamificacion_estado_view, name='gamificacion_estado'),
     path('gamificacion/reto-diario/', views.gamificacion_reto_diario_view, name='gamificacion_reto_diario'),
+    path('gamificacion/reto-diario-fallo/', views.gamificacion_reto_diario_fallo_view, name='gamificacion_reto_diario_fallo'),
     path('gamificacion/mision/', views.gamificacion_mision_view, name='gamificacion_mision'),
     path('gamificacion/ranking-retos/', views.gamificacion_ranking_retos_view, name='gamificacion_ranking_retos'),
     

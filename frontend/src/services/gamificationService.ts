@@ -1,8 +1,4 @@
-import { getAuthHeaders } from '../config/api';
-
-// En producción, la gamificación se maneja por el backend PHP legacy
-// usando el router index.php, igual que misiones y suscripciones.
-const PHP_API_BASE_URL = 'https://lalenguacolombia.co/api/index.php';
+import { getAuthHeaders, API_BASE_URL } from '../config/api';
 
 interface GamificacionEstadoResponse {
   success: boolean;
@@ -31,9 +27,11 @@ interface GamificacionAccionResponse {
     reto_racha_actual?: number;
     reto_mejor_racha?: number;
     reto_ultima_fecha?: string | null;
+    reto_semana_progreso?: number;
     dulces_ganados?: number;
     xp_ganado?: number;
     bonus_aplicado?: boolean;
+    already_completed?: boolean;
     title?: string;
     title_code?: string;
     next_title_xp?: number | null;
@@ -44,7 +42,7 @@ interface GamificacionAccionResponse {
 
 export const gamificationService = {
   async getEstado(): Promise<GamificacionEstadoResponse> {
-    const res = await fetch(`${PHP_API_BASE_URL}/gamificacion/estado/`, {
+    const res = await fetch(`${API_BASE_URL}/gamificacion/estado/`, {
       method: 'GET',
       headers: getAuthHeaders(),
     });
@@ -57,7 +55,7 @@ export const gamificationService = {
   },
 
   async claimDailyChallenge(): Promise<GamificacionAccionResponse> {
-    const res = await fetch(`${PHP_API_BASE_URL}/gamificacion/reto-diario/`, {
+    const res = await fetch(`${API_BASE_URL}/gamificacion/reto-diario/`, {
       method: 'POST',
       headers: getAuthHeaders(),
     });
@@ -71,7 +69,7 @@ export const gamificationService = {
   },
 
   async registerDailyChallengeFailure(): Promise<GamificacionAccionResponse> {
-    const res = await fetch(`${PHP_API_BASE_URL}/gamificacion/reto-diario-fallo/`, {
+    const res = await fetch(`${API_BASE_URL}/gamificacion/reto-diario-fallo/`, {
       method: 'POST',
       headers: getAuthHeaders(),
     });
@@ -83,10 +81,11 @@ export const gamificationService = {
     return json;
   },
 
-  async claimMissionReward(): Promise<GamificacionAccionResponse> {
-    const res = await fetch(`${PHP_API_BASE_URL}/gamificacion/mision/`, {
+  async claimMissionReward(missionKey?: string): Promise<GamificacionAccionResponse> {
+    const res = await fetch(`${API_BASE_URL}/gamificacion/mision/`, {
       method: 'POST',
       headers: getAuthHeaders(),
+      body: JSON.stringify({ mission_key: missionKey || '' }),
     });
 
     const json = (await res.json()) as GamificacionAccionResponse;

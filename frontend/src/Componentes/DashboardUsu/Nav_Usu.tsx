@@ -8,11 +8,12 @@ import { notificationService, type Notificacion } from "../../services/notificat
 interface NavUsuProps {
   candies: number;
   experience: number;
+  userName?: string;
   onLogout?: () => void;
   onOpenAchievements?: () => void;
 }
 
-export default function NavUsu({ candies, experience, onLogout, onOpenAchievements }: NavUsuProps) {
+export default function NavUsu({ candies, experience, userName, onLogout, onOpenAchievements }: NavUsuProps) {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
@@ -90,6 +91,11 @@ export default function NavUsu({ candies, experience, onLogout, onOpenAchievemen
           <div className="nav-actions">
             {/* Sistema de Dulces, Experiencia y Logros */}
             <div className="rewards-section">
+              {userName && (
+                <div className="user-name-pill">
+                  <span className="user-name-label">Hola, {userName}</span>
+                </div>
+              )}
               <div className="candy-counter">
                 <span className="candy-icon">🍬</span>
                 <span className="candy-count">{candies}</span>

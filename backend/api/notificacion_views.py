@@ -161,18 +161,19 @@ def obtener_notificaciones(request):
     """
     Obtiene las notificaciones del profesor autenticado y genera nuevas automáticamente
     """
-    # Verificar si el usuario es profesor o tiene permisos
-    if not (request.user.role == 'profesor' or request.user.is_profesor):
+    # Verificar si el usuario es profesor, admin o tiene permisos
+    if not (request.user.role in ['profesor', 'admin'] or request.user.is_profesor):
         return Response({
             'success': False,
-            'message': 'Solo los profesores pueden acceder a las notificaciones'
+            'message': 'Solo profesores y administradores pueden acceder a las notificaciones'
         }, status=status.HTTP_403_FORBIDDEN)
     
     try:
-        # Generar notificaciones automáticas
-        generar_notificaciones_automaticas(request.user.id)
+        # Generar notificaciones automáticas solo si es profesor
+        if request.user.role == 'profesor' or request.user.is_profesor:
+            generar_notificaciones_automaticas(request.user.id)
         
-        # Obtener todas las notificaciones del profesor (últimos 30 días)
+        # Obtener todas las notificaciones del usuario (últimos 30 días)
         hace_30_dias = timezone.now() - timedelta(days=30)
         
         notificaciones = Notificacion.objects.filter(

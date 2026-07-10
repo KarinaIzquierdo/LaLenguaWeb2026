@@ -33,6 +33,8 @@ interface Usuario {
   activo: boolean;
   especializacion_id?: number;
   especializacion?: string;
+  nivel?: string;
+  english_level?: string;
 }
 
 interface FormErrors {
@@ -59,6 +61,7 @@ export default function FormularioUsuarios() {
    * @state {boolean} isLoading - Estado de carga para operaciones asíncronas.
    */
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   /**
    * @state {Object} formData - Estado para los datos del formulario.
@@ -71,6 +74,7 @@ export default function FormularioUsuarios() {
     rol: 'Estudiante',
     contrasena: '',
     especializacion_id: undefined,
+    english_level: 'A1',
   });
 
   /**
@@ -183,6 +187,7 @@ export default function FormularioUsuarios() {
       rol: 'Estudiante',
       contrasena: '',
       especializacion_id: undefined,
+      english_level: 'A1',
     });
     setFormErrors({});
   };
@@ -203,6 +208,7 @@ export default function FormularioUsuarios() {
       rol: user.rol,
       contrasena: '', // Contraseña no se edita directamente aquí por seguridad
       especializacion_id: user.especializacion_id,
+      english_level: user.nivel || 'A1',
     });
     setFormErrors({});
   };
@@ -303,6 +309,7 @@ export default function FormularioUsuarios() {
           password: formData.contrasena,
           email: formData.correo?.trim() || undefined,
           especializacion: formData.especializacion_id ?? null,
+          english_level: formData.rol === 'Estudiante' ? (formData.english_level || 'A1') : undefined,
         };
 
         const result = await userService.register(registerData);
@@ -345,13 +352,24 @@ export default function FormularioUsuarios() {
   // Cargar lista de usuarios al montar el componente
   useEffect(() => {
     const fetchUsers = async () => {
+      setIsLoading(true);
+      setLoadError(null);
       try {
-        const data = await userService.getAll();
-        setUsers(data);
+        const data: any = await userService.getAll();
+        if (Array.isArray(data)) {
+          setUsers(data);
+        } else if (data && Array.isArray(data.users)) {
+          setUsers(data.users);
+        } else {
+          console.warn('Formato inesperado al cargar usuarios:', data);
+          setUsers([]);
+        }
       } catch (error) {
         console.error('Error loading users:', error);
-        // Si hay error de autorización, mostrar mensaje
+        setLoadError('No se pudieron cargar los usuarios. Revisa tu conexión o cierra sesión y vuelve a ingresar.');
         setUsers([]);
+      } finally {
+        setIsLoading(false);
       }
     };
     fetchUsers();
@@ -383,8 +401,7 @@ export default function FormularioUsuarios() {
                   <th>Correo Personal</th>
                   <th>Rol</th>
                   <th>Especialización</th>
-                  <th>Estado</th>
-                  <th>Acciones</th>
+                  <th>Nivel de Inglés</th>
                 </tr>
               </thead>
               <tbody>
@@ -401,58 +418,29 @@ export default function FormularioUsuarios() {
                         </span>
                       </td>
                       <td>
-                        <span 
-                          className={`status-badge ${user.activo ? 'status-active' : 'status-inactive'}`}
-                          aria-label={user.activo ? 'Usuario activo' : 'Usuario inactivo'}
-                        >
-                          {user.activo ? 'Activo' : 'Inactivo'}
+                        <span className="nivel-badge">
+                          {user.nivel || 'N/A'}
                         </span>
                       </td>
-                    <td className="actions-cell">
-                      <button 
-                        onClick={() => handleEditUser(user)} 
-                        className="action-button edit-button"
-                        disabled={isLoading}
-                        aria-label={`Editar usuario ${user.nombres} ${user.apellidos}`}
-                        title="Editar usuario"
-                      >
-                        <FaEdit />
-                        <span>Editar</span>
-                      </button>
-                      <button 
-                        onClick={() => handleToggleActive(user.id)} 
-                        className={`action-button ${user.activo ? 'deactivate-button' : 'activate-button'}`}
-                        disabled={isLoading}
-                        aria-label={user.activo ? `Desactivar usuario ${user.nombres}` : `Activar usuario ${user.nombres}`}
-                        title={user.activo ? 'Desactivar usuario' : 'Activar usuario'}
-                      >
-                        {isLoading ? (
-                          <FaSpinner className="loading-spinner" />
-                        ) : user.activo ? (
-                          <FaToggleOn />
-                        ) : (
-                          <FaToggleOff />
-                        )}
-                        <span>{user.activo ? 'Desactivar' : 'Activar'}</span>
-                      </button>
-                      <button 
-                        onClick={() => handleDeleteUser(user.id, `${user.nombres} ${user.apellidos}`)} 
-                        className="action-button delete-button"
-                        disabled={isLoading}
-                        aria-label={`Eliminar usuario ${user.nombres} ${user.apellidos}`}
-                        title="Eliminar usuario permanentemente"
-                      >
-                        <FaTrash />
-                        <span>Eliminar</span>
-                      </button>
-                    </td>
                   </tr>
                   );
                 })}
-                {users.length === 0 && (
+                {users.length === 0 && !isLoading && (
                   <tr>
-                    <td colSpan={7} style={{ textAlign: 'center', padding: '2rem' }}>
-                      No hay usuarios registrados
+                    <td colSpan={6} style={{ textAlign: 'center', padding: '2rem' }}>
+                      {loadError ? (
+                        <div className="users-error-message">
+                          <p>{loadError}</p>
+                          <button
+                            onClick={() => window.location.reload()}
+                            className="retry-button"
+                          >
+                            Reintentar
+                          </button>
+                        </div>
+                      ) : (
+                        'No hay usuarios registrados'
+                      )}
                     </td>
                   </tr>
                 )}
@@ -598,6 +586,25 @@ export default function FormularioUsuarios() {
               <option value="Financiero">Financiero</option>
             </select>
           </div>
+
+          {formData.rol === 'Estudiante' && (
+            <div className="form-field">
+              <label htmlFor="english_level">Nivel de Inglés</label>
+              <select
+                id="english_level"
+                name="english_level"
+                value={formData.english_level || 'A1'}
+                onChange={handleChange}
+              >
+                <option value="A1">A1 - Principiante</option>
+                <option value="A2">A2 - Básico</option>
+                <option value="B1">B1 - Intermedio</option>
+                <option value="B2">B2 - Intermedio-Alto</option>
+                <option value="C1">C1 - Avanzado</option>
+                <option value="C2">C2 - Competente/Nativo</option>
+              </select>
+            </div>
+          )}
 
           <div className="form-field">
             <label htmlFor="especializacion_id">Especialización</label>

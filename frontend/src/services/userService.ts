@@ -1,5 +1,6 @@
 // Servicio para registrar usuarios desde el frontend
 import { API_BASE_URL } from '../config/api';
+import type { EliminacionData } from '../Componentes/DashboardAdmin/ModalEliminarEstudiante';
 
 export interface RegisterData {
   first_name: string;
@@ -10,6 +11,7 @@ export interface RegisterData {
   password: string;
   bloque_asignado?: string;
   especializacion?: number | null;
+  english_level?: string;
 }
 
 export interface RegisterResponse {
@@ -46,7 +48,10 @@ export const userService = {
           'Authorization': token ? `Bearer ${token}` : '',
         },
       });
-      if (!response.ok) return [];
+      if (!response.ok) {
+        console.error(`Error al cargar usuarios: HTTP ${response.status} ${response.statusText}`);
+        return [];
+      }
       const data = await response.json();
 
       // El backend devuelve { success, message, users: [...] }
@@ -117,7 +122,26 @@ export const userService = {
     }
   },
 
-  async deleteUser(userId: number): Promise<any> {
+  async getAcademicDetail(userId: number): Promise<any> {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/estudiantes/${userId}/detalle-academico/`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : '',
+        },
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Error al cargar expediente');
+      }
+      return await response.json();
+    } catch (error) {
+      return { success: false, message: (error as Error).message || 'Error de conexión' };
+    }
+  },
+
+  async deleteUser(userId: number, data?: EliminacionData): Promise<any> {
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(`${API_BASE_URL}/users/${userId}/`, {
@@ -126,6 +150,7 @@ export const userService = {
           'Content-Type': 'application/json',
           'Authorization': token ? `Bearer ${token}` : '',
         },
+        body: data ? JSON.stringify(data) : undefined,
       });
       return await response.json();
     } catch (error) {

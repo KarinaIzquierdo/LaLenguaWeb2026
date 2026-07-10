@@ -28,7 +28,7 @@ const GestionSuscripciones: React.FC = () => {
       setLoading(true);
       const [usuariosData, planesVencerData, suscripcionesData, planesData, estudiantesData] = await Promise.all([
         subscriptionService.getUsuariosSinPlan(),
-        subscriptionService.getPlanesPorVencer(7), // 7 días de aviso
+        subscriptionService.getPlanesPorVencer(3), // 3 días de aviso
         subscriptionService.getSuscripcionesActivas(),
         subscriptionService.getPlanes(),
         subscriptionService.getTodosLosEstudiantes()
@@ -125,11 +125,9 @@ const GestionSuscripciones: React.FC = () => {
   const formatearFecha = (fecha: string | undefined) => {
     if (!fecha) return 'N/A';
     try {
-      return new Date(fecha).toLocaleDateString('es-ES', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-      });
+      const [anio, mes, dia] = fecha.split('-').map(Number);
+      const meses = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+      return `${dia} ${meses[mes - 1]} ${anio}`;
     } catch (error) {
       return 'N/A';
     }
@@ -260,7 +258,7 @@ const GestionSuscripciones: React.FC = () => {
               <option value="">Seleccionar plan...</option>
               {Array.isArray(planes) && planes.map((plan) => (
                 <option key={plan.id} value={plan.id}>
-                  {plan.nombre} - ${plan.precio_base.toLocaleString()} COP
+                  {plan.nombre} - ${Number(plan.precio_base).toLocaleString('es-CO')} COP
                 </option>
               ))}
             </select>
@@ -374,13 +372,13 @@ const GestionSuscripciones: React.FC = () => {
       {/* Planes por Vencer */}
       <section className="planes-vencer-section">
         <div className="section-header">
-          <h3>⏰ Planes por Vencer (próximos 7 días)</h3>
+          <h3>⏰ Planes por Vencer (próximos 3 días)</h3>
           <span className="count">{planesPorVencer.length} planes</span>
         </div>
         
         {planesPorVencer.length === 0 ? (
           <div className="empty-state">
-            <p>✅ No hay planes por vencer en los próximos 7 días</p>
+            <p>✅ No hay planes por vencer en los próximos 3 días</p>
           </div>
         ) : (
           <div className="planes-vencer-table">

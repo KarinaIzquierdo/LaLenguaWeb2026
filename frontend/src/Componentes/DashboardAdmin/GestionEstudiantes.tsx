@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import './GestionEstudiantes.css';
 import { userService } from '../../services/userService';
+import { generateStudentReportPDF } from '../../utils/generateStudentReportPDF';
 import ModalEliminarEstudiante from './ModalEliminarEstudiante';
 import type { EliminacionData } from './ModalEliminarEstudiante';
 
@@ -35,6 +36,8 @@ const GestionEstudiantes = () => {
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [academicDetail, setAcademicDetail] = useState<any>(null);
+  const [loadingAcademicDetail, setLoadingAcademicDetail] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
   const [editForm, setEditForm] = useState<EditForm>({
@@ -90,9 +93,23 @@ const GestionEstudiantes = () => {
     setPaginaActual(1);
   }, [searchTerm, filterNivel, students]);
 
-  const handleViewDetails = (student: Student) => {
+  const handleViewDetails = async (student: Student) => {
     setSelectedStudent(student);
     setShowDetailsModal(true);
+    setLoadingAcademicDetail(true);
+    setAcademicDetail(null);
+    try {
+      const detail = await userService.getAcademicDetail(student.id);
+      if (detail.success) {
+        setAcademicDetail(detail);
+      } else {
+        console.error('Error cargando expediente:', detail.message);
+      }
+    } catch (error) {
+      console.error('Error cargando expediente:', error);
+    } finally {
+      setLoadingAcademicDetail(false);
+    }
   };
 
   const handleEdit = (student: Student) => {
@@ -135,17 +152,7 @@ const GestionEstudiantes = () => {
     if (!studentToDelete) return;
     
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`https://lalenguacolombia.co/api/index.php/users/${studentToDelete.id}/`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(data)
-      });
-
-      const result = await response.json();
+      const result = await userService.deleteUser(studentToDelete.id, data);
 
       if (result.success) {
         alert('Estudiante eliminado correctamente. Se ha creado un registro de eliminación.');
@@ -367,40 +374,142 @@ const GestionEstudiantes = () => {
         </div>
       )}
 
-      {/* Modal de Detalles */}
+      {/* Modal de Detalles / Expediente */}
       {showDetailsModal && selectedStudent && (
         <div className="modal-backdrop" onClick={() => setShowDetailsModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-content academic-record-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>Detalles del Estudiante</h3>
+              <h3>Expediente del Estudiante</h3>
               <button onClick={() => setShowDetailsModal(false)} className="close-btn">×</button>
             </div>
             <div className="modal-body">
-              <div className="detail-row">
-                <span className="detail-label">Nombre completo:</span>
-                <span className="detail-value">{selectedStudent.nombres} {selectedStudent.apellidos}</span>
-              </div>
-              <div className="detail-row">
-                <span className="detail-label">Email:</span>
-                <span className="detail-value">{selectedStudent.correo_personal || 'N/A'}</span>
-              </div>
-              <div className="detail-row">
-                <span className="detail-label">Nivel de inglés:</span>
-                <span className="detail-value">{selectedStudent.nivel || 'N/A'}</span>
-              </div>
-              <div className="detail-row">
-                <span className="detail-label">Estado:</span>
-                <span className="detail-value">{selectedStudent.is_active ? 'Activo' : 'Inactivo'}</span>
-              </div>
-              <div className="detail-row">
-                <span className="detail-label">Fecha de registro:</span>
-                <span className="detail-value">{formatDate(selectedStudent.date_joined)}</span>
-              </div>
-              <div className="detail-row">
-                <span className="detail-label">ID:</span>
-                <span className="detail-value">{selectedStudent.id}</span>
-              </div>
+              {loadingAcademicDetail && <div className="loading-message">Cargando expediente...</div>}
+              {!loadingAcademicDetail && academicDetail && (
+                <>
+                  {/* Información personal */}
+                  <div className="record-section">
+                    <h4>Información Personal</h4>
+                    <div className="detail-grid">
+                      <div className="detail-row"><span className="detail-label">Nombre:</span><span className="detail-value">{academicDetail.estudiante.nombres} {academicDetail.estudiante.apellidos}</span></div>
+                      <div className="detail-row"><span className="detail-label">Email:</span><span className="detail-value">{academicDetail.estudiante.email || 'N/A'}</span></div>
+                      <div className="detail-row"><span className="detail-label">Correo personal:</span><span className="detail-value">{academicDetail.estudiante.correo_personal || 'N/A'}</span></div>
+                      <div className="detail-row"><span className="detail-label">Teléfono:</span><span className="detail-value">{academicDetail.estudiante.telefono || 'N/A'}</span></div>
+                      <div className="detail-row"><span className="detail-label">Cédula:</span><span className="detail-value">{academicDetail.estudiante.cedula || 'N/A'}</span></div>
+                      <div className="detail-row"><span className="detail-label">Ubicación:</span><span className="detail-value">{[academicDetail.estudiante.ciudad, academicDetail.estudiante.pais].filter(Boolean).join(', ') || 'N/A'}</span></div>
+                      <div className="detail-row"><span className="detail-label">Nivel de inglés:</span><span className="detail-value">{academicDetail.estudiante.nivel_ingles || 'N/A'}</span></div>
+                      <div className="detail-row"><span className="detail-label">Especialización:</span><span className="detail-value">{academicDetail.estudiante.especializacion || 'Sin asignar'}</span></div>
+                      <div className="detail-row"><span className="detail-label">Estado:</span><span className="detail-value">{academicDetail.estudiante.activo ? 'Activo' : 'Inactivo'}</span></div>
+                      <div className="detail-row"><span className="detail-label">Fecha de registro:</span><span className="detail-value">{formatDate(academicDetail.estudiante.fecha_registro)}</span></div>
+                    </div>
+                  </div>
+
+                  {/* Suscripción y progreso */}
+                  {academicDetail.suscripcion ? (
+                    <div className="record-section">
+                      <h4>Suscripción y Progreso</h4>
+                      <div className="detail-grid">
+                        <div className="detail-row"><span className="detail-label">Plan:</span><span className="detail-value">{academicDetail.suscripcion.plan}</span></div>
+                        <div className="detail-row"><span className="detail-label">Estado:</span><span className="detail-value">{academicDetail.suscripcion.estado}</span></div>
+                        <div className="detail-row"><span className="detail-label">Clases tomadas:</span><span className="detail-value">{academicDetail.suscripcion.clases_tomadas} / {academicDetail.suscripcion.clases_totales}</span></div>
+                        <div className="detail-row"><span className="detail-label">Progreso:</span><span className="detail-value">{academicDetail.suscripcion.progreso_porcentaje}%</span></div>
+                        <div className="detail-row"><span className="detail-label">Días restantes:</span><span className="detail-value">{academicDetail.suscripcion.dias_restantes}</span></div>
+                      </div>
+                      <div className="progress-bar-container">
+                        <div className="progress-bar" style={{ width: `${academicDetail.suscripcion.progreso_porcentaje}%` }}></div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="record-section">
+                      <h4>Suscripción y Progreso</h4>
+                      <p className="empty-section">No tiene suscripción activa.</p>
+                    </div>
+                  )}
+
+                  {/* Gamificación */}
+                  <div className="record-section">
+                    <h4>Gamificación</h4>
+                    <div className="gamification-grid">
+                      <div className="gamification-card"><span className="gamification-value">{academicDetail.gamificacion.total_xp}</span><span className="gamification-label">XP</span></div>
+                      <div className="gamification-card"><span className="gamification-value">{academicDetail.gamificacion.total_dulces}</span><span className="gamification-label">Dulces</span></div>
+                      <div className="gamification-card"><span className="gamification-value">{academicDetail.gamificacion.reto_racha_actual}</span><span className="gamification-label">Racha actual</span></div>
+                      <div className="gamification-card"><span className="gamification-value">{academicDetail.gamificacion.reto_mejor_racha}</span><span className="gamification-label">Mejor racha</span></div>
+                    </div>
+                  </div>
+
+                  {/* Asistencia */}
+                  <div className="record-section">
+                    <h4>Asistencia</h4>
+                    {academicDetail.asistencia.stats.total > 0 ? (
+                      <>
+                        <div className="attendance-stats">
+                          <div className="attendance-item presente"><span className="attendance-count">{academicDetail.asistencia.stats.presente}</span><span className="attendance-label">Presente</span></div>
+                          <div className="attendance-item ausente"><span className="attendance-count">{academicDetail.asistencia.stats.ausente}</span><span className="attendance-label">Ausente</span></div>
+                          <div className="attendance-item tardanza"><span className="attendance-count">{academicDetail.asistencia.stats.tardanza}</span><span className="attendance-label">Tardanza</span></div>
+                          <div className="attendance-item justificado"><span className="attendance-count">{academicDetail.asistencia.stats.justificado}</span><span className="attendance-label">Justificado</span></div>
+                        </div>
+                        <h5>Registros recientes</h5>
+                        <ul className="recent-list">
+                          {academicDetail.asistencia.recientes.map((a: any, idx: number) => (
+                            <li key={idx}><span className={`status-badge-mini ${a.estado}`}>{a.estado}</span> {formatDate(a.fecha)} {a.observaciones && <em>({a.observaciones})</em>}</li>
+                          ))}
+                        </ul>
+                      </>
+                    ) : (
+                      <p className="empty-section">No hay registros de asistencia.</p>
+                    )}
+                  </div>
+
+                  {/* Clases */}
+                  <div className="record-section">
+                    <h4>Clases Asignadas ({academicDetail.clases.length})</h4>
+                    {academicDetail.clases.length > 0 ? (
+                      <ul className="recent-list">
+                        {academicDetail.clases.map((c: any) => (
+                          <li key={c.id}><strong>{c.nombre}</strong> — {c.profesor} — {formatDate(c.fecha)} {c.hora && `(${c.hora})`} <span className="class-state">{c.estado}</span></li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="empty-section">No tiene clases asignadas.</p>
+                    )}
+                  </div>
+
+                  {/* Evaluaciones */}
+                  <div className="record-section">
+                    <h4>Evaluaciones ({academicDetail.evaluaciones.length})</h4>
+                    {academicDetail.evaluaciones.length > 0 ? (
+                      <table className="evaluations-table">
+                        <thead><tr><th>Título</th><th>Tipo</th><th>Estado</th><th>Calificación</th></tr></thead>
+                        <tbody>
+                          {academicDetail.evaluaciones.map((e: any) => (
+                            <tr key={e.id}>
+                              <td>{e.titulo}</td>
+                              <td>{e.tipo}</td>
+                              <td><span className={`status-badge-mini ${e.estado === 'Entregada' ? 'entregada' : 'pendiente'}`}>{e.estado}</span></td>
+                              <td>{e.calificacion !== null ? `${e.calificacion}/100` : '—'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : (
+                      <p className="empty-section">No tiene evaluaciones asignadas.</p>
+                    )}
+                  </div>
+                </>
+              )}
+              {!loadingAcademicDetail && !academicDetail && (
+                <div className="loading-message">No se pudo cargar el expediente.</div>
+              )}
             </div>
+            {!loadingAcademicDetail && academicDetail && (
+              <div className="modal-footer">
+                <button
+                  onClick={() => generateStudentReportPDF(academicDetail)}
+                  className="btn-report"
+                >
+                  📄 Descargar reporte PDF
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

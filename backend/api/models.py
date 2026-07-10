@@ -51,6 +51,18 @@ class CustomUser(AbstractUser):
     reto_mejor_racha = models.IntegerField(default=0)
     reto_ultima_fecha = models.DateField(null=True, blank=True)
     
+    # Contadores totales para ranking de retos diarios
+    reto_completados_total = models.IntegerField(default=0, help_text="Total de retos diarios completados")
+    reto_fallidos_total = models.IntegerField(default=0, help_text="Total de retos diarios fallados")
+    
+    # Progreso por habilidades (0-3 estrellas)
+    skill_vocabulario = models.IntegerField(default=0, help_text="Nivel de vocabulario (0-3 estrellas)")
+    skill_gramatica = models.IntegerField(default=0, help_text="Nivel de gramática (0-3 estrellas)")
+    skill_conversacion = models.IntegerField(default=0, help_text="Nivel de conversación (0-3 estrellas)")
+    
+    # Progreso semanal de retos diarios (0 a 7 segmentos visuales)
+    reto_semana_progreso = models.IntegerField(default=0, help_text="Segmentos completados esta semana (0-7)")
+    
     def __str__(self):
         return f"{self.username} - {self.first_name} {self.last_name}"
 
@@ -296,6 +308,7 @@ class Notificacion(models.Model):
         ('estudiante_sin_evaluar', 'Estudiante Sin Evaluar'),
         ('clase_hoy', 'Clase Hoy'),
         ('evaluacion_vencida', 'Evaluación Vencida'),
+        ('plan_vencimiento', 'Plan por Vencer'),
     ]
     
     PRIORIDAD_CHOICES = [
@@ -334,6 +347,7 @@ class NotificacionEstudiante(models.Model):
     Modelo para notificaciones dirigidas a estudiantes
     """
     TIPO_CHOICES = [
+        ('plan_asignado', 'Plan Asignado'),
         ('plan_vencimiento', 'Plan por Vencer'),
         ('plan_vencido', 'Plan Vencido'),
         ('clase_programada', 'Clase Programada'),
@@ -716,6 +730,24 @@ class Asistencia(models.Model):
     
     def __str__(self):
         return f"{self.estudiante.username} - {self.fecha} - {self.estado}"
+
+
+class MissionCompletion(models.Model):
+    """Registra qué misiones ha completado cada usuario y evita recompensas duplicadas"""
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='mission_completions')
+    mission_key = models.CharField(max_length=100)
+    dulces = models.IntegerField(default=0)
+    xp = models.IntegerField(default=0)
+    completed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'mission_key')
+        verbose_name = 'Completitud de Misión'
+        verbose_name_plural = 'Completitudes de Misiones'
+        ordering = ['-completed_at']
+
+    def __str__(self):
+        return f"{self.user.username} - {self.mission_key}"
 
 
 class DailyChallengeQuestion(models.Model):

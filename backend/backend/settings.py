@@ -82,15 +82,16 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # Configuración para MySQL (desarrollo y producción)
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': config('DB_NAME', default='the_language'),
+        'ENGINE': 'mysql.connector.django',
+        'NAME': config('DB_NAME', default='La_lengua_bd2'),
         'USER': config('DB_USER', default='root'),
-        'PASSWORD': config('DB_PASSWORD', default='Sena2025'),
+        'PASSWORD': config('DB_PASSWORD', default=''),
         'HOST': config('DB_HOST', default='127.0.0.1'),
-        'PORT': config('DB_PORT', default='3306'),
+        'PORT': config('DB_PORT', default='3307'),
         'OPTIONS': {
             'charset': 'utf8mb4',
             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+            'use_pure': True,  # Forzar el conector de Python puro para evitar desvíos del sistema
         },
     }
 }

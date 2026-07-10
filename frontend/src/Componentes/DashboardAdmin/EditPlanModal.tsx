@@ -9,17 +9,44 @@ interface EditPlanModalProps {
   onSave: (updatedPlan: Plan) => void;
 }
 
+interface PlanFormData {
+  id?: number;
+  nombre?: string;
+  tipo?: 'basico' | 'especializado' | 'premium';
+  descripcion?: string;
+  precio_base?: number | '';
+  duracion_meses?: number;
+  caracteristicas?: string[];
+  activo?: boolean;
+  color_tema?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+const formatPrecioInput = (value: number | '') => {
+  if (value === '' || value === 0) return '';
+  return value.toLocaleString('es-CO');
+};
+
+const parsePrecioInput = (value: string): number | '' => {
+  const cleaned = value.replace(/\./g, '').replace(',', '.');
+  const parsed = Number(cleaned);
+  return isNaN(parsed) || cleaned === '' ? '' : parsed;
+};
+
 const EditPlanModal: React.FC<EditPlanModalProps> = ({ plan, isOpen, onClose, onSave }) => {
-  const [formData, setFormData] = useState<Partial<Plan>>({
+  const isCreating = !plan;
+  const [formData, setFormData] = useState<PlanFormData>({
     nombre: '',
     tipo: 'basico',
     descripcion: '',
-    precio_base: 0,
+    precio_base: '',
     duracion_meses: 1,
     caracteristicas: [],
     activo: true,
     color_tema: '#2563eb'
   });
+  const [precioInput, setPrecioInput] = useState('');
   const [newCaracteristica, setNewCaracteristica] = useState('');
 
   useEffect(() => {
@@ -34,6 +61,19 @@ const EditPlanModal: React.FC<EditPlanModalProps> = ({ plan, isOpen, onClose, on
         activo: plan.activo,
         color_tema: plan.color_tema
       });
+      setPrecioInput(formatPrecioInput(plan.precio_base));
+    } else {
+      setFormData({
+        nombre: '',
+        tipo: 'basico',
+        descripcion: '',
+        precio_base: '',
+        duracion_meses: 1,
+        caracteristicas: [],
+        activo: true,
+        color_tema: '#2563eb'
+      });
+      setPrecioInput('');
     }
   }, [plan]);
 
@@ -43,6 +83,19 @@ const EditPlanModal: React.FC<EditPlanModalProps> = ({ plan, isOpen, onClose, on
       ...prev,
       [name]: type === 'number' ? Number(value) : value
     }));
+  };
+
+  const handlePrecioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setPrecioInput(value);
+    setFormData(prev => ({
+      ...prev,
+      precio_base: parsePrecioInput(value)
+    }));
+  };
+
+  const handlePrecioBlur = () => {
+    setPrecioInput(formatPrecioInput(formData.precio_base || ''));
   };
 
   const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -72,21 +125,23 @@ const EditPlanModal: React.FC<EditPlanModalProps> = ({ plan, isOpen, onClose, on
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (plan && formData.nombre && formData.precio_base) {
+    const precioFinal = formData.precio_base === '' ? 0 : Number(formData.precio_base);
+    if (formData.nombre && precioFinal > 0) {
       onSave({
-        ...plan,
-        ...formData
+        ...(plan || {}),
+        ...formData,
+        precio_base: precioFinal
       } as Plan);
     }
   };
 
-  if (!isOpen || !plan) return null;
+  if (!isOpen) return null;
 
   return (
     <div className="modal-overlay">
       <div className="modal-content">
         <div className="modal-header">
-          <h2>✏️ Editar Plan</h2>
+          <h2>{isCreating ? '➕ Crear Nuevo Plan' : '✏️ Editar Plan'}</h2>
           <button className="close-button" onClick={onClose}>✕</button>
         </div>
 
@@ -122,14 +177,14 @@ const EditPlanModal: React.FC<EditPlanModalProps> = ({ plan, isOpen, onClose, on
             <div className="form-group">
               <label htmlFor="precio_base">Precio Base (COP) *</label>
               <input
-                type="number"
+                type="text"
                 id="precio_base"
                 name="precio_base"
-                value={formData.precio_base}
-                onChange={handleInputChange}
+                value={precioInput}
+                onChange={handlePrecioChange}
+                onBlur={handlePrecioBlur}
                 required
-                min="0"
-                step="1000"
+                inputMode="numeric"
                 placeholder="180000"
               />
             </div>
@@ -219,7 +274,7 @@ const EditPlanModal: React.FC<EditPlanModalProps> = ({ plan, isOpen, onClose, on
               Cancelar
             </button>
             <button type="submit" className="save-btn">
-              💾 Guardar Cambios
+              💾 {isCreating ? 'Crear Plan' : 'Guardar Cambios'}
             </button>
           </div>
         </form>

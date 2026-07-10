@@ -1194,19 +1194,44 @@ def daily_challenges_view(request):
     }, status=status.HTTP_200_OK)
 
 
+def get_title_from_xp(total_xp: int):
+    """Devuelve el título, código y XP necesario para el siguiente título."""
+    thresholds = [
+        (0, 'Principiante', 'principiante', 100),
+        (100, 'Explorador', 'explorador', 300),
+        (300, 'Aventurero', 'aventurero', 600),
+        (600, 'Intermedio', 'intermedio', 1000),
+        (1000, 'Avanzado', 'avanzado', 1500),
+        (1500, 'Experto', 'experto', None),
+    ]
+    for min_xp, title, code, next_xp in thresholds:
+        if total_xp >= min_xp:
+            return {'title': title, 'title_code': code, 'next_title_xp': next_xp}
+    return {'title': 'Principiante', 'title_code': 'principiante', 'next_title_xp': 100}
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def gamificacion_estado_view(request):
     user = request.user
+    total_xp = getattr(user, 'total_xp', 0) or 0
+    title_info = get_title_from_xp(total_xp)
 
     return Response({
         'success': True,
         'data': {
             'total_dulces': getattr(user, 'total_dulces', 0) or 0,
-            'total_xp': getattr(user, 'total_xp', 0) or 0,
+            'total_xp': total_xp,
             'reto_racha_actual': getattr(user, 'reto_racha_actual', 0) or 0,
             'reto_mejor_racha': getattr(user, 'reto_mejor_racha', 0) or 0,
             'reto_ultima_fecha': user.reto_ultima_fecha.isoformat() if getattr(user, 'reto_ultima_fecha', None) else None,
+            'reto_semana_progreso': getattr(user, 'reto_semana_progreso', 0) or 0,
+            'title': title_info['title'],
+            'title_code': title_info['title_code'],
+            'next_title_xp': title_info['next_title_xp'],
+            'skill_vocabulario': getattr(user, 'skill_vocabulario', 0) or 0,
+            'skill_gramatica': getattr(user, 'skill_gramatica', 0) or 0,
+            'skill_conversacion': getattr(user, 'skill_conversacion', 0) or 0,
         }
     }, status=status.HTTP_200_OK)
 
@@ -1242,6 +1267,13 @@ def gamificacion_reto_diario_view(request):
     if racha_actual > mejor_racha:
         mejor_racha = racha_actual
 
+    # Progreso semanal visual (0-7 segmentos): incrementa y reinicia cada 7 días completados
+    semana_progreso = getattr(user, 'reto_semana_progreso', 0) or 0
+    if semana_progreso >= 7:
+        semana_progreso = 1
+    else:
+        semana_progreso += 1
+
     dulces_base = 5
     xp_base = 15
     dulces_bonus = 0
@@ -1259,7 +1291,9 @@ def gamificacion_reto_diario_view(request):
     user.reto_racha_actual = racha_actual
     user.reto_mejor_racha = mejor_racha
     user.reto_ultima_fecha = hoy
-    user.save(update_fields=['total_dulces', 'total_xp', 'reto_racha_actual', 'reto_mejor_racha', 'reto_ultima_fecha'])
+    user.reto_semana_progreso = semana_progreso
+    user.reto_completados_total = (getattr(user, 'reto_completados_total', 0) or 0) + 1
+    user.save(update_fields=['total_dulces', 'total_xp', 'reto_racha_actual', 'reto_mejor_racha', 'reto_ultima_fecha', 'reto_semana_progreso', 'reto_completados_total'])
 
     return Response({
         'success': True,
@@ -1270,6 +1304,7 @@ def gamificacion_reto_diario_view(request):
             'reto_racha_actual': user.reto_racha_actual,
             'reto_mejor_racha': user.reto_mejor_racha,
             'reto_ultima_fecha': user.reto_ultima_fecha.isoformat() if user.reto_ultima_fecha else None,
+            'reto_semana_progreso': user.reto_semana_progreso,
             'dulces_ganados': dulces_base + dulces_bonus,
             'xp_ganado': xp_base + xp_bonus,
             'bonus_aplicado': completó_ciclo,
@@ -1279,15 +1314,81 @@ def gamificacion_reto_diario_view(request):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+def gamificacion_reto_diario_fallo_view(request):
+    user = request.user
+    hoy = timezone.localdate()
+    ultima_fecha = getattr(user, 'reto_ultima_fecha', None)
+
+    # Solo registrar fallo si aún no ha interactuado con el reto hoy
+    if ultima_fecha == hoy:
+        return Response({
+            'success': False,
+            'message': 'Ya interactuaste con el reto diario hoy',
+            'data': {
+                'total_dulces': getattr(user, 'total_dulces', 0) or 0,
+                'total_xp': getattr(user, 'total_xp', 0) or 0,
+                'reto_racha_actual': getattr(user, 'reto_racha_actual', 0) or 0,
+                'reto_mejor_racha': getattr(user, 'reto_mejor_racha', 0) or 0,
+                'reto_ultima_fecha': ultima_fecha.isoformat() if ultima_fecha else None,
+            }
+        }, status=status.HTTP_200_OK)
+
+    user.reto_racha_actual = 0
+    user.reto_semana_progreso = 0
+    user.reto_ultima_fecha = hoy
+    user.reto_fallidos_total = (getattr(user, 'reto_fallidos_total', 0) or 0) + 1
+    user.save(update_fields=['reto_racha_actual', 'reto_semana_progreso', 'reto_ultima_fecha', 'reto_fallidos_total'])
+
+    return Response({
+        'success': True,
+        'message': 'Racha de reto diario reiniciada',
+        'data': {
+            'total_dulces': getattr(user, 'total_dulces', 0) or 0,
+            'total_xp': getattr(user, 'total_xp', 0) or 0,
+            'reto_racha_actual': 0,
+            'reto_mejor_racha': getattr(user, 'reto_mejor_racha', 0) or 0,
+            'reto_ultima_fecha': user.reto_ultima_fecha.isoformat() if user.reto_ultima_fecha else None,
+            'reto_semana_progreso': 0,
+            'dulces_ganados': 0,
+            'xp_ganado': 0,
+        }
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def gamificacion_mision_view(request):
     user = request.user
+    mission_key = request.data.get('mission_key', '')
 
     dulces_mision = 20
     xp_mision = 30
 
+    # Evitar recompensas duplicadas para la misma misión
+    if mission_key:
+        from .models import MissionCompletion
+        already_completed = MissionCompletion.objects.filter(user=user, mission_key=mission_key).first()
+        if already_completed:
+            return Response({
+                'success': True,
+                'message': 'Esta misión ya fue completada. No se otorgan recompensas adicionales.',
+                'data': {
+                    'total_dulces': user.total_dulces,
+                    'total_xp': user.total_xp,
+                    'dulces_ganados': 0,
+                    'xp_ganado': 0,
+                    'already_completed': True,
+                }
+            }, status=status.HTTP_200_OK)
+
     user.total_dulces = (getattr(user, 'total_dulces', 0) or 0) + dulces_mision
     user.total_xp = (getattr(user, 'total_xp', 0) or 0) + xp_mision
     user.save(update_fields=['total_dulces', 'total_xp'])
+
+    # Registrar la misión como completada
+    if mission_key:
+        from .models import MissionCompletion
+        MissionCompletion.objects.create(user=user, mission_key=mission_key, dulces=dulces_mision, xp=xp_mision)
 
     return Response({
         'success': True,
@@ -1297,6 +1398,7 @@ def gamificacion_mision_view(request):
             'total_xp': user.total_xp,
             'dulces_ganados': dulces_mision,
             'xp_ganado': xp_mision,
+            'already_completed': False,
         }
     }, status=status.HTTP_200_OK)
 
@@ -1517,6 +1619,26 @@ class ClaseViewSet(viewsets.ModelViewSet):
                 )
 
         return response
+    
+    def update(self, request, *args, **kwargs):
+        """Actualizar clase asegurando asignación de estudiantes."""
+        data = request.data.copy()
+        
+        # Compatibilidad: si solo viene "estudiantes" pero no "estudiantesSeleccionados",
+        # mapearlo al campo que usa el serializer para poblar el ManyToMany
+        if 'estudiantesSeleccionados' not in data and data.get('estudiantes'):
+            data['estudiantesSeleccionados'] = data.get('estudiantes')
+            # Limpiar 'estudiantes' para evitar que el PrimaryKeyRelatedField falle
+            # al validar strings como claves primarias
+            data.pop('estudiantes', None)
+        
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        
+        return Response(serializer.data)
     
     @action(detail=True, methods=['patch'])
     def cambiar_estado(self, request, pk=None):
@@ -2216,3 +2338,120 @@ def gallery_delete_view(request, pk):
             'success': False,
             'message': 'Elemento no encontrado'
         }, status=status.HTTP_404_NOT_FOUND)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def estudiante_detalle_academico_view(request, estudiante_id):
+    """
+    Endpoint para obtener el expediente académico completo de un estudiante.
+    Incluye información personal, clases, asistencias, evaluaciones, suscripción y gamificación.
+    """
+    try:
+        estudiante = get_object_or_404(CustomUser, pk=estudiante_id, role='student')
+
+        # Clases asignadas
+        clases = estudiante.clases.all().order_by('-fecha')
+        clases_data = []
+        for clase in clases:
+            clases_data.append({
+                'id': clase.id,
+                'nombre': clase.nombre,
+                'profesor': clase.profesor,
+                'fecha': clase.fecha.isoformat(),
+                'hora': clase.hora,
+                'estado': clase.estado,
+            })
+
+        # Asistencias
+        asistencias = estudiante.asistencias.all().order_by('-fecha')
+        asistencia_stats = {
+            'presente': asistencias.filter(estado='presente').count(),
+            'ausente': asistencias.filter(estado='ausente').count(),
+            'tardanza': asistencias.filter(estado='tardanza').count(),
+            'justificado': asistencias.filter(estado='justificado').count(),
+            'total': asistencias.count(),
+        }
+        asistencias_recientes = []
+        for a in asistencias[:10]:
+            asistencias_recientes.append({
+                'fecha': a.fecha.isoformat(),
+                'estado': a.estado,
+                'observaciones': a.observaciones or '',
+            })
+
+        # Evaluaciones asignadas y respuestas
+        evaluaciones_asignadas = estudiante.evaluaciones_asignadas.all().order_by('-created_at')
+        respuestas = estudiante.respuestas_evaluacion.select_related('evaluacion').order_by('-fecha_envio')
+        evaluaciones_data = []
+        for evaluacion in evaluaciones_asignadas:
+            respuesta = respuestas.filter(evaluacion=evaluacion).first()
+            evaluaciones_data.append({
+                'id': evaluacion.id,
+                'titulo': evaluacion.titulo,
+                'tipo': evaluacion.tipo,
+                'estado': 'Entregada' if respuesta and respuesta.completado else 'Pendiente',
+                'calificacion': float(respuesta.calificacion) if respuesta and respuesta.calificacion else None,
+                'fecha_entrega': respuesta.fecha_envio.isoformat() if respuesta and respuesta.fecha_envio else None,
+            })
+
+        # Suscripción activa
+        suscripcion = estudiante.suscripciones.select_related('plan').first()
+        suscripcion_data = None
+        if suscripcion:
+            suscripcion_data = {
+                'plan': suscripcion.plan.nombre,
+                'estado': suscripcion.estado,
+                'fecha_inicio': suscripcion.fecha_inicio.isoformat(),
+                'fecha_fin': suscripcion.fecha_fin.isoformat(),
+                'clases_totales': suscripcion.clases_totales,
+                'clases_tomadas': suscripcion.clases_tomadas,
+                'progreso_porcentaje': suscripcion.progreso_porcentaje,
+                'dias_restantes': suscripcion.dias_restantes,
+            }
+
+        # Gamificación
+        gamificacion_data = {
+            'total_dulces': estudiante.total_dulces,
+            'total_xp': estudiante.total_xp,
+            'reto_racha_actual': estudiante.reto_racha_actual,
+            'reto_mejor_racha': estudiante.reto_mejor_racha,
+        }
+
+        return Response({
+            'success': True,
+            'estudiante': {
+                'id': estudiante.id,
+                'nombres': estudiante.first_name or '',
+                'apellidos': estudiante.last_name or '',
+                'email': estudiante.email,
+                'correo_personal': estudiante.correo_personal or '',
+                'telefono': estudiante.phone or '',
+                'cedula': estudiante.cedula or '',
+                'pais': estudiante.country or '',
+                'ciudad': estudiante.city or '',
+                'direccion': estudiante.address or '',
+                'fecha_nacimiento': estudiante.birth_date.isoformat() if estudiante.birth_date else '',
+                'nivel_ingles': estudiante.english_level or estudiante.level or '',
+                'objetivos': estudiante.learning_goals or '',
+                'especializacion': estudiante.especializacion.nombre if estudiante.especializacion else 'Sin asignar',
+                'activo': estudiante.is_active,
+                'fecha_registro': estudiante.date_joined.isoformat() if estudiante.date_joined else '',
+            },
+            'clases': clases_data,
+            'asistencia': {
+                'stats': asistencia_stats,
+                'recientes': asistencias_recientes,
+            },
+            'evaluaciones': evaluaciones_data,
+            'suscripcion': suscripcion_data,
+            'gamificacion': gamificacion_data,
+        }, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return Response({
+            'success': False,
+            'message': f'Error al obtener expediente: {str(e)}'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

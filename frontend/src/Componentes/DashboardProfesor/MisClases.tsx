@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ClaseService } from '../../services/claseService';
+import { userService } from '../../services/userService';
 import TomarAsistencia from './TomarAsistencia';
 import './MisClases.css';
 
@@ -36,6 +37,15 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
   const [modoModal, setModoModal] = useState<'ver' | 'editar'>('ver');
   const [mostrarAsistencia, setMostrarAsistencia] = useState(false);
   const [claseAsistencia, setClaseAsistencia] = useState<Clase | null>(null);
+  const [editForm, setEditForm] = useState<Partial<Clase>>({});
+  const [savingClase, setSavingClase] = useState(false);
+  const [availableStudents, setAvailableStudents] = useState<Array<{id: number; name: string}>>([]);
+  const [selectedStudentIds, setSelectedStudentIds] = useState<number[]>([]);
+  const [studentSearchTerm, setStudentSearchTerm] = useState('');
+
+  useEffect(() => {
+    loadAvailableStudents();
+  }, []);
 
   useEffect(() => {
     const fetchClases = async () => {
@@ -239,8 +249,28 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
     setModalVisible(true);
   };
 
+  const prepareEditForm = (clase: any) => {
+    setEditForm({
+      tema: clase.tema || clase.nombre || '',
+      descripcion: clase.descripcion || '',
+      fecha: clase.fecha || '',
+      hora: clase.hora || '',
+      duracion: clase.duracion || 0,
+      tipoClase: clase.tipo_clase || clase.tipoClase || 'grupal',
+      estado: clase.estado || 'programada',
+      meetLink: clase.meet_link || clase.meetLink || '',
+    });
+    const currentIds = (clase.estudiantes || [])
+      .map((e: any) => typeof e === 'string' ? parseInt(e, 10) : e)
+      .filter((id: any) => typeof id === 'number' && !isNaN(id));
+    setSelectedStudentIds(currentIds);
+    setStudentSearchTerm('');
+  };
+
   const editarClase = (clase: Clase) => {
     setSelectedClase(clase);
+    prepareEditForm(clase);
+    loadAvailableStudents();
     setModoModal('editar');
     setModalVisible(true);
   };
@@ -248,6 +278,71 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
   const cerrarModal = () => {
     setModalVisible(false);
     setSelectedClase(null);
+    setEditForm({});
+    setModoModal('ver');
+  };
+
+  const handleEditChange = (field: keyof Clase, value: any) => {
+    setEditForm(prev => ({ ...prev, [field]: value }));
+  };
+
+  const loadAvailableStudents = async () => {
+    try {
+      const users = await userService.getAll();
+      const students = (users || [])
+        .filter((u: any) => u.rol === 'student' || u.role === 'student')
+        .map((u: any) => ({
+          id: u.id,
+          name: `${u.nombres || ''} ${u.apellidos || ''}`.trim() || u.username || u.correo || `ID ${u.id}`,
+        }))
+        .sort((a: any, b: any) => a.name.localeCompare(b.name));
+      setAvailableStudents(students);
+    } catch (e) {
+      console.error('Error cargando estudiantes:', e);
+      setAvailableStudents([]);
+    }
+  };
+
+  const toggleStudentSelection = (studentId: number) => {
+    setSelectedStudentIds(prev =>
+      prev.includes(studentId)
+        ? prev.filter(id => id !== studentId)
+        : [...prev, studentId]
+    );
+  };
+
+  const guardarCambiosClase = async () => {
+    if (!selectedClase || !editForm) return;
+    setSavingClase(true);
+    try {
+      const payload = {
+        nombre: selectedClase.nombre || editForm.tema || 'Clase sin nombre',
+        profesor: selectedClase.profesor || '',
+        tema: editForm.tema,
+        descripcion: editForm.descripcion,
+        fecha: editForm.fecha,
+        hora: editForm.hora,
+        duracion: editForm.duracion,
+        meet_link: editForm.meetLink || editForm.meet_link,
+        estado: editForm.estado,
+        tipo_clase: editForm.tipoClase,
+        modalidad: selectedClase.modalidad || 'virtual',
+        estudiantesSeleccionados: selectedStudentIds.map(id => id.toString()),
+      };
+      await ClaseService.updateClase(selectedClase.id, payload);
+
+      // Actualizar lista local incluyendo estudiantes seleccionados
+      const updatedStudentIds = selectedStudentIds;
+      setClases(prev => prev.map(c => (c.id === selectedClase.id ? { ...c, ...editForm, estudiantes: updatedStudentIds.map(String) } : c)));
+      setSelectedClase((prev: any) => ({ ...prev, ...editForm, estudiantes: updatedStudentIds.map(String) }));
+      setModoModal('ver');
+      alert('✅ Clase actualizada correctamente');
+    } catch (error: any) {
+      console.error('Error guardando clase:', error);
+      alert(error.response?.data?.message || error.message || 'Error al guardar la clase');
+    } finally {
+      setSavingClase(false);
+    }
   };
 
   const formatearFecha = (fecha: string) => {
@@ -348,6 +443,14 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
   // Filtrar clases por fecha
   const hoy = new Date().toISOString().split('T')[0];
   
+  const esClasePasada = (clase: Clase) => {
+    const ahora = new Date();
+    const [year, month, day] = clase.fecha.split('-').map(Number);
+    const [horaStr, minutoStr] = (clase.hora || '00:00').split(':').map(Number);
+    const fechaHoraClase = new Date(year, month - 1, day, horaStr || 0, minutoStr || 0);
+    return fechaHoraClase < ahora;
+  };
+
   const clasesVisibles = clasesDelBloque.filter(clase => {
     // Verificar estado en localStorage para persistencia
     const claseKey = `clase_${clase.tema.replace(/\s+/g, '_')}_estado`;
@@ -355,6 +458,11 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
     
     // Si está completada en localStorage, no mostrar
     if (estadoGuardado === 'completada') {
+      return false;
+    }
+    
+    // No mostrar clases que ya pasaron en fecha u hora
+    if (esClasePasada(clase)) {
       return false;
     }
     
@@ -371,7 +479,7 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
       return false;
     }
     
-    return clase.fecha === hoy && clase.estado !== 'completada';
+    return clase.fecha === hoy && !esClasePasada(clase) && clase.estado !== 'completada';
   });
   
   const clasesProximas = clases.filter(clase => {
@@ -839,70 +947,212 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
             </div>
             
             <div className="modal-body">
-              <div className="detalle-grupo">
-                <label><strong>Tema:</strong></label>
-                <p>{selectedClase.tema}</p>
-              </div>
-              
-              <div className="detalle-grupo">
-                <label><strong>Descripción:</strong></label>
-                <p>{selectedClase.descripcion}</p>
-              </div>
-              
-              <div className="detalle-grupo">
-                <label><strong>Fecha y Hora:</strong></label>
-                <p>{formatearFecha(selectedClase.fecha)} a las {selectedClase.hora}</p>
-              </div>
-              
-              <div className="detalle-grupo">
-                <label><strong>Duración:</strong></label>
-                <p>{selectedClase.duracion} minutos</p>
-              </div>
-              
-              <div className="detalle-grupo">
-                <label><strong>Tipo:</strong></label>
-                <p>{selectedClase.tipoClase === 'individual' ? 'Individual' : 'Grupal'}</p>
-              </div>
-              
-              <div className="detalle-grupo">
-                <label><strong>Estado:</strong></label>
-                <p className={`estado-text ${selectedClase.estado}`}>
-                  {selectedClase.estado === 'programada' && '⏳ Programada'}
-                  {selectedClase.estado === 'activa' && '🔴 En Vivo'}
-                  {selectedClase.estado === 'completada' && '✅ Completada'}
-                </p>
-              </div>
-              
-              <div className="detalle-grupo">
-                <label><strong>Enlace de Meet:</strong></label>
-                <p>{selectedClase.meet_link || selectedClase.meetLink || 'No configurado'}</p>
-              </div>
-              
-              <div className="detalle-grupo">
-                <label><strong>Estudiantes:</strong></label>
-                <div className="estudiantes-modal">
-                  {(selectedClase.estudiantes || []).length > 0 ? (
-                    selectedClase.estudiantes.map((estudiante, index) => (
-                      <span key={index} className="estudiante-tag-modal">{estudiante}</span>
-                    ))
-                  ) : (
-                    <p>No hay estudiantes asignados</p>
-                  )}
-                </div>
-              </div>
+              {modoModal === 'ver' ? (
+                <>
+                  <div className="detalle-grupo">
+                    <label><strong>Tema:</strong></label>
+                    <p>{selectedClase.tema}</p>
+                  </div>
+                  
+                  <div className="detalle-grupo">
+                    <label><strong>Descripción:</strong></label>
+                    <p>{selectedClase.descripcion}</p>
+                  </div>
+                  
+                  <div className="detalle-grupo">
+                    <label><strong>Fecha y Hora:</strong></label>
+                    <p>{formatearFecha(selectedClase.fecha)} a las {selectedClase.hora}</p>
+                  </div>
+                  
+                  <div className="detalle-grupo">
+                    <label><strong>Duración:</strong></label>
+                    <p>{selectedClase.duracion} minutos</p>
+                  </div>
+                  
+                  <div className="detalle-grupo">
+                    <label><strong>Tipo:</strong></label>
+                    <p>{selectedClase.tipoClase === 'individual' ? 'Individual' : 'Grupal'}</p>
+                  </div>
+                  
+                  <div className="detalle-grupo">
+                    <label><strong>Estado:</strong></label>
+                    <p className={`estado-text ${selectedClase.estado}`}>
+                      {selectedClase.estado === 'programada' && '⏳ Programada'}
+                      {selectedClase.estado === 'activa' && '🔴 En Vivo'}
+                      {selectedClase.estado === 'completada' && '✅ Completada'}
+                    </p>
+                  </div>
+                  
+                  <div className="detalle-grupo">
+                    <label><strong>Enlace de Meet:</strong></label>
+                    <p>{selectedClase.meet_link || selectedClase.meetLink || 'No configurado'}</p>
+                  </div>
+                  
+                  <div className="detalle-grupo">
+                    <label><strong>Estudiantes:</strong></label>
+                    <div className="estudiantes-modal">
+                      {(selectedClase.estudiantes || []).length > 0 ? (
+                        selectedClase.estudiantes.map((estudiante: any, index: number) => {
+                          const studentId = typeof estudiante === 'string' ? parseInt(estudiante, 10) : estudiante;
+                          const student = availableStudents.find(s => s.id === studentId);
+                          const displayName = student?.name || `ID ${studentId}`;
+                          return <span key={index} className="estudiante-tag-modal">{displayName}</span>;
+                        })
+                      ) : (
+                        <p>No hay estudiantes asignados</p>
+                      )}
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="detalle-grupo">
+                    <label><strong>Tema:</strong></label>
+                    <input
+                      type="text"
+                      className="modal-input"
+                      value={editForm.tema || ''}
+                      onChange={(e) => handleEditChange('tema', e.target.value)}
+                    />
+                  </div>
+                  
+                  <div className="detalle-grupo">
+                    <label><strong>Descripción:</strong></label>
+                    <textarea
+                      className="modal-input modal-textarea"
+                      rows={3}
+                      value={editForm.descripcion || ''}
+                      onChange={(e) => handleEditChange('descripcion', e.target.value)}
+                    />
+                  </div>
+                  
+                  <div className="detalle-grupo">
+                    <label><strong>Fecha:</strong></label>
+                    <input
+                      type="date"
+                      className="modal-input"
+                      value={editForm.fecha || ''}
+                      onChange={(e) => handleEditChange('fecha', e.target.value)}
+                    />
+                  </div>
+                  
+                  <div className="detalle-grupo">
+                    <label><strong>Hora:</strong></label>
+                    <input
+                      type="time"
+                      className="modal-input"
+                      value={editForm.hora || ''}
+                      onChange={(e) => handleEditChange('hora', e.target.value)}
+                    />
+                  </div>
+                  
+                  <div className="detalle-grupo">
+                    <label><strong>Duración (minutos):</strong></label>
+                    <input
+                      type="number"
+                      className="modal-input"
+                      min={15}
+                      value={editForm.duracion || 0}
+                      onChange={(e) => handleEditChange('duracion', parseInt(e.target.value, 10) || 0)}
+                    />
+                  </div>
+                  
+                  <div className="detalle-grupo">
+                    <label><strong>Tipo:</strong></label>
+                    <select
+                      className="modal-input"
+                      value={editForm.tipoClase || 'grupal'}
+                      onChange={(e) => handleEditChange('tipoClase', e.target.value)}
+                    >
+                      <option value="individual">Individual</option>
+                      <option value="grupal">Grupal</option>
+                    </select>
+                  </div>
+                  
+                  <div className="detalle-grupo">
+                    <label><strong>Estado:</strong></label>
+                    <select
+                      className="modal-input"
+                      value={editForm.estado || 'programada'}
+                      onChange={(e) => handleEditChange('estado', e.target.value)}
+                    >
+                      <option value="programada">Programada</option>
+                      <option value="activa">En Vivo</option>
+                      <option value="completada">Completada</option>
+                    </select>
+                  </div>
+                  
+                  <div className="detalle-grupo">
+                    <label><strong>Enlace de Meet:</strong></label>
+                    <input
+                      type="text"
+                      className="modal-input"
+                      value={editForm.meetLink || editForm.meet_link || ''}
+                      onChange={(e) => handleEditChange('meetLink', e.target.value)}
+                    />
+                  </div>
+                  
+                  <div className="detalle-grupo">
+                    <label><strong>Estudiantes asignados:</strong></label>
+                    <input
+                      type="text"
+                      className="modal-input"
+                      placeholder="Buscar estudiante..."
+                      value={studentSearchTerm}
+                      onChange={(e) => setStudentSearchTerm(e.target.value)}
+                    />
+                    <div className="estudiantes-selector">
+                      {availableStudents
+                        .filter(s => s.name.toLowerCase().includes(studentSearchTerm.toLowerCase()))
+                        .map(student => (
+                          <label key={student.id} className="estudiante-checkbox">
+                            <input
+                              type="checkbox"
+                              checked={selectedStudentIds.includes(student.id)}
+                              onChange={() => toggleStudentSelection(student.id)}
+                            />
+                            <span>{student.name}</span>
+                          </label>
+                        ))}
+                    </div>
+                    <p className="estudiantes-seleccionados-count">
+                      {selectedStudentIds.length} estudiante(s) seleccionado(s)
+                    </p>
+                  </div>
+                </>
+              )}
             </div>
             
             <div className="modal-footer">
-              <button className="btn-cerrar-modal" onClick={cerrarModal}>
-                Cerrar
-              </button>
-              {modoModal === 'ver' && (
-                <button 
-                  className="btn-editar-modal" 
-                  onClick={() => setModoModal('editar')}
-                >
-                  ✏️ Editar
-                </button>
+              {modoModal === 'editar' ? (
+                <>
+                  <button className="btn-cerrar-modal" onClick={() => setModoModal('ver')} disabled={savingClase}>
+                    Cancelar
+                  </button>
+                  <button 
+                    className="btn-editar-modal" 
+                    onClick={guardarCambiosClase}
+                    disabled={savingClase}
+                  >
+                    {savingClase ? 'Guardando...' : '💾 Guardar cambios'}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button className="btn-cerrar-modal" onClick={cerrarModal}>
+                    Cerrar
+                  </button>
+                  <button 
+                    className="btn-editar-modal" 
+                    onClick={() => {
+                      prepareEditForm(selectedClase);
+                      loadAvailableStudents();
+                      setModoModal('editar');
+                    }}
+                  >
+                    ✏️ Editar
+                  </button>
+                </>
               )}
             </div>
           </div>

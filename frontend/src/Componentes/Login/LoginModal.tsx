@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import './LoginModal.css';
 import { authService } from '../../services/authService';
+import { IoEyeOutline, IoEyeOffOutline } from "react-icons/io5";
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -19,6 +20,7 @@ export default function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps
   const [resetEmail, setResetEmail] = useState('');
   const [resetStatus, setResetStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [resetLink, setResetLink] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -140,16 +142,26 @@ export default function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps
 
             <div className="form-group">
               <label htmlFor="password">Contraseña</label>
-              <input
-                type="password"
-                id="password"
-                name="password"
-                value={formData.password}
-                onChange={handleInputChange}
-                placeholder="Ingresa tu contraseña"
-                className="login-input"
-                disabled={isLoading}
-              />
+              <div className="password-input-container">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  id="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  placeholder="Ingresa tu contraseña"
+                  className="login-input"
+                  disabled={isLoading}
+                />
+                <button
+                  type="button"
+                  className="password-toggle-button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  disabled={isLoading}
+                >
+                  {showPassword ? <IoEyeOffOutline /> : <IoEyeOutline />}
+                </button>
+              </div>
               <div style={{ marginTop: 8 }}>
                 <button type="button" className="link-button" onClick={handleOpenReset}>
                   ¿Olvidaste tu contraseña?

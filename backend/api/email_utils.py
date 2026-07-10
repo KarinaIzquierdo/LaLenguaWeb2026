@@ -60,6 +60,96 @@ def send_welcome_email(user_email, user_name, user_role, temporary_password, log
         return False
 
 
+def send_plan_expiration_notification(user_email, user_name, plan_name, fecha_vencimiento, dias_restantes, is_admin=False):
+    """
+    Envía un email de notificación cuando un plan está por vencer
+    
+    Args:
+        user_email (str): Correo del destinatario
+        user_name (str): Nombre del destinatario
+        plan_name (str): Nombre del plan
+        fecha_vencimiento (str): Fecha de vencimiento del plan
+        dias_restantes (int): Días restantes para el vencimiento
+        is_admin (bool): Si es True, el email es para el admin; si es False, para el estudiante
+    
+    Returns:
+        bool: True si el email se envió correctamente, False en caso contrario
+    """
+    try:
+        if is_admin:
+            subject = f'⚠️ Plan por vencer - {plan_name}'
+            text_content = f"""
+Hola {user_name},
+
+El plan {plan_name} de un estudiante vence el {fecha_vencimiento} (faltan {dias_restantes} días).
+
+Por favor contacta al estudiante para gestionar la renovación.
+
+Saludos,
+El equipo de La Lengua
+            """
+            html_content = f"""
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Plan por Vencer</title></head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: #d97706;">⚠️ Plan por vencer</h2>
+        <p>Hola <strong>{user_name}</strong>,</p>
+        <p>El plan <strong>{plan_name}</strong> de un estudiante vence el <strong>{fecha_vencimiento}</strong>.</p>
+        <p>Quedan <strong>{dias_restantes} días</strong> para el vencimiento.</p>
+        <p>Por favor contacta al estudiante para gestionar la renovación.</p>
+        <p>Saludos,<br>El equipo de La Lengua</p>
+    </div>
+</body>
+</html>
+            """
+        else:
+            subject = f'⏰ Tu plan {plan_name} está por vencer'
+            text_content = f"""
+Hola {user_name},
+
+Tu plan {plan_name} vence el {fecha_vencimiento} (faltan {dias_restantes} días).
+
+No olvides renovarlo para seguir disfrutando de tus clases.
+
+Saludos,
+El equipo de La Lengua
+            """
+            html_content = f"""
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Plan por Vencer</title></head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: #d97706;">⏰ Tu plan está por vencer</h2>
+        <p>Hola <strong>{user_name}</strong>,</p>
+        <p>Tu plan <strong>{plan_name}</strong> vence el <strong>{fecha_vencimiento}</strong>.</p>
+        <p>Quedan <strong>{dias_restantes} días</strong> para el vencimiento.</p>
+        <p>No olvides renovarlo para seguir disfrutando de tus clases.</p>
+        <p>Saludos,<br>El equipo de La Lengua</p>
+    </div>
+</body>
+</html>
+            """
+        
+        email = EmailMultiAlternatives(
+            subject=subject,
+            body=text_content,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[user_email]
+        )
+        email.attach_alternative(html_content, "text/html")
+        email.send(fail_silently=False)
+        
+        print(f"✅ Notificación de vencimiento enviada a: {user_email}")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Error al enviar notificación de vencimiento a {user_email}: {str(e)}")
+        return False
+
+
 def send_password_reset_email(user_email, user_name, reset_link):
     """
     Envía un email con el enlace para restablecer la contraseña

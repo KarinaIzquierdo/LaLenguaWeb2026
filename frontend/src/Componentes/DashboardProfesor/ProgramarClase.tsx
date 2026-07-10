@@ -94,7 +94,9 @@ export default function ProgramarClase() {
         const usuarios = await userService.getAll();
         const estudiantes = usuarios
           .filter(usuario => {
-            return usuario.rol === 'student' && usuario.activo;
+            const rolEsEstudiante = (usuario.rol || usuario.role || '') === 'student';
+            const activo = usuario.activo !== false && usuario.is_active !== false;
+            return rolEsEstudiante && activo;
           })
           .map(usuario => {
             const nivel = usuario.nivel || 'Sin nivel';
@@ -460,16 +462,21 @@ export default function ProgramarClase() {
               {mostrarEstudiantes && (
                 <div className="estudiantes-panel">
                   <div className="panel-header">
-                    <select
-                      value={filtroNivel}
-                      onChange={(e) => setFiltroNivel(e.target.value)}
-                      className="nivel-filter"
-                    >
-                      <option value="todos">Todos los niveles</option>
-                      {nivelesDisponiblesOrdenados.map(nivel => (
-                        <option key={nivel} value={nivel}>{nivel}</option>
-                      ))}
-                    </select>
+                    <div className="panel-filters">
+                      <select
+                        value={filtroNivel}
+                        onChange={(e) => setFiltroNivel(e.target.value)}
+                        className="nivel-filter"
+                      >
+                        <option value="todos">Todos los niveles</option>
+                        {nivelesDisponiblesOrdenados.map(nivel => (
+                          <option key={nivel} value={nivel}>{nivel}</option>
+                        ))}
+                      </select>
+                      <span className="estudiantes-count">
+                        {estudiantesFiltrados.length} de {estudiantesDisponibles.length} estudiantes
+                      </span>
+                    </div>
                     
                     <button
                       type="button"
@@ -490,17 +497,17 @@ export default function ProgramarClase() {
                       estudiantesFiltrados.map(estudiante => (
                         <div
                           key={estudiante.id}
-                          className={`estudiante-item ${
+                          className={`programar-estudiante-item ${
                             formulario.estudiantesSeleccionados.includes(estudiante.id) ? 'selected' : ''
                           }`}
                           onClick={() => toggleEstudiante(estudiante.id)}
                         >
-                          <div className="estudiante-info">
-                            <span className="estudiante-nombre">{estudiante.nombre}</span>
-                            <span className="estudiante-nivel">{estudiante.nivel}</span>
-                            <span className="estudiante-email">{estudiante.email}</span>
+                          <div className="programar-estudiante-info">
+                            <span className="programar-estudiante-nombre">{estudiante.nombre}</span>
+                            <span className="programar-estudiante-nivel">{estudiante.nivel}</span>
+                            <span className="programar-estudiante-email">{estudiante.email}</span>
                           </div>
-                          <div className="checkbox">
+                          <div className="programar-checkbox">
                             {formulario.estudiantesSeleccionados.includes(estudiante.id) ? '✓' : ''}
                           </div>
                         </div>

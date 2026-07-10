@@ -21,6 +21,8 @@ export interface EvaluacionData {
   unidad?: string;
   clase?: string;
   enlace?: string;
+  dirigidaA?: 'individual' | 'grupo';
+  estudiantes_asignados?: number[];
   archivo?: File | null;
 }
 
@@ -70,7 +72,7 @@ export const evaluacionProfesorService = {
       formData.append('titulo', data.titulo);
       formData.append(
         'descripcion',
-        `Nivel: ${data.nivel || ''} | Unidad: ${data.unidad || ''} | Clase: ${data.clase || ''} | Enlace: ${data.enlace || ''}`
+        `Nivel: ${data.nivel || ''} | Unidad: ${data.unidad || ''} | Clase: ${data.clase || ''} | Dirigida a: ${data.dirigidaA || 'grupo'} | Enlace: ${data.enlace || ''}`
       );
       formData.append('tipo', data.tipo || 'quiz');
       formData.append('estado', 'borrador');
@@ -79,6 +81,9 @@ export const evaluacionProfesorService = {
       }
       if (data.archivo) {
         formData.append('archivo', data.archivo);
+      }
+      if (data.estudiantes_asignados && data.estudiantes_asignados.length > 0) {
+        formData.append('estudiantes_asignados', JSON.stringify(data.estudiantes_asignados));
       }
 
       const token = localStorage.getItem('token');
@@ -171,11 +176,14 @@ export const evaluacionProfesorService = {
       // Mapear los datos al formato del backend
       const backendData: any = {};
       if (data.titulo) backendData.titulo = data.titulo;
-      if (data.nivel || data.unidad || data.clase || data.enlace) {
-        backendData.descripcion = `Nivel: ${data.nivel} | Unidad: ${data.unidad} | Clase: ${data.clase} | Enlace: ${data.enlace}`;
+      if (data.nivel || data.unidad || data.clase || data.enlace || data.dirigidaA) {
+        backendData.descripcion = `Nivel: ${data.nivel || ''} | Unidad: ${data.unidad || ''} | Clase: ${data.clase || ''} | Dirigida a: ${data.dirigidaA || 'grupo'} | Enlace: ${data.enlace || ''}`;
       }
       if (data.tipo) backendData.tipo = data.tipo;
       if (data.estado) backendData.estado = data.estado;
+      if (data.estudiantes_asignados) {
+        backendData.estudiantes_asignados = data.estudiantes_asignados;
+      }
 
       const response = await fetch(`${API_BASE_URL}/evaluaciones/${id}/update/`, {
         method: 'PUT',

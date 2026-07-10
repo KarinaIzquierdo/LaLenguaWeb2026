@@ -1,6 +1,5 @@
 import { authService } from './authService';
-
-const API_BASE_URL = 'https://lalenguacolombia.co/api/index.php';
+import { API_BASE_URL } from '../config/api';
 
 export type MissionLink = {
   id: number;

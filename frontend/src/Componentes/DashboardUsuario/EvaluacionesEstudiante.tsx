@@ -121,6 +121,16 @@ export default function EvaluacionesEstudiante() {
     });
   };
 
+  const formatDateTime = (dateString: string) => {
+    return new Date(dateString).toLocaleString('es-ES', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
   const descargarEvaluacion = async (evaluacion: EvaluacionEstudiante) => {
     try {
       const response = await evaluacionService.downloadEvaluacion(evaluacion.id);
@@ -243,7 +253,7 @@ export default function EvaluacionesEstudiante() {
                       <td>
                         {evaluacion.fecha_limite ? (
                           <span className={overdue ? 'fecha-vencida' : 'fecha-limite'}>
-                            {new Date(evaluacion.fecha_limite).toLocaleDateString()}
+                            {formatDateTime(evaluacion.fecha_limite)}
                           </span>
                         ) : (
                           'Sin fecha límite'

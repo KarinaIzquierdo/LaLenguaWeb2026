@@ -169,6 +169,29 @@ class ClaseSerializer(serializers.ModelSerializer):
         
         return clase
 
+    def update(self, instance, validated_data):
+        """Actualizar clase asegurando la asignación de estudiantes."""
+        # Soportar tanto 'estudiantesSeleccionados' como 'estudiantes'
+        estudiantes_ids = validated_data.pop('estudiantesSeleccionados', None)
+        if estudiantes_ids is None:
+            estudiantes_ids = validated_data.pop('estudiantes', [])
+        else:
+            # Si ya se usó estudiantesSeleccionados, descartar estudiantes
+            # para evitar error al asignar la relación ManyToMany directamente
+            validated_data.pop('estudiantes', None)
+        
+        # Actualizar campos normales
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        
+        # Actualizar estudiantes si se proporcionaron
+        if estudiantes_ids is not None:
+            estudiantes = CustomUser.objects.filter(id__in=estudiantes_ids)
+            instance.estudiantes.set(estudiantes)
+        
+        return instance
+
 class UserRegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8)
     role = serializers.ChoiceField(choices=CustomUser.ROLE_CHOICES)
@@ -179,7 +202,7 @@ class UserRegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CustomUser
-        fields = ('username', 'first_name', 'last_name', 'email', 'role', 'password', 'especializacion', 'correo_personal')
+        fields = ('username', 'first_name', 'last_name', 'email', 'role', 'password', 'especializacion', 'correo_personal', 'english_level')
 
     def validate_correo_personal(self, value):
         """Validar que el correo personal sea único"""
@@ -395,9 +418,11 @@ class EspecializacionSerializer(serializers.ModelSerializer):
 
 
 class PlanSerializer(serializers.ModelSerializer):
+    precio = serializers.DecimalField(source='precio_base', max_digits=10, decimal_places=2, read_only=True)
+
     class Meta:
         model = Plan
-        fields = ['id', 'nombre', 'tipo', 'descripcion', 'precio_base', 'duracion_meses', 
+        fields = ['id', 'nombre', 'tipo', 'descripcion', 'precio', 'precio_base', 'duracion_meses', 
                  'caracteristicas', 'activo', 'color_tema', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
 

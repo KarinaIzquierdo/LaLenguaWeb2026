@@ -284,6 +284,59 @@
   border: 1px solid rgba(239, 68, 68, 0.2);
 }
 
+/* Centrar la columna de Nivel de Inglés */
+.users-table th:nth-child(6),
+.users-table td:nth-child(6) {
+  text-align: center;
+}
+
+/* Mensaje de error al cargar usuarios */
+.users-error-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-md);
+  color: #dc2626;
+}
+
+.users-error-message p {
+  margin: 0;
+  font-weight: 500;
+}
+
+.retry-button {
+  padding: var(--spacing-sm) var(--spacing-lg);
+  background: linear-gradient(90deg, #4f46e5, #7c3aed);
+  color: white;
+  border: none;
+  border-radius: var(--border-radius-md);
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition-base);
+}
+
+.retry-button:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+/* Estilos para el badge de nivel de inglés */
+.nivel-badge {
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  color: #ffffff;
+  border: 1px solid rgba(99, 102, 241, 0.4);
+  display: inline-block;
+  min-width: 80px;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(99, 102, 241, 0.2);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
 /* Celda de acciones */
 .actions-cell {
   display: flex;

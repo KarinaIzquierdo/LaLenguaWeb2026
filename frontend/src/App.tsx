@@ -28,6 +28,7 @@ import MisionesAdmin from './Componentes/DashboardAdmin/MisionesAdmin';
 import RetosDiariosAdmin from './Componentes/DashboardAdmin/RetosDiariosAdmin';
 import RankingRetosAdmin from './Componentes/DashboardAdmin/RankingRetosAdmin';
 import RegistrosEliminacion from './Componentes/DashboardAdmin/RegistrosEliminacion';
+import NotificacionesProfesor from './Componentes/DashboardProfesor/NotificacionesProfesor';
 
 function App() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
@@ -44,7 +45,8 @@ function App() {
         if (token) {
           // Simplificado - solo verificar si existe el token
           setIsAuthenticated(true);
-          const role = localStorage.getItem('userRole') as 'student' | 'profesor' | 'admin' | null;
+          const rawRole = localStorage.getItem('userRole');
+          const role = (rawRole ? rawRole.toLowerCase() : null) as 'student' | 'profesor' | 'admin' | null;
           setUserRole(role);
         }
       } catch (error) {
@@ -97,13 +99,12 @@ function App() {
         console.log('Profile check:', profile)
         console.log('Profile role:', profile.role)
         console.log('Profile completed:', profile.profile_completed)
-        setUserRole(profile.role || 'student')
+        const role = (profile.role || 'student').toLowerCase() as 'student' | 'profesor' | 'admin';
+        setUserRole(role);
         
         // Guardar el rol en localStorage para persistencia
-        localStorage.setItem('userRole', profile.role || 'student')
+        localStorage.setItem('userRole', role);
         
-        // Redirigir según el rol, independientemente del estado del perfil
-        const role = profile.role || 'student'
         console.log('Redirecting user with role:', role)
         
         // Si el perfil no está completado, mostrar modal DESPUÉS de redirigir
@@ -249,6 +250,7 @@ function App() {
               <Route path="misiones" element={<MisionesAdmin />} />
               <Route path="retos-diarios" element={<RetosDiariosAdmin />} />
               <Route path="ranking-retos" element={<RankingRetosAdmin />} />
+              <Route path="notificaciones" element={<NotificacionesProfesor />} />
             </Route>
             
             {/* Ruta de login - redirige al home */}

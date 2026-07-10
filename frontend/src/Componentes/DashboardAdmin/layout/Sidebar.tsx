@@ -1,11 +1,16 @@
 import { NavLink } from 'react-router-dom';
+import { FaUserShield } from 'react-icons/fa';
 import { ThemeToggleButton } from './ThemeToggleButton';
 
 export const Sidebar = ({ onLogout }: { onLogout: () => void }) => {
   return (
     <aside className="sidebar">
       <div>
-        <h3>Admin Panel</h3>
+        <div className="sidebar-title">
+          <FaUserShield className="sidebar-title-icon" />
+          <span className="sidebar-title-text">Admin Panel</span>
+          <span className="sidebar-title-sub">Panel de Control</span>
+        </div>
         <ul className="sidebar-nav">
           <li>
             <NavLink to="/admin/dashboard" className={({ isActive }) => isActive ? 'active' : ''}>
@@ -55,6 +60,11 @@ export const Sidebar = ({ onLogout }: { onLogout: () => void }) => {
           <li>
             <NavLink to="/admin/gestion-suscripciones" className={({ isActive }) => isActive ? 'active' : ''}>
               👥 Gestión de Suscripciones
+            </NavLink>
+          </li>
+          <li>
+            <NavLink to="/admin/notificaciones" className={({ isActive }) => isActive ? 'active' : ''}>
+              🔔 Notificaciones
             </NavLink>
           </li>
           <li>

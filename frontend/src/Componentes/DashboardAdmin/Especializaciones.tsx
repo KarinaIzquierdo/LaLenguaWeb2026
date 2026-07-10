@@ -2,6 +2,17 @@ import { useState, useEffect } from 'react';
 import './admin.css';
 import { especializacionService, type Especializacion } from '../../services/especializacionService';
 
+const formatPrecio = (value: number | '') => {
+  if (value === '' || value === 0) return '';
+  return value.toLocaleString('es-CO');
+};
+
+const parsePrecio = (value: string): number | '' => {
+  const cleaned = value.replace(/\./g, '').replace(',', '.');
+  const parsed = Number(cleaned);
+  return isNaN(parsed) || cleaned === '' ? '' : parsed;
+};
+
 const Especializaciones = () => {
   const [especializaciones, setEspecializaciones] = useState<Especializacion[]>([]);
   const [loading, setLoading] = useState(false);
@@ -31,20 +42,26 @@ const Especializaciones = () => {
     nombre: '',
     descripcion: '',
     duracion: '',
-    precio: 0,
+    precio: '' as number | '',
     activa: true
   });
+  const [precioInput, setPrecioInput] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     
     try {
+      const dataToSend = {
+        ...nuevaEspecializacion,
+        precio: nuevaEspecializacion.precio === '' ? 0 : nuevaEspecializacion.precio
+      };
+
       if (especializacionEditando) {
         // Editar especialización existente
         const result = await especializacionService.updateEspecializacion(
           especializacionEditando.id, 
-          nuevaEspecializacion
+          dataToSend
         );
         if (result.success) {
           await loadEspecializaciones();
@@ -53,7 +70,7 @@ const Especializaciones = () => {
         }
       } else {
         // Crear nueva especialización
-        const result = await especializacionService.createEspecializacion(nuevaEspecializacion);
+        const result = await especializacionService.createEspecializacion(dataToSend);
         if (result.success) {
           await loadEspecializaciones();
         } else {
@@ -66,9 +83,10 @@ const Especializaciones = () => {
         nombre: '',
         descripcion: '',
         duracion: '',
-        precio: 0,
+        precio: '',
         activa: true
       });
+      setPrecioInput('');
       setEspecializacionEditando(null);
       setMostrarFormulario(false);
     } catch (error) {
@@ -87,6 +105,7 @@ const Especializaciones = () => {
       precio: esp.precio,
       activa: esp.activa
     });
+    setPrecioInput(formatPrecio(esp.precio));
     setMostrarFormulario(true);
   };
 
@@ -131,9 +150,10 @@ const Especializaciones = () => {
       nombre: '',
       descripcion: '',
       duracion: '',
-      precio: 0,
+      precio: '',
       activa: true
     });
+    setPrecioInput('');
   };
 
   return (
@@ -197,15 +217,20 @@ const Especializaciones = () => {
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="precio">Precio (USD)</label>
+                  <label htmlFor="precio">Precio (COP)</label>
                   <input
-                    type="number"
+                    type="text"
                     id="precio"
-                    value={nuevaEspecializacion.precio}
-                    onChange={(e) => setNuevaEspecializacion(prev => ({ ...prev, precio: Number(e.target.value) }))}
+                    value={precioInput}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setPrecioInput(value);
+                      setNuevaEspecializacion(prev => ({ ...prev, precio: parsePrecio(value) }));
+                    }}
+                    onBlur={() => setPrecioInput(formatPrecio(nuevaEspecializacion.precio))}
                     required
-                    min="0"
-                    step="0.01"
+                    inputMode="numeric"
+                    placeholder="500000"
                   />
                 </div>
               </div>
@@ -257,7 +282,7 @@ const Especializaciones = () => {
                 </div>
                 <div className="detail-item">
                   <span className="label">Precio:</span>
-                  <span className="value">${esp.precio}</span>
+                  <span className="value">${Number(esp.precio).toLocaleString('es-CO')}</span>
                 </div>
                 <div className="detail-item">
                   <span className="label">Creada:</span>
