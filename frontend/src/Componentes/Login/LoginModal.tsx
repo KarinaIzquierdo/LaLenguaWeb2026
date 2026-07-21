@@ -19,7 +19,6 @@ export default function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps
   const [showReset, setShowReset] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [resetStatus, setResetStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-  const [resetLink, setResetLink] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -52,7 +51,6 @@ export default function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps
     setShowReset(true);
     setResetEmail(formData.email || '');
     setResetStatus(null);
-    setResetLink(null);
   };
 
   const handleSendReset = async () => {
@@ -79,7 +77,6 @@ export default function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps
           if (resetLink.startsWith('/')) {
             resetLink = `${window.location.origin}${resetLink}`;
           }
-          setResetLink(resetLink);
         }
       } catch (e) {
         // No bloquear el flujo: si falla, seguiremos con fallback dentro de emailService

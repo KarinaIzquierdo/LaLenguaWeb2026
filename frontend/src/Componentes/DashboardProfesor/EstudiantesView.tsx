@@ -3,6 +3,7 @@ import { userService } from '../../services/userService';
 import { ClaseService } from '../../services/claseService';
 import { authService } from '../../services/authService';
 import { asistenciaService } from '../../services/asistenciaService';
+import { calificacionService } from '../../services/calificacionService';
 import './EstudiantesView.css';
 
 interface Estudiante {
@@ -105,11 +106,38 @@ export default function EstudiantesView() {
         return;
       }
 
-      // Construir la lista de estudiantes con estadísticas de asistencia
+      // Obtener el panel de calificaciones real para calcular métricas
+      let panelCalificaciones: any[] = [];
+      try {
+        const califsResponse = await calificacionService.obtenerPanelCalificaciones();
+        if (califsResponse.success && Array.isArray(califsResponse.items)) {
+          panelCalificaciones = califsResponse.items;
+        }
+      } catch (err) {
+        console.error('Error al cargar panel de calificaciones:', err);
+      }
+
+      // Construir la lista de estudiantes con estadísticas de asistencia e interés reales
       const estudiantesData: Estudiante[] = await Promise.all(
         soloEstudiantes.map(async (u: any) => {
-          // Obtener estadísticas de asistencia desde el servicio (actualmente contra el backend antiguo)
+          // Obtener estadísticas de asistencia
           const stats = await asistenciaService.getEstadisticasAsistencia(u.id);
+
+          // Filtrar las calificaciones reales para este estudiante
+          const califsEstudiante = panelCalificaciones.filter(
+            (item: any) => item.estudiante_id === u.id && item.calificacion !== null
+          );
+
+          // Contar evaluaciones realizadas (las que tienen respuesta o ya han sido calificadas)
+          const evaluacionesRealizadas = panelCalificaciones.filter(
+            (item: any) => item.estudiante_id === u.id && (item.tiene_respuesta || item.calificacion !== null)
+          ).length;
+          
+          let promedioGeneral = 0;
+          if (califsEstudiante.length > 0) {
+            const suma = califsEstudiante.reduce((acc: number, item: any) => acc + (item.calificacion || 0), 0);
+            promedioGeneral = Math.round(suma / califsEstudiante.length);
+          }
 
           return {
             id: u.id.toString(),
@@ -118,8 +146,8 @@ export default function EstudiantesView() {
             nivel: u.nivel || 'Sin nivel',
             fechaRegistro: u.date_joined || new Date().toISOString(),
             clasesCompletadas: stats.presentes, // Clases donde asistió
-            evaluacionesRealizadas: 0, // TODO: Calcular desde evaluaciones
-            promedioGeneral: 0, // TODO: Calcular desde evaluaciones
+            evaluacionesRealizadas,
+            promedioGeneral,
             ultimaActividad: new Date().toISOString(),
             estado: (u.is_active ? 'activo' : 'inactivo') as 'activo' | 'inactivo'
           };
@@ -171,42 +199,8 @@ export default function EstudiantesView() {
     }
   };
 
-  // Datos mock de evaluaciones del estudiante seleccionado
-  const [resultadosEvaluaciones] = useState<ResultadoEvaluacion[]>([
-    {
-      evaluacionId: '1',
-      titulo: 'Quiz de Vocabulario - Unidad 3',
-      fecha: '2025-08-30',
-      puntuacion: 17,
-      puntosTotales: 20,
-      porcentaje: 85,
-      respuestasCorrectas: 8,
-      totalPreguntas: 10,
-      tiempoEmpleado: '12:34'
-    },
-    {
-      evaluacionId: '2',
-      titulo: 'Examen de Gramática Intermedia',
-      fecha: '2025-08-25',
-      puntuacion: 19,
-      puntosTotales: 25,
-      porcentaje: 76,
-      respuestasCorrectas: 19,
-      totalPreguntas: 25,
-      tiempoEmpleado: '28:45'
-    },
-    {
-      evaluacionId: '3',
-      titulo: 'Quiz Rápido - Present Perfect',
-      fecha: '2025-08-20',
-      puntuacion: 15,
-      puntosTotales: 16,
-      porcentaje: 94,
-      respuestasCorrectas: 7,
-      totalPreguntas: 8,
-      tiempoEmpleado: '8:12'
-    }
-  ]);
+  // Historial de evaluaciones del estudiante seleccionado cargado dinámicamente
+  const [resultadosEvaluaciones, setResultadosEvaluaciones] = useState<ResultadoEvaluacion[]>([]);
 
   const estudiantePerteneceAClaseSeleccionada = (estudiante: Estudiante) => {
     if (!claseSeleccionada) return true;
@@ -247,11 +241,46 @@ export default function EstudiantesView() {
     
     // Cargar historial de asistencia del estudiante
     await cargarAsistenciasEstudiante(estudiante.id);
+
+    // Cargar historial de evaluaciones del estudiante
+    await cargarEvaluacionesEstudiante(estudiante.id);
+  };
+
+  const cargarEvaluacionesEstudiante = async (estudianteId: string) => {
+    try {
+      const califsResponse = await calificacionService.obtenerPanelCalificaciones();
+      if (califsResponse.success && Array.isArray(califsResponse.items)) {
+        const califsEstudiante = califsResponse.items.filter(
+          (item: any) => item.estudiante_id === Number(estudianteId) && (item.tiene_respuesta || item.calificacion !== null)
+        );
+
+        const mapeadas: ResultadoEvaluacion[] = califsEstudiante.map((item: any) => {
+          return {
+            evaluacionId: item.evaluacion_id.toString(),
+            titulo: item.evaluacion_titulo || 'Evaluación',
+            fecha: item.fecha_envio ? item.fecha_envio.split('T')[0] : 'Sin fecha',
+            puntuacion: item.calificacion || 0,
+            puntosTotales: 100,
+            porcentaje: item.calificacion || 0,
+            respuestasCorrectas: Math.round(((item.calificacion || 0) / 100) * 10),
+            totalPreguntas: 10,
+            tiempoEmpleado: 'N/A'
+          };
+        });
+
+        setResultadosEvaluaciones(mapeadas);
+      } else {
+        setResultadosEvaluaciones([]);
+      }
+    } catch (error) {
+      console.error('Error cargando evaluaciones de estudiante:', error);
+      setResultadosEvaluaciones([]);
+    }
   };
 
   const cargarAsistenciasEstudiante = async (estudianteId: string) => {
     try {
-      // Obtener solo las clases del profesor actual
+      // Obtener las clases del profesor actual
       const userStr = localStorage.getItem('user');
       let todasLasClases: any[] = [];
       if (userStr) {
@@ -263,36 +292,31 @@ export default function EstudiantesView() {
           todasLasClases = [];
         }
       }
-      
-      // Filtrar clases (del profesor) donde el estudiante está asignado
+
+      // Filtrar clases del profesor donde el estudiante está asignado
       const clasesDelEstudiante = todasLasClases.filter((clase: any) => {
         return clase.estudiantes && clase.estudiantes.includes(parseInt(estudianteId));
       });
-      
-      // Cargar asistencia de cada clase
+
+      // Consultar asistencias reales del estudiante desde el backend
+      const asistenciasDB = await asistenciaService.getAsistenciasPorEstudiante(Number(estudianteId));
+
+      // Mapear asistencias reales con las clases del profesor
       const asistencias = clasesDelEstudiante.map((clase: any) => {
-        const asistenciaKey = `asistencia_clase_${clase.id}`;
-        const asistenciaGuardada = localStorage.getItem(asistenciaKey);
-        let asistio = null;
-        
-        if (asistenciaGuardada) {
-          const asistencias = JSON.parse(asistenciaGuardada);
-          asistio = asistencias[estudianteId];
-        }
-        
+        const asistenciaReal = asistenciasDB.find((a: any) => a.clase_id === clase.id);
         return {
           claseId: clase.id,
           tema: clase.tema || clase.nombre,
           fecha: clase.fecha,
           profesor: clase.profesor,
-          asistio: asistio
+          asistio: asistenciaReal ? (asistenciaReal.estado === 'presente') : null
         };
       });
-      
+
       setAsistenciasEstudiante(asistencias);
-      console.log('Asistencias del estudiante:', asistencias);
     } catch (error) {
       console.error('Error cargando asistencias:', error);
+      setAsistenciasEstudiante([]);
     }
   };
 
@@ -453,8 +477,8 @@ export default function EstudiantesView() {
         </div>
       ) : (
         <div className="estudiantes-table-container">
-          <div className="users-table">
-            <table>
+          <div className="users-table-wrapper">
+            <table className="users-table">
               <thead>
                 <tr>
                   <th>Nombre</th>
@@ -465,7 +489,7 @@ export default function EstudiantesView() {
                   <th>Evaluaciones</th>
                   <th>Promedio</th>
                   <th>Estado</th>
-                  <th>Asistencia</th>
+                  <th style={{ minWidth: '260px', textAlign: 'center' }}>Asistencia</th>
                 </tr>
               </thead>
               <tbody>
@@ -500,7 +524,7 @@ export default function EstudiantesView() {
                           {estudiante.estado === 'activo' ? '🟢 Activo' : '🔴 Inactivo'}
                         </span>
                       </td>
-                      <td className="text-center">
+                      <td className="text-center" style={{ minWidth: '260px' }}>
                         <div className="asistencia-controls">
                           <label className="asistencia-option">
                             <input 

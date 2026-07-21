@@ -145,6 +145,15 @@ export default function DriveEvaluaciones() {
         return;
       }
 
+      // Validar que la fecha límite tenga un año válido (evitar años excesivos como 72026)
+      if (formData.fecha_limite) {
+        const selectedYear = new Date(formData.fecha_limite).getFullYear();
+        if (selectedYear > 9999 || selectedYear < 1000) {
+          alert('Por favor, ingresa una fecha límite con un año válido (entre 1000 y 9999).');
+          return;
+        }
+      }
+
       // Construir lista de estudiantes asignados
       let estudiantesAsignados: number[] = [];
       if (formData.dirigidaA === 'individual') {

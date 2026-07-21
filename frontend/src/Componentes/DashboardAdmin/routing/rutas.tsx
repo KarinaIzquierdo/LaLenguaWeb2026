@@ -19,7 +19,7 @@ import GestionSuscripciones from '../GestionSuscripciones';
 import MisionesAdmin from '../MisionesAdmin';
 import RetosDiariosAdmin from '../RetosDiariosAdmin';
 import RankingRetosAdmin from '../RankingRetosAdmin';
-import NotificacionesProfesor from '../../DashboardProfesor/NotificacionesProfesor';
+import NotificacionesAdmin from '../NotificacionesAdmin';
 
 export const Rutas = () => {
     // Función de logout para pasar a AdminLayout
@@ -47,7 +47,7 @@ export const Rutas = () => {
                 <Route path="misiones" element={<MisionesAdmin />} />
                 <Route path="retos-diarios" element={<RetosDiariosAdmin />} />
                 <Route path="ranking-retos" element={<RankingRetosAdmin />} />
-                <Route path="notificaciones" element={<NotificacionesProfesor />} />
+                <Route path="notificaciones" element={<NotificacionesAdmin />} />
             </Route>
 
             {/* Ruta para manejar páginas no encontradas */}

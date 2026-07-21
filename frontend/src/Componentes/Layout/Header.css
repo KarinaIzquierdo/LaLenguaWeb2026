@@ -212,56 +212,132 @@
     opacity: 1;
 }
 
+/* Mobile menu toggle */
+.mobile-menu-toggle {
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
+    width: 44px;
+    height: 44px;
+    background: transparent;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    padding: 0;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1101;
+}
+
+.mobile-menu-toggle span {
+    display: block;
+    width: 24px;
+    height: 3px;
+    background: #333;
+    border-radius: 2px;
+    transition: all 0.3s ease;
+}
+
+.mobile-menu-toggle.open span:nth-child(1) {
+    transform: translateY(8px) rotate(45deg);
+}
+
+.mobile-menu-toggle.open span:nth-child(2) {
+    opacity: 0;
+}
+
+.mobile-menu-toggle.open span:nth-child(3) {
+    transform: translateY(-8px) rotate(-45deg);
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .header-home {
-        padding: 1rem 1.5rem;
-        flex-wrap: wrap;
-        row-gap: 0.5rem;
+        padding: 0.75rem 1rem;
+        flex-wrap: nowrap;
     }
-    
+
     .logo-image {
-        width: 40px;
+        width: 38px;
     }
-    
+
     .logo-text {
-        font-size: 0.85rem;
+        font-size: 0.8rem;
     }
-    
+
+    .mobile-menu-toggle {
+        display: flex;
+    }
+
     .nav {
-        gap: 0.8rem;
-        flex-wrap: wrap;
-        justify-content: flex-end;
+        position: absolute;
+        top: 100%;
+        right: 1rem;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+        background: #ffffff;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        border-radius: 16px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+        padding: 1rem;
+        min-width: 200px;
+        display: none;
+        z-index: 1100;
     }
-    
-    .nav a {
-        font-size: 0.85rem;
-        padding: 0.4rem 0.6rem;
+
+    .nav.nav-open {
+        display: flex;
+        animation: fadeInDown 0.25s ease;
+    }
+
+    .nav a,
+    .nav a:link,
+    .nav a:visited,
+    .nav .login-btn {
+        display: block;
+        width: 100%;
+        text-align: center;
+        padding: 0.75rem 1rem;
+        border-radius: 10px;
     }
 }
 
 @media (max-width: 480px) {
     .header-home {
-        padding: 0.8rem 1rem;
-        flex-direction: column;
-        align-items: flex-start;
-        row-gap: 0.5rem;
+        padding: 0.6rem 0.75rem;
     }
-    
+
     .logo-image {
-        width: 35px;
+        width: 32px;
     }
-    
+
     .logo-text {
-        font-size: 0.75rem;
+        font-size: 0.7rem;
     }
-    
+
+    .mobile-menu-toggle {
+        width: 40px;
+        height: 40px;
+    }
+
     .nav {
-        width: 100%;
-        justify-content: flex-end;
+        right: 0.75rem;
+        left: 0.75rem;
+        min-width: auto;
+        width: auto;
     }
-    
-    .nav a {
-        display: none;
+}
+
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
 }

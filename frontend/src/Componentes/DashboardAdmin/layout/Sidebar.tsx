@@ -1,15 +1,24 @@
 import { NavLink } from 'react-router-dom';
-import { FaUserShield } from 'react-icons/fa';
+import { FaUserShield, FaTimes } from 'react-icons/fa';
 import { ThemeToggleButton } from './ThemeToggleButton';
 
-export const Sidebar = ({ onLogout }: { onLogout: () => void }) => {
+interface SidebarProps {
+  onLogout: () => void;
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export const Sidebar = ({ onLogout, isOpen, onClose }: SidebarProps) => {
   return (
-    <aside className="sidebar">
-      <div>
+    <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
+      <div className="sidebar-wrapper">
         <div className="sidebar-title">
           <FaUserShield className="sidebar-title-icon" />
           <span className="sidebar-title-text">Admin Panel</span>
           <span className="sidebar-title-sub">Panel de Control</span>
+          <button className="sidebar-close-button" onClick={onClose} aria-label="Cerrar menú">
+            <FaTimes />
+          </button>
         </div>
         <ul className="sidebar-nav">
           <li>

@@ -40,6 +40,10 @@ const GestionSuscripciones: React.FC = () => {
       setPlanes(Array.isArray(planesData) ? planesData : []);
       setTodosLosEstudiantes(Array.isArray(estudiantesData) ? estudiantesData : []);
       setError(null);
+
+      // Debug: ver qué devuelve el backend
+      console.log('DEBUG suscripciones activas:', suscripcionesData);
+      console.log('DEBUG planes por vencer:', planesVencerData);
     } catch (err) {
       console.error('Error loading data:', err);
       setError('Error al cargar los datos');
@@ -81,7 +85,7 @@ const GestionSuscripciones: React.FC = () => {
   const handleEnviarRecordatorio = async (suscripcion: Suscripcion) => {
     try {
       await subscriptionService.enviarRecordatorio(suscripcion.id);
-      alert(`Recordatorio enviado a ${suscripcion.estudiante_nombre}`);
+      alert(`Recordatorio enviado a ${getNombreEstudiante(suscripcion)}`);
     } catch (err) {
       console.error('Error sending reminder:', err);
       alert('Error al enviar recordatorio');
@@ -92,7 +96,7 @@ const GestionSuscripciones: React.FC = () => {
     try {
       await subscriptionService.renovarPlan(suscripcion.id);
       await loadData();
-      alert(`Plan renovado para ${suscripcion.estudiante_nombre}`);
+      alert(`Plan renovado para ${getNombreEstudiante(suscripcion)}`);
     } catch (err) {
       console.error('Error renewing plan:', err);
       alert('Error al renovar plan');
@@ -101,7 +105,7 @@ const GestionSuscripciones: React.FC = () => {
 
   const handleCancelarPlan = async (suscripcion: Suscripcion) => {
     const confirmar = window.confirm(
-      `¿Estás seguro de cancelar el plan de ${suscripcion.estudiante_nombre}?\n\nEsta acción marcará la suscripción como cancelada y ya no aparecerá en suscripciones activas.`
+      `¿Estás seguro de cancelar el plan de ${getNombreEstudiante(suscripcion)}?\n\nEsta acción marcará la suscripción como cancelada y ya no aparecerá en suscripciones activas.`
     );
     
     if (!confirmar) return;
@@ -131,6 +135,19 @@ const GestionSuscripciones: React.FC = () => {
     } catch (error) {
       return 'N/A';
     }
+  };
+
+  const getNombreEstudiante = (s: Suscripcion) => {
+    if (s.estudiante_nombre && s.estudiante_nombre.trim()) return s.estudiante_nombre;
+    const est = todosLosEstudiantes.find(e => e.id === s.estudiante);
+    const nombre = `${est?.first_name || ''} ${est?.last_name || ''}`.trim();
+    return nombre || est?.email || `Usuario #${s.estudiante || '?'}`;
+  };
+
+  const getNombrePlan = (s: Suscripcion) => {
+    if (s.plan_nombre && s.plan_nombre.trim()) return s.plan_nombre;
+    const plan = planes.find(p => p.id === s.plan);
+    return plan?.nombre || `Plan #${s.plan || '?'}`;
   };
 
   const calcularDiasRestantes = (fechaFin: string) => {
@@ -399,10 +416,10 @@ const GestionSuscripciones: React.FC = () => {
                     <tr key={suscripcion.id} className={diasRestantes <= 3 ? 'urgente' : 'warning'}>
                       <td>
                         <div className="usuario-cell">
-                          <strong>{suscripcion.estudiante_nombre}</strong>
+                          <strong>{getNombreEstudiante(suscripcion)}</strong>
                         </div>
                       </td>
-                      <td>{suscripcion.plan_nombre}</td>
+                      <td>{getNombrePlan(suscripcion)}</td>
                       <td>{formatearFecha(suscripcion.fecha_fin_plan)}</td>
                       <td>
                         <span className={`dias-badge ${diasRestantes <= 3 ? 'critico' : 'warning'}`}>
@@ -456,8 +473,8 @@ const GestionSuscripciones: React.FC = () => {
             <tbody>
               {suscripcionesActivas.slice(0, 10).map((suscripcion) => (
                 <tr key={suscripcion.id}>
-                  <td>{suscripcion.estudiante_nombre}</td>
-                  <td>{suscripcion.plan_nombre}</td>
+                  <td>{getNombreEstudiante(suscripcion)}</td>
+                  <td>{getNombrePlan(suscripcion)}</td>
                   <td>{formatearFecha(suscripcion.fecha_inicio)}</td>
                   <td>{formatearFecha(suscripcion.fecha_fin)}</td>
                   <td>
@@ -473,7 +490,7 @@ const GestionSuscripciones: React.FC = () => {
                        'VENCIDO'}
                     </span>
                   </td>
-                  <td>
+                  <td title={JSON.stringify(suscripcion)}>
                     {(suscripcion.estado === 'activa' || suscripcion.estado === 'por_vencer') && (
                       <button 
                         onClick={() => handleCancelarPlan(suscripcion)}

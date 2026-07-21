@@ -40,19 +40,27 @@ export default function RegistrosEliminacion() {
   const [loading, setLoading] = useState(true);
   const [filtroRazon, setFiltroRazon] = useState('');
   const [busqueda, setBusqueda] = useState('');
+  const [busquedaDebounced, setBusquedaDebounced] = useState('');
   const [registroSeleccionado, setRegistroSeleccionado] = useState<RegistroEliminacion | null>(null);
   const [paginaActual, setPaginaActual] = useState(1);
 
   useEffect(() => {
+    const timer = setTimeout(() => {
+      setBusquedaDebounced(busqueda);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [busqueda]);
+
+  useEffect(() => {
     cargarDatos();
-  }, [filtroRazon, busqueda]);
+  }, [filtroRazon, busquedaDebounced]);
 
   const cargarDatos = async () => {
     try {
       setLoading(true);
 
       const [registrosData, estadisticasData] = await Promise.all([
-        registroEliminacionService.getRegistros(filtroRazon || undefined, busqueda || undefined),
+        registroEliminacionService.getRegistros(filtroRazon || undefined, busquedaDebounced || undefined),
         registroEliminacionService.getEstadisticas()
       ]);
 
@@ -101,17 +109,6 @@ export default function RegistrosEliminacion() {
   const irUltima = () => irAPagina(totalPaginas);
   const irAnterior = () => irAPagina(paginaActualSegura - 1);
   const irSiguiente = () => irAPagina(paginaActualSegura + 1);
-
-  if (loading) {
-    return (
-      <div className="registros-eliminacion-container">
-        <div className="loading-registros">
-          <div className="spinner"></div>
-          <p>Cargando registros...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="registros-eliminacion-container">
@@ -178,7 +175,12 @@ export default function RegistrosEliminacion() {
 
       {/* Lista de registros en tabla con paginación */}
       <div className="registros-table-container">
-        {registros.length === 0 ? (
+        {loading ? (
+          <div className="loading-registros">
+            <div className="spinner"></div>
+            <p>Cargando registros...</p>
+          </div>
+        ) : registros.length === 0 ? (
           <div className="no-registros">
             <p>📭 No hay registros de eliminación</p>
           </div>
@@ -202,37 +204,42 @@ export default function RegistrosEliminacion() {
                 </tr>
               </thead>
               <tbody>
-                {registrosPagina.map((registro) => (
-                  <tr key={registro.id}>
-                    <td>{registro.id}</td>
-                    <td>{registro.nombre_completo}</td>
-                    <td>{registro.email}</td>
-                    <td>{registro.nivel || 'N/A'}</td>
-                    <td>{registro.bloque_asignado || 'N/A'}</td>
-                    <td>{formatearFecha(registro.fecha_registro)}</td>
-                    <td>{formatearFecha(registro.fecha_eliminacion)}</td>
-                    <td>{registro.tiempo_registrado_str}</td>
-                    <td>
-                      <span className={`razon-badge razon-${registro.razon}`}>
-                        {registro.razon_display}
-                      </span>
-                    </td>
-                    <td>
-                      {registro.deuda_pendiente !== '0.00'
-                        ? <span className="detalle-value deuda">${registro.deuda_pendiente}</span>
-                        : '—'}
-                    </td>
-                    <td>{registro.eliminado_por?.nombre || '—'}</td>
-                    <td>
-                      <button
-                        className="btn-detalle-registro"
-                        onClick={() => setRegistroSeleccionado(registro)}
-                      >
-                        Ver detalles
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {registrosPagina.map((registro) => {
+                  const nombreFormateado = registro.nombre_completo && registro.nombre_completo.trim() 
+                    ? registro.nombre_completo.trim() 
+                    : (registro.username || '—');
+                  return (
+                    <tr key={registro.id}>
+                      <td>{registro.id}</td>
+                      <td>{nombreFormateado}</td>
+                      <td>{registro.email || '—'}</td>
+                      <td>{registro.nivel || '—'}</td>
+                      <td>{registro.bloque_asignado || '—'}</td>
+                      <td>{registro.fecha_registro ? formatearFecha(registro.fecha_registro) : '—'}</td>
+                      <td>{registro.fecha_eliminacion ? formatearFecha(registro.fecha_eliminacion) : '—'}</td>
+                      <td>{registro.tiempo_registrado_str || '—'}</td>
+                      <td>
+                        <span className={`razon-badge razon-${registro.razon}`}>
+                          {registro.razon_display || 'Otro'}
+                        </span>
+                      </td>
+                      <td>
+                        {registro.deuda_pendiente && registro.deuda_pendiente !== '0.00'
+                          ? <span className="detalle-value deuda">${registro.deuda_pendiente}</span>
+                          : '—'}
+                      </td>
+                      <td>{registro.eliminado_por?.nombre || '—'}</td>
+                      <td>
+                        <button
+                          className="btn-detalle-registro"
+                          onClick={() => setRegistroSeleccionado(registro)}
+                        >
+                          Ver detalles
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
 

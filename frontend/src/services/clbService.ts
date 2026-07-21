@@ -1,4 +1,4 @@
-const API_BASE_URL = 'https://lalenguacolombia.co/api/index.php';
+import { API_BASE_URL } from '../config/api';
 
 export interface Club {
   id: number;
@@ -6,6 +6,8 @@ export interface Club {
   description?: string;
   profesor: number;
   profesor_name?: string;
+  is_member?: boolean;
+  students_count?: number;
 }
 
 export interface ClubMaterial {
@@ -40,13 +42,11 @@ function authHeaders(): HeadersInit {
 
 export const clbService = {
   async getClubs(): Promise<Club[]> {
-    const res = await fetch(`${API_BASE_URL}/clubs/`, { headers: jsonHeaders() });
+    const res = await fetch(`${API_BASE_URL}/clubs/list/`, { headers: jsonHeaders() });
     const data = await res.json();
     if (!res.ok) throw new Error(`HTTP ${res.status}: ${JSON.stringify(data)}`);
-    // Si data ya es un array, devolverlo directamente
-    if (Array.isArray(data)) return data as Club[];
-    // Si no, intentar con data.clubs o data.data
-    return (data.clubs || data.data || []) as Club[];
+    // El backend Django devuelve { success: true, data: [...] }
+    return (data.data || data.clubs || data || []) as Club[];
   },
   async createClub(payload: { name: string; description?: string }): Promise<Club> {
     const res = await fetch(`${API_BASE_URL}/clubs/create/`, {
@@ -146,6 +146,24 @@ export const clbService = {
   async removeStudent(clubId: number, userId: number): Promise<void> {
     const res = await fetch(`${API_BASE_URL}/clubs/${clubId}/students/${userId}/remove/`, {
       method: 'DELETE',
+      headers: jsonHeaders(),
+    });
+    const text = await res.text();
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${text}`);
+  },
+
+  async joinClub(clubId: number): Promise<void> {
+    const res = await fetch(`${API_BASE_URL}/clubs/${clubId}/join/`, {
+      method: 'POST',
+      headers: jsonHeaders(),
+    });
+    const text = await res.text();
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${text}`);
+  },
+
+  async leaveClub(clubId: number): Promise<void> {
+    const res = await fetch(`${API_BASE_URL}/clubs/${clubId}/leave/`, {
+      method: 'POST',
       headers: jsonHeaders(),
     });
     const text = await res.text();

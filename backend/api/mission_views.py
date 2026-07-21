@@ -101,10 +101,14 @@ def missions_available_view(request):
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def mission_links_list_create_view(request):
-    # Check admin privilege: either Django staff or custom role 'admin'
+    # Check admin or profesor privilege
     user = request.user
-    if not (getattr(user, 'is_staff', False) or getattr(user, 'role', '') == 'admin'):
-        return Response({'detail': 'Forbidden'}, status=status.HTTP_403_FORBIDDEN)
+    user_role = getattr(user, 'role', 'sin rol')
+    is_profesor = getattr(user, 'is_profesor', False) or user_role == 'profesor'
+    if not (user.is_staff or user.is_superuser or user_role == 'admin' or is_profesor):
+        return Response({
+            'detail': f'No tienes permisos para gestionar misiones. Tu rol actual es "{user_role}" y se requiere ser administrador o profesor.'
+        }, status=status.HTTP_403_FORBIDDEN)
 
     if request.method == 'GET':
         mission_key = request.query_params.get('mission_key')
@@ -124,10 +128,14 @@ def mission_links_list_create_view(request):
 @api_view(['GET', 'PUT', 'PATCH', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def mission_link_detail_view(request, pk: int):
-    # Check admin privilege
+    # Check admin or profesor privilege
     user = request.user
-    if not (getattr(user, 'is_staff', False) or getattr(user, 'role', '') == 'admin'):
-        return Response({'detail': 'Forbidden'}, status=status.HTTP_403_FORBIDDEN)
+    user_role = getattr(user, 'role', 'sin rol')
+    is_profesor = getattr(user, 'is_profesor', False) or user_role == 'profesor'
+    if not (user.is_staff or user.is_superuser or user_role == 'admin' or is_profesor):
+        return Response({
+            'detail': f'No tienes permisos para gestionar misiones. Tu rol actual es "{user_role}" y se requiere ser administrador o profesor.'
+        }, status=status.HTTP_403_FORBIDDEN)
 
     obj = get_object_or_404(MissionExternalLink, pk=pk)
 

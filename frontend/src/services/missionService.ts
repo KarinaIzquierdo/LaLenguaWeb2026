@@ -31,7 +31,16 @@ export const missionService = {
     const res = await fetch(`${API_BASE_URL}/missions/links/${q}`, {
       headers: this.getAuthHeaders(),
     });
-    if (!res.ok) throw new Error('No se pudieron cargar las misiones');
+    if (!res.ok) {
+      let detail = '';
+      try {
+        const err = await res.json();
+        detail = err.detail || err.message || JSON.stringify(err);
+      } catch {
+        detail = res.statusText;
+      }
+      throw new Error(`No se pudieron cargar las misiones (${res.status})${detail ? ': ' + detail : ''}`);
+    }
     return res.json();
   },
   async create(payload: Partial<MissionLink>): Promise<MissionLink> {

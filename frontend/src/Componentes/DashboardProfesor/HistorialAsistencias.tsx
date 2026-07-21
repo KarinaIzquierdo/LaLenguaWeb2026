@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ClaseService } from '../../services/claseService';
 import { asistenciaService } from '../../services/asistenciaService';
+import { userService } from '../../services/userService';
 import './HistorialAsistencias.css';
 
 interface AsistenciaHistorial {
@@ -46,8 +47,37 @@ export default function HistorialAsistencias() {
       setCargando(true);
       setClaseSeleccionada(clase);
       
+      // Obtener asistencias guardadas desde el backend
       const asistenciasData = await asistenciaService.getAsistenciasPorClase(clase.id);
-      setAsistencias(asistenciasData);
+      
+      // Obtener todos los estudiantes asignados a esta clase
+      const estudiantesAsignados: number[] = clase.estudiantes || [];
+      
+      let todosLosUsuarios: any[] = [];
+      try {
+        todosLosUsuarios = await userService.getAll();
+      } catch (e) {
+        console.error('Error cargando usuarios:', e);
+      }
+      
+      const estudiantesInfo = todosLosUsuarios.filter((u: any) => 
+        estudiantesAsignados.includes(u.id)
+      );
+      
+      // Construir lista completa: todos los estudiantes asignados + su estado de asistencia
+      const asistenciasCompletas: AsistenciaHistorial[] = estudiantesInfo.map((estudiante: any) => {
+        const asistenciaGuardada = asistenciasData.find((a: any) => a.estudiante_id === estudiante.id);
+        return {
+          id: asistenciaGuardada?.id || 0,
+          estudiante_id: estudiante.id,
+          estudiante_nombre: `${estudiante.nombres || estudiante.first_name || ''} ${estudiante.apellidos || estudiante.last_name || ''}`.trim(),
+          fecha: asistenciaGuardada?.fecha || clase.fecha,
+          estado: asistenciaGuardada?.estado || 'sin_marcar',
+          clase_id: clase.id
+        };
+      });
+      
+      setAsistencias(asistenciasCompletas);
     } catch (error) {
       console.error('Error cargando asistencias:', error);
     } finally {
@@ -65,6 +95,8 @@ export default function HistorialAsistencias() {
         return <span className="estado-badge tardanza">⏰ Tardanza</span>;
       case 'justificado':
         return <span className="estado-badge justificado">📝 Justificado</span>;
+      case 'sin_marcar':
+        return <span className="estado-badge sin-marcar">⏳ Sin marcar</span>;
       default:
         return <span className="estado-badge">{estado}</span>;
     }

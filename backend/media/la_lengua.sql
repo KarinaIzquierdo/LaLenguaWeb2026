@@ -1,1 +1,0 @@
-SELECT * FROM the_language.api_registroeliminacion;

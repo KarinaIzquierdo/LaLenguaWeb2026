@@ -117,6 +117,11 @@ export default function ProgramarClases() {
   const [seleccionarTodos, setSeleccionarTodos] = useState<boolean>(false);
 
   /**
+   * @state {boolean} mostrarEstudiantes - Controla la visibilidad del selector de estudiantes.
+   */
+  const [mostrarEstudiantes, setMostrarEstudiantes] = useState<boolean>(false);
+
+  /**
    * @function validateForm
    * @brief Valida los datos del formulario antes de enviarlo.
    * @returns {Object} Un objeto que contiene los mensajes de error.
@@ -127,7 +132,6 @@ export default function ProgramarClases() {
     if (!formData.profesor.trim()) errors.profesor = 'El nombre del profesor es obligatorio';
     if (!formData.fecha) errors.fecha = 'La fecha es obligatoria';
     if (!formData.hora) errors.hora = 'La hora es obligatoria';
-    if (!formData.estudiantes || formData.estudiantes.length === 0) errors.estudiantes = 'Debes seleccionar al menos un estudiante';
     return errors;
   };
 
@@ -192,8 +196,8 @@ export default function ProgramarClases() {
   const estudiantesFiltrados = estudiantesDisponibles.filter(estudiante => {
     if (filtroNivel === 'todos') return true;
     
-    // Filtrar por nivel específico (A1, A2, B1, B2, C1, C2)
-    if (['A1', 'A2', 'B1', 'B2', 'C1', 'C2'].includes(filtroNivel)) {
+    // Filtrar por nivel específico (A1, A1+, A2, A2+, B1, B1+, B2, C1, C2)
+    if (['A1', 'A1+', 'A2', 'A2+', 'B1', 'B1+', 'B2', 'C1', 'C2'].includes(filtroNivel)) {
       return estudiante.nivel === filtroNivel;
     }
     
@@ -209,6 +213,7 @@ export default function ProgramarClases() {
     setShowForm(true);
     setEditingClass(null);
     setFormData({ nombre: '', profesor: '', fecha: '', hora: '', estudiantes: [], meet_link: '' });
+    setMostrarEstudiantes(false);
     setFormErrors({});
     setSubmitError('');
   };
@@ -229,6 +234,7 @@ export default function ProgramarClases() {
       estudiantes: clase.estudiantes || [],
       meet_link: clase.meet_link || ''
     });
+    setMostrarEstudiantes((clase.estudiantes || []).length > 0);
     setFormErrors({});
     setSubmitError('');
   };
@@ -311,6 +317,7 @@ export default function ProgramarClases() {
       setPaginaActual(1);
       setShowForm(false);
       setEditingClass(null);
+      setMostrarEstudiantes(false);
       setFormErrors({});
     } catch (err: any) {
       console.error('Error guardando clase:', err);
@@ -327,6 +334,7 @@ export default function ProgramarClases() {
   const handleCancel = () => {
     setShowForm(false);
     setEditingClass(null);
+    setMostrarEstudiantes(false);
     setFormErrors({});
     setSubmitError('');
   };
@@ -372,7 +380,7 @@ export default function ProgramarClases() {
     cargarEstudiantes();
   }, []);
 
-  // Cargar clases desde el backend al montar el componente
+  // Cargar todas las clases desde el backend (vista de administración)
   useEffect(() => {
     const fetchClases = async () => {
       setIsLoading(true);
@@ -381,7 +389,7 @@ export default function ProgramarClases() {
         setClases(data);
         setPaginaActual(1);
       } catch (err) {
-        // Puedes mostrar un error aquí si lo deseas
+        console.error('Error cargando clases:', err);
       }
       setIsLoading(false);
     };
@@ -511,80 +519,112 @@ export default function ProgramarClases() {
             </div>
 
             <div className={`form-group ${formErrors.estudiantes ? 'error' : ''}`}>
-              <label>Selecciona Estudiantes *</label>
-              
-              {/* Filtros y controles */}
-              <div style={{ display: 'flex', gap: '12px', marginBottom: '12px', alignItems: 'center' }}>
-                <select
-                  value={filtroNivel}
-                  onChange={(e) => setFiltroNivel(e.target.value)}
-                  style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
-                >
-                  <option value="todos">Todos los niveles</option>
-                  <option value="A1">A1</option>
-                  <option value="A2">A2</option>
-                  <option value="B1">B1</option>
-                  <option value="B2">B2</option>
-                  <option value="C1">C1</option>
-                  <option value="C2">C2</option>
-                  <option value="Sin nivel">Sin nivel</option>
-                </select>
-                
-                <button
-                  type="button"
-                  onClick={toggleSeleccionarTodos}
-                  disabled={estudiantesFiltrados.length === 0}
-                  style={{
-                    padding: '8px 16px',
-                    background: '#007bff',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: estudiantesFiltrados.length === 0 ? 'not-allowed' : 'pointer',
-                    opacity: estudiantesFiltrados.length === 0 ? 0.5 : 1
-                  }}
-                >
-                  {seleccionarTodos ? '✓ Deseleccionar todos' : 'Seleccionar todos'}
-                </button>
-              </div>
+              <label>Asignar Estudiantes (opcional)</label>
+              <button
+                type="button"
+                onClick={() => setMostrarEstudiantes(!mostrarEstudiantes)}
+                style={{
+                  padding: '10px 16px',
+                  background: '#f3f4f6',
+                  color: '#374151',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  marginBottom: '12px',
+                  fontWeight: 500,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  width: '100%',
+                  boxSizing: 'border-box'
+                }}
+              >
+                <span>
+                  {mostrarEstudiantes ? 'Ocultar estudiantes' : 'Seleccionar estudiantes'}
+                  {formData.estudiantes.length > 0 && ` (${formData.estudiantes.length} seleccionados)`}
+                </span>
+                <span>{mostrarEstudiantes ? '▲' : '▼'}</span>
+              </button>
 
-              {/* Lista de estudiantes */}
-              <div className="estudiantes-container">
-                {cargandoEstudiantes ? (
-                  <div className="loading-message">
-                    <div className="spinner"></div>
-                    Cargando estudiantes...
+              {mostrarEstudiantes && (
+                <>
+                  {/* Filtros y controles */}
+                  <div style={{ display: 'flex', gap: '12px', marginBottom: '12px', alignItems: 'center' }}>
+                    <select
+                      value={filtroNivel}
+                      onChange={(e) => setFiltroNivel(e.target.value)}
+                      style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
+                    >
+                      <option value="todos">Todos los niveles</option>
+                      <option value="A1">A1</option>
+                      <option value="A1+">A1+</option>
+                      <option value="A2">A2</option>
+                      <option value="A2+">A2+</option>
+                      <option value="B1">B1</option>
+                      <option value="B1+">B1+</option>
+                      <option value="B2">B2</option>
+                      <option value="C1">C1</option>
+                      <option value="C2">C2</option>
+                      <option value="Sin nivel">Sin nivel</option>
+                    </select>
+                    
+                    <button
+                      type="button"
+                      onClick={toggleSeleccionarTodos}
+                      disabled={estudiantesFiltrados.length === 0}
+                      style={{
+                        padding: '8px 16px',
+                        background: '#007bff',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: estudiantesFiltrados.length === 0 ? 'not-allowed' : 'pointer',
+                        opacity: estudiantesFiltrados.length === 0 ? 0.5 : 1
+                      }}
+                    >
+                      {seleccionarTodos ? '✓ Deseleccionar todos' : 'Seleccionar todos'}
+                    </button>
                   </div>
-                ) : estudiantesFiltrados.length === 0 ? (
-                  <div className="empty-message">
-                    No hay estudiantes disponibles para este filtro
-                  </div>
-                ) : (
-                  <div className="estudiantes-grid">
-                    {estudiantesFiltrados.map((estudiante) => (
-                      <div 
-                        key={estudiante.id} 
-                        className={`estudiante-card ${formData.estudiantes.includes(estudiante.id) ? 'selected' : ''}`}
-                        onClick={() => handleEstudiantesChange(estudiante.id)}
-                      >
-                        <div className="estudiante-checkbox">
-                          <input
-                            type="checkbox"
-                            checked={formData.estudiantes.includes(estudiante.id)}
-                            onChange={() => handleEstudiantesChange(estudiante.id)}
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                        </div>
-                        <div className="estudiante-info">
-                          <div className="estudiante-nombre">{estudiante.nombre}</div>
-                          <div className="estudiante-bloque">{estudiante.bloque}</div>
-                          <div className="estudiante-email">{estudiante.email}</div>
-                        </div>
+
+                  {/* Lista de estudiantes */}
+                  <div className="estudiantes-container">
+                    {cargandoEstudiantes ? (
+                      <div className="loading-message">
+                        <div className="spinner"></div>
+                        Cargando estudiantes...
                       </div>
-                    ))}
+                    ) : estudiantesFiltrados.length === 0 ? (
+                      <div className="empty-message">
+                        No hay estudiantes disponibles para este filtro
+                      </div>
+                    ) : (
+                      <div className="estudiantes-grid">
+                        {estudiantesFiltrados.map((estudiante) => (
+                          <div 
+                            key={estudiante.id} 
+                            className={`estudiante-card ${formData.estudiantes.includes(estudiante.id) ? 'selected' : ''}`}
+                            onClick={() => handleEstudiantesChange(estudiante.id)}
+                          >
+                            <div className="estudiante-checkbox">
+                              <input
+                                type="checkbox"
+                                checked={formData.estudiantes.includes(estudiante.id)}
+                                onChange={() => handleEstudiantesChange(estudiante.id)}
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                            </div>
+                            <div className="estudiante-info">
+                              <div className="estudiante-nombre">{estudiante.nombre}</div>
+                              <div className="estudiante-bloque">{estudiante.bloque}</div>
+                              <div className="estudiante-email">{estudiante.email}</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
+                </>
+              )}
               {formErrors.estudiantes && <span className="error-message">{formErrors.estudiantes}</span>}
             </div>
 

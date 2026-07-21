@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import './Dashboard_Profesor.css';
+import './GestionCLB.css';
 import { clbService, type Club, type ClubMaterial } from '../../services/clbService';
 
 interface GestionCLBProps {
@@ -21,7 +22,7 @@ export default function GestionCLB({ profesorId = 1 }: GestionCLBProps) {
     week: '',
     title: '',
     description: '',
-    resource_type: 'url' as 'url' | 'file',
+    resource_type: 'file' as 'file',
     url: '',
     file: null as File | null,
   });
@@ -61,7 +62,7 @@ export default function GestionCLB({ profesorId = 1 }: GestionCLBProps) {
   }, [selectedClub]);
 
   const resetForm = () => {
-    setForm({ week: '', title: '', description: '', resource_type: 'url', url: '', file: null });
+    setForm({ week: '', title: '', description: '', resource_type: 'file', url: '', file: null });
     setShowForm(false);
     setEditingMaterial(null);
   };
@@ -76,12 +77,9 @@ export default function GestionCLB({ profesorId = 1 }: GestionCLBProps) {
       alert('Semana y Título son obligatorios');
       return;
     }
-    if (form.resource_type === 'url') {
-      const valid = /^https?:\/\//i.test(form.url);
-      if (!valid) {
-        alert('Ingresa una URL válida (http/https)');
-        return;
-      }
+    if (!editingMaterial && !form.file) {
+      alert('Selecciona un archivo para continuar');
+      return;
     }
 
     try {
@@ -91,7 +89,6 @@ export default function GestionCLB({ profesorId = 1 }: GestionCLBProps) {
           week: form.week,
           title: form.title,
           description: form.description || undefined,
-          url: form.resource_type === 'url' ? form.url : undefined,
         });
         setMaterials(prev => prev.map(m => (m.id === updated.id ? updated : m)));
       } else {
@@ -99,17 +96,17 @@ export default function GestionCLB({ profesorId = 1 }: GestionCLBProps) {
           week: form.week,
           title: form.title,
           description: form.description || undefined,
-          resource_type: form.resource_type,
-          url: form.resource_type === 'url' ? form.url : undefined,
-          file: form.resource_type === 'file' ? form.file ?? undefined : undefined,
-        } as any;
+          resource_type: 'file' as const,
+          file: form.file ?? undefined,
+        };
         const created = await clbService.createClubMaterial(selectedClub, payload);
         setMaterials(prev => [created, ...prev]);
       }
       resetForm();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error creating material:', err);
-      alert('Error al guardar el material. Revisa tu conexión o permisos.');
+      const message = err?.message || 'Error al guardar el material. Revisa tu conexión o permisos.';
+      alert(message);
     } finally {
       setSaving(false);
     }
@@ -121,8 +118,8 @@ export default function GestionCLB({ profesorId = 1 }: GestionCLBProps) {
       week: item.week,
       title: item.title,
       description: item.description || '',
-      resource_type: item.resource_type,
-      url: item.url || '',
+      resource_type: 'file',
+      url: '',
       file: null,
     });
     setShowForm(true);
@@ -142,157 +139,191 @@ export default function GestionCLB({ profesorId = 1 }: GestionCLBProps) {
     }
   };
 
+  const selectedClubName = clubs.find(c => c.id === selectedClub)?.name || '';
+
   return (
-    <div className="dashboard-content">
-      <div className="profesor-header">
-        <div className="welcome-section">
-          <h2>Gestión CLB</h2>
-          <p>Carga semanalmente el material para tu club y estudiantes asignados</p>
-        </div>
-        <div className="stats-cards">
-          <div className="stat-card" style={{ padding: 12 }}>
-            <label style={{ fontWeight: 600, display: 'block', marginBottom: 6 }}>Club</label>
-            <select
-              value={selectedClub ?? ''}
-              onChange={(e) => setSelectedClub(Number(e.target.value))}
-              disabled={clubs.length === 0}
-            >
-              {clubs.map(c => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
-            {clubs.length === 0 && (
-              <div style={{ fontSize: 12, color: '#666', marginTop: 6 }}>
-                Primero crea un club en "Mis Clubs".
-              </div>
-            )}
+    <div className="clb-container">
+      <div className="clb-header">
+        <div className="clb-header-content">
+          <div className="clb-header-icon">📚</div>
+          <div className="clb-header-text">
+            <h2>Gestión de Material de Clubs</h2>
+            <p>Carga semanalmente el material para tu club y estudiantes asignados. Mantén todo organizado por semanas.</p>
           </div>
-          <button
-            className="btn-primary"
-            onClick={() => setShowForm(true)}
-          >
-            ➕ Agregar material
-          </button>
         </div>
+      </div>
+
+      <div className="clb-controls">
+        <div className="clb-selector">
+          <span className="clb-selector-label">
+            <span>🏷️</span> Club
+          </span>
+          <select
+            value={selectedClub ?? ''}
+            onChange={(e) => setSelectedClub(Number(e.target.value))}
+            disabled={clubs.length === 0}
+          >
+            {clubs.length === 0 ? (
+              <option value="" disabled>No tienes clubs aún</option>
+            ) : (
+              clubs.map(c => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))
+            )}
+          </select>
+          {selectedClub !== null && (
+            <span className="clb-count">
+              <span className="clb-count-number">{materials.length}</span>
+              {materials.length === 1 ? 'material' : 'materiales'}
+            </span>
+          )}
+        </div>
+
+        <button
+          className="clb-btn-add"
+          onClick={() => setShowForm(true)}
+          disabled={clubs.length === 0}
+        >
+          <span className="clb-btn-add-icon">+</span>
+          Agregar material
+        </button>
       </div>
 
       {showForm && (
         <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: 720 }}>
-            <div className="modal-header">
-              <h3>{editingMaterial ? 'Editar material de CLB' : 'Nuevo material de CLB'}</h3>
+          <div className="modal-content clb-modal-content">
+            <div className="modal-header clb-modal-header">
+              <h3>{editingMaterial ? 'Editar material' : 'Nuevo material'}</h3>
               <button className="close-btn" onClick={resetForm}>✕</button>
             </div>
             {clubs.length === 0 ? (
-              <div className="galeria-form" style={{ padding: 16 }}>
-                <p style={{ marginBottom: 16 }}>Aún no tienes clubs. Crea uno primero desde "Mis Clubs" y vuelve a intentar.</p>
-                <div className="form-actions">
-                  <button type="button" className="btn-primary" onClick={resetForm}>Entendido</button>
+              <div className="clb-form">
+                <p style={{ marginBottom: 20 }}>Aún no tienes clubs. Crea uno primero desde "Mis Clubs" y vuelve a intentar.</p>
+                <div className="clb-form-actions">
+                  <button type="button" className="clb-btn-save" onClick={resetForm}>Entendido</button>
                 </div>
               </div>
             ) : (
-            <form onSubmit={handleSave} className="galeria-form">
-              <div className="form-group">
-                <label>Club</label>
-                <select
-                  value={selectedClub ?? ''}
-                  onChange={(e) => setSelectedClub(Number(e.target.value))}
-                  required
-                >
-                  <option value="" disabled>Selecciona un club…</option>
-                  {clubs.map(c => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Semana (ej: 2025-W37)</label>
-                <input type="text" value={form.week} onChange={(e) => setForm({ ...form, week: e.target.value })} placeholder="YYYY-Www" required />
-              </div>
+              <form onSubmit={handleSave} className="clb-form">
+                <div className="clb-form-grid">
+                  <div className="clb-form-group clb-full">
+                    <label>Club</label>
+                    <select
+                      value={selectedClub ?? ''}
+                      onChange={(e) => setSelectedClub(Number(e.target.value))}
+                      required
+                    >
+                      <option value="" disabled>Selecciona un club…</option>
+                      {clubs.map(c => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
+                  </div>
 
-              <div className="form-group">
-                <label>Título</label>
-                <input type="text" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Tema de la semana" required />
-              </div>
+                  <div className="clb-form-group">
+                    <label>Semana (ej: 2025-W37)</label>
+                    <input type="text" value={form.week} onChange={(e) => setForm({ ...form, week: e.target.value })} placeholder="YYYY-Www" required />
+                  </div>
 
-              <div className="form-group">
-                <label>Descripción</label>
-                <textarea rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Breve descripción del material" />
-              </div>
+                  <div className="clb-form-group">
+                    <label>Título</label>
+                    <input type="text" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Tema de la semana" required />
+                  </div>
 
-              <div className="form-group">
-                <label>Recurso</label>
-                <div className="content-input-options">
-                  <label className="input-option">
-                    <input type="radio" name="resourceType" checked={form.resource_type === 'url'} onChange={() => setForm({ ...form, resource_type: 'url' })} /> URL (http/s)
-                  </label>
-                  <label className="input-option">
-                    <input type="radio" name="resourceType" checked={form.resource_type === 'file'} onChange={() => setForm({ ...form, resource_type: 'file' })} /> Archivo
-                  </label>
+                  <div className="clb-form-group clb-full">
+                    <label>Descripción</label>
+                    <textarea rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Breve descripción del material" />
+                  </div>
+
+                  <div className="clb-form-group clb-full">
+                    <label>Archivo</label>
+                    <div className="clb-file-row">
+                      <label className="clb-file-upload">
+                        <input
+                          type="file"
+                          onChange={(e) => setForm({ ...form, file: e.target.files?.[0] ?? null })}
+                        />
+                        <span className="clb-file-btn">Seleccionar archivo</span>
+                      </label>
+                      <span className="clb-file-name">
+                        {form.file
+                          ? form.file.name
+                          : editingMaterial
+                            ? 'Reemplazar archivo'
+                            : 'Sin archivos seleccionados'}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                {form.resource_type === 'url' ? (
-                  <input type="url" value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} placeholder="https://…" />
-                ) : (
-                  <input type="file" onChange={(e) => setForm({ ...form, file: e.target.files?.[0] ?? null })} />
-                )}
-              </div>
 
-              <div className="form-actions">
-                <button type="button" className="btn-secondary" onClick={resetForm}>Cancelar</button>
-                <button type="submit" className="btn-primary" disabled={saving}>
-                  {saving ? 'Guardando…' : 'Guardar'}
-                </button>
-              </div>
-            </form>
+                <div className="clb-form-actions">
+                  <button type="button" className="clb-btn-cancel" onClick={resetForm}>Cancelar</button>
+                  <button type="submit" className="clb-btn-save" disabled={saving}>
+                    {saving ? 'Guardando…' : editingMaterial ? 'Actualizar material' : 'Guardar material'}
+                  </button>
+                </div>
+              </form>
             )}
           </div>
         </div>
       )}
 
-      <div className="galeria-content">
+      <div>
         {loading ? (
-          <div className="loading-state"><p>Cargando…</p></div>
+          <div className="clb-state">
+            <div className="clb-state-icon">⏳</div>
+            <h3>Cargando materiales…</h3>
+          </div>
         ) : !selectedClub ? (
-          <div className="empty-state"><h3>Selecciona un club para ver materiales</h3></div>
+          <div className="clb-state">
+            <div className="clb-state-icon">🏷️</div>
+            <h3>Selecciona un club</h3>
+            <p>Elige uno de tus clubs desde el selector superior para ver y gestionar su material.</p>
+          </div>
         ) : materials.length === 0 ? (
-          <div className="empty-state">
+          <div className="clb-state">
+            <div className="clb-state-icon">📂</div>
             <h3>No hay materiales cargados</h3>
-            <p>Usa "Agregar material" para cargar el material semanal del club</p>
+            <p>Empieza a cargar el material semanal del club <strong>{selectedClubName}</strong>. Tus estudiantes lo verán en su panel.</p>
+            <button className="clb-btn-add" onClick={() => setShowForm(true)}>
+              <span className="clb-btn-add-icon">+</span>
+              Agregar primer material
+            </button>
           </div>
         ) : (
-          <div className="media-grid">
+          <div className="clb-grid">
             {materials.map(item => (
-              <div key={item.id} className="media-card">
-                <div className="media-preview">
-                  {item.resource_type === 'url' ? (
-                    <img src={item.url} alt={item.title} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                  ) : (
-                    <div className="video-preview">
-                      <div className="play-overlay">📄</div>
-                    </div>
-                  )}
-                  <div className="media-badge">Semana {item.week}</div>
+              <div key={item.id} className="clb-card">
+                <div className="clb-card-preview">
+                  <div className="clb-card-file">
+                    <div className="clb-card-file-icon">📄</div>
+                    <span>Archivo adjunto</span>
+                  </div>
+                  <div className="clb-card-badge">Semana {item.week}</div>
                 </div>
-                <div className="media-info">
-                  <h3>{item.title}</h3>
-                  <p className="media-description">{item.description}</p>
-                  <div className="media-meta">
+                <div className="clb-card-body">
+                  <h3 className="clb-card-title">{item.title}</h3>
+                  <p className="clb-card-desc">{item.description}</p>
+                  <div className="clb-card-meta">
+                    <span>📅</span>
                     <span>{new Date(item.created_at).toLocaleDateString('es-ES')}</span>
                   </div>
-                  <div className="media-actions">
+                  <div className={`clb-card-actions ${item.url ? 'clb-actions-3' : ''}`}>
                     {item.url && (
-                      <a className="btn-edit" href={item.url} target="_blank" rel="noreferrer">🔗 Abrir recurso</a>
+                      <a className="clb-btn-open" href={item.url} target="_blank" rel="noreferrer">
+                        📥 Descargar
+                      </a>
                     )}
                     <button
                       type="button"
-                      className="btn-edit"
+                      className="clb-btn-edit"
                       onClick={() => openEditMaterial(item)}
                     >
                       ✏️ Editar
                     </button>
                     <button
                       type="button"
-                      className="btn-delete"
+                      className="clb-btn-delete"
                       disabled={deletingId === item.id}
                       onClick={() => handleDeleteMaterial(item)}
                     >

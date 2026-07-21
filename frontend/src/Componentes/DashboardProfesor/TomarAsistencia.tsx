@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { userService } from '../../services/userService';
+import { asistenciaService } from '../../services/asistenciaService';
 import './TomarAsistencia.css';
 
 interface Estudiante {
@@ -36,8 +37,11 @@ export default function TomarAsistencia({
   const cargarEstudiantes = async () => {
     try {
       setCargando(true);
-      const todosUsuarios = await userService.getAll();
-      
+      const [todosUsuarios, asistenciasBackend] = await Promise.all([
+        userService.getAll(),
+        asistenciaService.getAsistenciasPorClase(claseId).catch(() => [] as any[])
+      ]);
+
       // Filtrar solo los estudiantes asignados a esta clase
       const estudiantesClase = todosUsuarios
         .filter(u => estudiantesIds.includes(u.id.toString()))
@@ -45,20 +49,29 @@ export default function TomarAsistencia({
           id: u.id.toString(),
           nombre: `${u.nombres} ${u.apellidos}`,
           email: u.correo,
-          asistio: null
+          asistio: null as boolean | null
         }));
-      
-      // Cargar asistencia guardada si existe
+
+      // Precargar asistencias registradas en el servidor
+      asistenciasBackend.forEach((a: any) => {
+        const estudiante = estudiantesClase.find(est => est.id === a.estudiante_id?.toString());
+        if (estudiante) {
+          if (a.estado === 'presente') estudiante.asistio = true;
+          else if (a.estado === 'ausente') estudiante.asistio = false;
+        }
+      });
+
+      // Fallback: asistencia guardada localmente
       const asistenciaGuardada = localStorage.getItem(`asistencia_clase_${claseId}`);
       if (asistenciaGuardada) {
         const asistencias = JSON.parse(asistenciaGuardada);
         estudiantesClase.forEach(est => {
-          if (asistencias[est.id] !== undefined) {
+          if (asistencias[est.id] !== undefined && est.asistio === null) {
             est.asistio = asistencias[est.id];
           }
         });
       }
-      
+
       setEstudiantes(estudiantesClase);
     } catch (error) {
       console.error('Error cargando estudiantes:', error);
@@ -81,17 +94,39 @@ export default function TomarAsistencia({
     );
   };
 
-  const handleGuardar = () => {
+  const handleGuardar = async () => {
     const asistencias: { [key: string]: boolean } = {};
-    estudiantes.forEach(est => {
+    const resultados: Array<{ id: string; exito: boolean }> = [];
+    const fechaFormateada = fecha && /^\d{4}-\d{2}-\d{2}$/.test(fecha)
+      ? fecha
+      : new Date(fecha || Date.now()).toLocaleDateString('en-CA');
+
+    for (const est of estudiantes) {
       if (est.asistio !== null) {
         asistencias[est.id] = est.asistio;
+        try {
+          await asistenciaService.registrarAsistencia({
+            estudiante_id: Number(est.id),
+            clase_id: claseId,
+            fecha: fechaFormateada,
+            estado: est.asistio ? 'presente' : 'ausente',
+          });
+          resultados.push({ id: est.id, exito: true });
+        } catch (error) {
+          console.error(`Error guardando asistencia para estudiante ${est.id}:`, error);
+          resultados.push({ id: est.id, exito: false });
+        }
       }
-    });
-    
-    // Guardar en localStorage
+    }
+
+    // Mantener copia local como respaldo
     localStorage.setItem(`asistencia_clase_${claseId}`, JSON.stringify(asistencias));
-    
+
+    const fallidos = resultados.filter(r => !r.exito).length;
+    if (fallidos > 0) {
+      alert(`⚠️ Se sincronizaron ${resultados.length - fallidos} asistencias, pero ${fallidos} fallaron. Se mantuvo una copia local.`);
+    }
+
     onGuardar(asistencias);
   };
 

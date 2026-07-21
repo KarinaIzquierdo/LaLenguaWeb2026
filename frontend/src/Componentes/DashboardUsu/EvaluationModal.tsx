@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './EvaluationModal.css';
+import { EvaluationService } from '../../services/evaluationService';
 
 interface Question {
   id: number;
@@ -110,9 +111,9 @@ const EvaluationModal: React.FC<EvaluationModalProps> = ({
     }
   };
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
     setIsCompleted(true);
-    
+
     // Calculate results
     let correctCount = 0;
     questions.forEach((question, index) => {
@@ -125,7 +126,7 @@ const EvaluationModal: React.FC<EvaluationModalProps> = ({
       type: evaluationType,
       totalQuestions: questions.length,
       correctAnswers: correctCount,
-      score: Math.round((correctCount / questions.length) * 100),
+      score: questions.length > 0 ? Math.round((correctCount / questions.length) * 100) : 0,
       timeSpent: formatTime(900 - timeLeft),
       questions: questions.map((q, index) => ({
         ...q,
@@ -133,6 +134,18 @@ const EvaluationModal: React.FC<EvaluationModalProps> = ({
         isCorrect: selectedAnswers[index] === q.correctAnswer
       }))
     };
+
+    // Enviar resultado al backend para actualizar XP, dulces y habilidades
+    try {
+      await EvaluationService.submitEvaluationResult({
+        evaluation_type: evaluationType,
+        score: results.score,
+        total_questions: results.totalQuestions,
+        correct_answers: results.correctAnswers,
+      });
+    } catch (error) {
+      console.error('Error registrando resultado de evaluación:', error);
+    }
 
     onComplete(results);
   };

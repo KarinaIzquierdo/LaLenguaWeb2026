@@ -24,7 +24,7 @@ export default function EvaluacionesEstudiante() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [subiendoRespuesta, setSubiendoRespuesta] = useState<string | null>(null);
-  const [evaluacionesConRespuesta, setEvaluacionesConRespuesta] = useState<string[]>([]);
+  const [respuestasMap, setRespuestasMap] = useState<Record<string, any>>({});
 
   useEffect(() => {
     loadEvaluaciones();
@@ -93,12 +93,18 @@ export default function EvaluacionesEstudiante() {
         respuestasList = respuestasResp.data;
       }
 
-      const ids = respuestasList
+      const map: Record<string, any> = {};
+      respuestasList
         .filter((resp: any) => resp.evaluacion)
-        .map((resp: any) => String(resp.evaluacion));
+        .forEach((resp: any) => {
+          const key = String(resp.evaluacion);
+          // Si hay varias respuestas, quedarse con la más reciente
+          if (!map[key] || new Date(resp.fecha_envio) > new Date(map[key].fecha_envio)) {
+            map[key] = resp;
+          }
+        });
 
-      const uniqueIds = Array.from(new Set(ids));
-      setEvaluacionesConRespuesta(uniqueIds);
+      setRespuestasMap(map);
     } catch (err) {
       console.error('Error cargando respuestas del estudiante:', err);
     }
@@ -189,8 +195,6 @@ export default function EvaluacionesEstudiante() {
     return new Date(fechaLimite) < new Date();
   };
 
-  const respuestasSet = new Set(evaluacionesConRespuesta);
-
   return (
     <div className="evaluaciones-section">
       <h2 className="section-title">📋 Mis Evaluaciones</h2>
@@ -230,13 +234,16 @@ export default function EvaluacionesEstudiante() {
                 <th>Tipo</th>
                 <th>Profesor</th>
                 <th>Fecha Límite</th>
+                <th>Calificación</th>
                 <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
               {evaluaciones.map((evaluacion) => {
                 const overdue = isOverdue(evaluacion.fecha_limite);
-                const hasRespuesta = respuestasSet.has(evaluacion.id);
+                const respuesta = respuestasMap[evaluacion.id];
+                const hasRespuesta = !!respuesta;
+                const isCalificada = hasRespuesta && respuesta.calificacion !== undefined && respuesta.calificacion !== null;
                 
                 return (
                   <React.Fragment key={evaluacion.id}>
@@ -257,6 +264,18 @@ export default function EvaluacionesEstudiante() {
                           </span>
                         ) : (
                           'Sin fecha límite'
+                        )}
+                      </td>
+                      <td>
+                        {respuesta?.calificacion !== undefined && respuesta?.calificacion !== null ? (
+                          <div className="calificacion-info">
+                            <span className="calificacion-badge">{Number(respuesta.calificacion).toFixed(1)} / 100</span>
+                            {respuesta.comentarios_profesor && (
+                              <div className="comentario-profesor">{respuesta.comentarios_profesor}</div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="sin-calificacion">Pendiente</span>
                         )}
                       </td>
                       <td>
@@ -282,22 +301,28 @@ export default function EvaluacionesEstudiante() {
                             <button
                               className={`btn-subir-tarea ${hasRespuesta ? 'btn-tarea-enviada' : ''}`}
                               onClick={() => subirRespuesta(evaluacion)}
-                              disabled={subiendoRespuesta === evaluacion.id || overdue}
+                              disabled={subiendoRespuesta === evaluacion.id || overdue || isCalificada}
                             >
                               {subiendoRespuesta === evaluacion.id
                                 ? '⏳ Subiendo...'
-                                : hasRespuesta
-                                  ? '✅ Tarea enviada'
-                                  : '📤 Subir Tarea'}
+                                : isCalificada
+                                  ? '✅ Tarea calificada'
+                                  : hasRespuesta
+                                    ? '✅ Tarea enviada'
+                                    : '📤 Subir Tarea'}
                             </button>
                           </div>
                         ) : (
                           <button 
                             className="btn-acceder-evaluacion"
                             onClick={() => window.open(evaluacion.enlace, '_blank')}
-                            disabled={!evaluacion.activa || overdue}
+                            disabled={!evaluacion.activa || overdue || isCalificada}
                           >
-                            🚀 Realizar Evaluación
+                            {isCalificada
+                              ? '✅ Evaluación calificada'
+                              : hasRespuesta
+                                ? '✅ Evaluación enviada'
+                                : '🚀 Realizar Evaluación'}
                           </button>
                         )}
                       </td>

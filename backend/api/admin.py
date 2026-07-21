@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.utils.html import format_html
-from .models import MissionExternalLink, RegistroEliminacion, Asistencia, Clase, Suscripcion, DailyChallengeQuestion
+from .models import MissionExternalLink, RegistroEliminacion, Asistencia, Clase, Suscripcion, DailyChallengeQuestion, NotificacionAdmin
 
 
 @admin.register(MissionExternalLink)
@@ -243,3 +243,11 @@ class DailyChallengeQuestionAdmin(admin.ModelAdmin):
     def pregunta_resumida(self, obj):
         return (obj.pregunta[:60] + '…') if len(obj.pregunta) > 60 else obj.pregunta
     pregunta_resumida.short_description = 'Pregunta'
+
+
+@admin.register(NotificacionAdmin)
+class NotificacionAdminAdmin(admin.ModelAdmin):
+    list_display = ('tipo', 'titulo', 'admin', 'prioridad', 'leida', 'created_at')
+    list_filter = ('tipo', 'prioridad', 'leida', 'created_at')
+    search_fields = ('titulo', 'mensaje', 'admin__username', 'admin__first_name', 'admin__last_name')
+    ordering = ('-created_at',)

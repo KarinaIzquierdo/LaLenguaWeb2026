@@ -76,7 +76,6 @@ export default function NavProfesor({ profesorData, activeView, setActiveView, o
     <aside className="sidebar-profesor">
       <div>
         <div className="sidebar-header">
-          <h3>Panel Profesor</h3>
           <div className="profesor-info">
             <div className="profesor-avatar">
               {profesorData.initials || profesorData.nombre.split(' ').map(n => n[0]).join('')}

@@ -45,6 +45,70 @@
   --gradient-hover: linear-gradient(135deg, var(--primary-blue-hover) 0%, var(--primary-accent-hover) 100%);
 }
 
+/* ========== ESTILOS DE CONTENEDOR DE DASHBOARD (COMPARTIDO) ========== */
+
+.dashboard-container {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 2rem;
+  box-sizing: border-box;
+}
+
+.card {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border-radius: 16px;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 4px 12px var(--shadow-color);
+  transition: all 0.3s ease;
+}
+
+.card h3 {
+  color: var(--text-primary);
+}
+
+.card p {
+  color: var(--text-secondary);
+}
+
+.dashboard-header {
+  margin-bottom: 2rem;
+}
+
+.dashboard-header h2 {
+  font-size: clamp(1.8rem, 4vw, 2.2rem);
+  font-weight: 700;
+  margin: 0 0 0.5rem 0;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+  position: relative;
+  padding-bottom: 0.5rem;
+}
+
+.dashboard-header h2::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 60px;
+  height: 3px;
+  background: var(--gradient-primary);
+  border-radius: 2px;
+}
+
+.dashboard-header p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+@media (max-width: 1024px) {
+  .dashboard-container {
+    padding: 1rem;
+  }
+}
+
 /* ========== ESTILOS PARA ESPECIALIZACIONES ================== */
 
 /* Estilos para Especializaciones */
@@ -1019,6 +1083,7 @@
   border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 2px 8px var(--shadow-color);
+  color: var(--text-primary);
 }
 
 .classes-table thead, .users-table thead {
@@ -1030,6 +1095,7 @@
   padding: 1.25rem 1rem;
   text-align: left;
   border-bottom: 1px solid var(--border-color);
+  color: inherit;
 }
 
 .classes-table th, .users-table th {

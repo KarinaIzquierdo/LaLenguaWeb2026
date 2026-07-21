@@ -986,6 +986,7 @@ def update_profile_view(request):
         # ✅ NIVEL DE INGLÉS - Soportar ambos formatos
         if 'englishLevel' in data or 'english_level' in data:
             user.english_level = data.get('englishLevel') or data.get('english_level', '')
+            user.level = user.english_level
         
         # ✅ OBJETIVOS DE APRENDIZAJE - Soportar ambos formatos
         if 'learningGoals' in data or 'learning_goals' in data:
@@ -1275,14 +1276,14 @@ def gamificacion_reto_diario_view(request):
         semana_progreso += 1
 
     dulces_base = 5
-    xp_base = 15
+    xp_base = 5
     dulces_bonus = 0
     xp_bonus = 0
     completó_ciclo = False
 
     if racha_actual >= 15:
-        dulces_bonus += 25
-        xp_bonus += 80
+        dulces_bonus += 10
+        xp_bonus += 10
         racha_actual = 0
         completó_ciclo = True
 
@@ -1337,7 +1338,8 @@ def gamificacion_reto_diario_fallo_view(request):
     user.reto_semana_progreso = 0
     user.reto_ultima_fecha = hoy
     user.reto_fallidos_total = (getattr(user, 'reto_fallidos_total', 0) or 0) + 1
-    user.save(update_fields=['reto_racha_actual', 'reto_semana_progreso', 'reto_ultima_fecha', 'reto_fallidos_total'])
+    user.reto_intentos_fallidos_total = (getattr(user, 'reto_intentos_fallidos_total', 0) or 0) + 1
+    user.save(update_fields=['reto_racha_actual', 'reto_semana_progreso', 'reto_ultima_fecha', 'reto_fallidos_total', 'reto_intentos_fallidos_total'])
 
     return Response({
         'success': True,
@@ -1361,8 +1363,8 @@ def gamificacion_mision_view(request):
     user = request.user
     mission_key = request.data.get('mission_key', '')
 
-    dulces_mision = 20
-    xp_mision = 30
+    dulces_mision = 10
+    xp_mision = 10
 
     # Evitar recompensas duplicadas para la misma misión
     if mission_key:
@@ -1434,7 +1436,8 @@ def gamificacion_ranking_retos_view(request):
                 total_xp,
                 reto_mejor_racha,
                 COALESCE(reto_completados_total, 0) AS reto_completados_total,
-                COALESCE(reto_fallidos_total, 0)   AS reto_fallidos_total
+                COALESCE(reto_fallidos_total, 0)   AS reto_fallidos_total,
+                COALESCE(reto_intentos_fallidos_total, 0) AS reto_intentos_fallidos_total
             FROM api_customuser
             WHERE role = %s
               AND is_active = %s
@@ -1465,6 +1468,7 @@ def gamificacion_ranking_retos_view(request):
             'reto_mejor_racha': row.get('reto_mejor_racha') or 0,
             'reto_completados_total': row.get('reto_completados_total') or 0,
             'reto_fallidos_total': row.get('reto_fallidos_total') or 0,
+            'reto_intentos_fallidos_total': row.get('reto_intentos_fallidos_total') or 0,
         }
         for row in rows
     ]
@@ -1578,9 +1582,17 @@ class ClaseViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         usuario_id = self.request.query_params.get('usuario')
+        profesor = self.request.query_params.get('profesor')
+
+        queryset = super().get_queryset()
+
         if usuario_id:
-            return Clase.objects.filter(estudiantes__id=usuario_id)
-        return super().get_queryset().order_by('-created_at')
+            queryset = queryset.filter(estudiantes__id=usuario_id)
+
+        if profesor:
+            queryset = queryset.filter(profesor__iexact=profesor)
+
+        return queryset.order_by('-created_at')
     
     def create(self, request, *args, **kwargs):
         """Crear clase asegurando asignación de estudiantes y enviar notificaciones."""
@@ -1621,7 +1633,7 @@ class ClaseViewSet(viewsets.ModelViewSet):
         return response
     
     def update(self, request, *args, **kwargs):
-        """Actualizar clase asegurando asignación de estudiantes."""
+        """Actualizar clase asegurando asignación de estudiantes y notificar a los nuevos."""
         data = request.data.copy()
         
         # Compatibilidad: si solo viene "estudiantes" pero no "estudiantesSeleccionados",
@@ -1634,9 +1646,35 @@ class ClaseViewSet(viewsets.ModelViewSet):
         
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
+        
+        # Guardar estudiantes asignados antes de la actualización
+        estudiantes_anteriores = set(instance.estudiantes.all().values_list('id', flat=True))
+        
         serializer = self.get_serializer(instance, data=data, partial=partial)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
+        
+        # Detectar estudiantes recién agregados y enviarles notificación
+        clase = self.get_object()
+        estudiantes_nuevos = set(clase.estudiantes.all().values_list('id', flat=True)) - estudiantes_anteriores
+        for estudiante_id in estudiantes_nuevos:
+            from .models import CustomUser
+            try:
+                estudiante = CustomUser.objects.get(id=estudiante_id)
+                NotificacionEstudiante.objects.create(
+                    estudiante=estudiante,
+                    tipo='clase_programada',
+                    mensaje=f'Nueva clase programada: {clase.tema} el {clase.fecha} a las {clase.hora}',
+                    datos_adicionales={
+                        'clase_id': clase.id,
+                        'tema': clase.tema,
+                        'fecha': str(clase.fecha),
+                        'hora': clase.hora,
+                        'meet_link': clase.meet_link
+                    }
+                )
+            except CustomUser.DoesNotExist:
+                pass
         
         return Response(serializer.data)
     
@@ -1991,7 +2029,7 @@ def clubs_list_view(request):
     """
     Listar clubs visibles para el usuario actual.
     - Si es profesor: clubs donde es profesor.
-    - Si es estudiante: clubs a los que pertenece.
+    - Si es estudiante: todos los clubs disponibles (pueden inscribirse).
     - Si es admin: todos.
     """
     user = request.user
@@ -2000,7 +2038,7 @@ def clubs_list_view(request):
     elif getattr(user, 'is_profesor', False) or getattr(user, 'role', None) == 'profesor':
         qs = Club.objects.filter(profesor=user)
     else:
-        qs = Club.objects.filter(students=user)
+        qs = Club.objects.all()
 
     serializer = ClubSerializer(qs.order_by('-updated_at'), many=True, context={'request': request})
     return Response({'success': True, 'data': serializer.data}, status=status.HTTP_200_OK)
@@ -2116,6 +2154,39 @@ def club_add_student_view(request, club_id):
 
     club.students.add(student)
     return Response({'success': True, 'message': 'Estudiante agregado'}, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def club_join_view(request, club_id):
+    """Permitir que un estudiante se inscriba libremente en un club."""
+    try:
+        club = Club.objects.get(pk=club_id)
+    except Club.DoesNotExist:
+        return Response({'success': False, 'message': 'Club no encontrado'}, status=status.HTTP_404_NOT_FOUND)
+
+    user = request.user
+    if getattr(user, 'is_profesor', False) or getattr(user, 'role', None) == 'profesor':
+        return Response({'success': False, 'message': 'Los profesores no pueden inscribirse como estudiantes'}, status=status.HTTP_403_FORBIDDEN)
+
+    club.students.add(user)
+    return Response({'success': True, 'message': 'Te has inscrito al club'}, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def club_leave_view(request, club_id):
+    """Permitir que un estudiante salga de un club."""
+    try:
+        club = Club.objects.get(pk=club_id)
+    except Club.DoesNotExist:
+        return Response({'success': False, 'message': 'Club no encontrado'}, status=status.HTTP_404_NOT_FOUND)
+
+    user = request.user
+    if user in club.students.all():
+        club.students.remove(user)
+        return Response({'success': True, 'message': 'Has salido del club'}, status=status.HTTP_200_OK)
+    return Response({'success': True, 'message': 'No perteneces a este club'}, status=status.HTTP_200_OK)
 
 
 @api_view(['DELETE'])

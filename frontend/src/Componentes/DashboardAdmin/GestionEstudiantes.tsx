@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import './GestionEstudiantes.css';
 import { userService } from '../../services/userService';
+import { especializacionService } from '../../services/especializacionService';
 import { generateStudentReportPDF } from '../../utils/generateStudentReportPDF';
 import ModalEliminarEstudiante from './ModalEliminarEstudiante';
 import type { EliminacionData } from './ModalEliminarEstudiante';
@@ -15,6 +16,7 @@ interface Student {
   bloque_asignado: string;
   nivel?: string;
   especializacion?: string;
+  especializacion_id?: number | null;
   is_active: boolean;
   date_joined: string;
 }
@@ -24,6 +26,7 @@ interface EditForm {
   apellidos: string;
   correo_personal: string;
   nivel: string;
+  especializacion: number | null;
 }
 
 const GestionEstudiantes = () => {
@@ -40,17 +43,29 @@ const GestionEstudiantes = () => {
   const [loadingAcademicDetail, setLoadingAcademicDetail] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
+  const [especializaciones, setEspecializaciones] = useState<{ id: number; nombre: string }[]>([]);
   const [editForm, setEditForm] = useState<EditForm>({
     nombres: '',
     apellidos: '',
     correo_personal: '',
-    nivel: 'A1'
+    nivel: 'A1',
+    especializacion: null
   });
 
   // Cargar estudiantes del backend
   useEffect(() => {
     loadStudents();
+    loadEspecializaciones();
   }, []);
+
+  const loadEspecializaciones = async () => {
+    try {
+      const data = await especializacionService.getEspecializaciones();
+      setEspecializaciones(data);
+    } catch (error) {
+      console.error('Error cargando especializaciones:', error);
+    }
+  };
 
   const loadStudents = async () => {
     try {
@@ -118,7 +133,8 @@ const GestionEstudiantes = () => {
       nombres: student.nombres || '',
       apellidos: student.apellidos || '',
       correo_personal: student.correo_personal || '',
-      nivel: student.nivel || 'A1'
+      nivel: student.nivel || 'A1',
+      especializacion: student.especializacion_id ?? null
     });
     setShowEditModal(true);
   };
@@ -131,7 +147,8 @@ const GestionEstudiantes = () => {
         first_name: editForm.nombres,
         last_name: editForm.apellidos,
         correo_personal: editForm.correo_personal,
-        english_level: editForm.nivel
+        english_level: editForm.nivel,
+        especializacion: editForm.especializacion
       };
       await userService.update(selectedStudent.id, dataToSend);
       setShowEditModal(false);
@@ -569,6 +586,21 @@ const GestionEstudiantes = () => {
                   <option value="C1">C1</option>
                   <option value="C1+">C1+</option>
                   <option value="C2">C2</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Especialización:</label>
+                <select
+                  value={editForm.especializacion ?? ''}
+                  onChange={(e) => setEditForm({...editForm, especializacion: e.target.value ? Number(e.target.value) : null})}
+                  className="form-input"
+                >
+                  <option value="">Sin asignar</option>
+                  {especializaciones.map((esp) => (
+                    <option key={esp.id} value={esp.id}>
+                      {esp.nombre}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div className="modal-actions">

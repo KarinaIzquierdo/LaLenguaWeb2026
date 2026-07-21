@@ -18,6 +18,10 @@ $path = '';
 // Método 1: PATH_INFO
 if (isset($_SERVER['PATH_INFO']) && !empty($_SERVER['PATH_INFO'])) {
     $path = trim($_SERVER['PATH_INFO'], '/');
+    // LiteSpeed puede incluir el prefijo 'api/' en PATH_INFO; normalizarlo
+    if (strpos($path, 'api/') === 0) {
+        $path = substr($path, 4);
+    }
 }
 // Método 2: Query parameter 'route' 
 elseif (isset($_GET['route'])) {

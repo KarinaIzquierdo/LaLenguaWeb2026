@@ -53,7 +53,8 @@ class CustomUser(AbstractUser):
     
     # Contadores totales para ranking de retos diarios
     reto_completados_total = models.IntegerField(default=0, help_text="Total de retos diarios completados")
-    reto_fallidos_total = models.IntegerField(default=0, help_text="Total de retos diarios fallados")
+    reto_fallidos_total = models.IntegerField(default=0, help_text="Total de retos diarios fallados (días con fallo)")
+    reto_intentos_fallidos_total = models.IntegerField(default=0, help_text="Total de intentos fallidos de retos diarios (cada intento cuenta)")
     
     # Progreso por habilidades (0-3 estrellas)
     skill_vocabulario = models.IntegerField(default=0, help_text="Nivel de vocabulario (0-3 estrellas)")
@@ -351,7 +352,11 @@ class NotificacionEstudiante(models.Model):
         ('plan_vencimiento', 'Plan por Vencer'),
         ('plan_vencido', 'Plan Vencido'),
         ('clase_programada', 'Clase Programada'),
+        ('clase_proxima', 'Clase Próxima'),
+        ('clase_hoy', 'Clase Hoy'),
         ('evaluacion_disponible', 'Evaluación Disponible'),
+        ('mision_disponible', 'Misión Disponible'),
+        ('reto_diario_disponible', 'Reto Diario Disponible'),
         ('logro_desbloqueado', 'Logro Desbloqueado'),
         ('mensaje_profesor', 'Mensaje del Profesor'),
         ('recordatorio_pago', 'Recordatorio de Pago'),
@@ -372,6 +377,50 @@ class NotificacionEstudiante(models.Model):
     
     def __str__(self):
         return f"{self.tipo} - {self.estudiante.username}"
+
+
+class NotificacionAdmin(models.Model):
+    """
+    Modelo para notificaciones dirigidas a administradores
+    """
+    TIPO_CHOICES = [
+        ('nuevo_estudiante', 'Nuevo Estudiante'),
+        ('estudiante_eliminado', 'Estudiante Eliminado'),
+        ('nueva_venta', 'Nueva Venta'),
+        ('venta_pendiente', 'Venta Pendiente'),
+        ('plan_por_vencer', 'Plan por Vencer'),
+        ('plan_vencido', 'Plan Vencido'),
+        ('nueva_clase', 'Nueva Clase Programada'),
+        ('evaluacion_enviada', 'Evaluación Enviada'),
+        ('evaluacion_pendiente', 'Evaluación Pendiente de Calificar'),
+        ('sistema', 'Notificación del Sistema'),
+    ]
+    
+    PRIORIDAD_CHOICES = [
+        ('baja', 'Baja'),
+        ('media', 'Media'),
+        ('alta', 'Alta'),
+        ('urgente', 'Urgente'),
+    ]
+    
+    admin = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='notificaciones_admin')
+    tipo = models.CharField(max_length=30, choices=TIPO_CHOICES)
+    titulo = models.CharField(max_length=200)
+    mensaje = models.TextField()
+    prioridad = models.CharField(max_length=10, choices=PRIORIDAD_CHOICES, default='media')
+    leida = models.BooleanField(default=False)
+    datos_adicionales = models.JSONField(null=True, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Notificación de Administrador'
+        verbose_name_plural = 'Notificaciones de Administradores'
+    
+    def __str__(self):
+        return f"{self.titulo} - {self.admin.username}"
 
 
 class MissionExternalLink(models.Model):

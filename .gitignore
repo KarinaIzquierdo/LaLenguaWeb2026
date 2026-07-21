@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
+venv/
+env/
+*.egg-info/
+
+# Node
+node_modules/
+frontend/dist/
+dist/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Credentials / config docs with secrets
+CREDENCIALES_PRUEBA.md
+CONFIGURACION_EMAILJS.md
+CONFIGURACION_EMAIL_DJANGO.md
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Media uploads (generated content)
+backend/media/*
+!backend/media/.gitkeep
+
+# Database files
+*.sqlite3
+*.db
+
+# Misc dev helpers
+clear-cache.html
+debug-authservice.html
+test-login.html

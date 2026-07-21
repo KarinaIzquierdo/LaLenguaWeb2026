@@ -13,6 +13,7 @@ interface RankingItem {
   reto_mejor_racha: number;
   reto_completados_total: number;
   reto_fallidos_total: number;
+  reto_intentos_fallidos_total: number;
 }
 
 const NIVELES = [
@@ -138,8 +139,8 @@ const RankingRetosAdmin: React.FC = () => {
                   <td>{item.full_name || 'Sin nombre'}</td>
                   <td>{item.email}</td>
                   <td>{item.nivel || 'N/A'}</td>
-                  <td>{item.reto_completados_total}</td>
-                  <td>{item.reto_fallidos_total}</td>
+                  <td>{item.reto_completados_total ?? 0}</td>
+                  <td>{(item.reto_intentos_fallidos_total ?? item.reto_fallidos_total) ?? 0}</td>
                   <td>{item.reto_mejor_racha}</td>
                   <td>{item.total_dulces}</td>
                   <td>{item.total_xp}</td>

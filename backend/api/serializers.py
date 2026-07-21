@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import authenticate
-from .models import CustomUser, Clase, Evaluation, MediaItem, Club, ClubMaterial, Especializacion, Evaluacion, RespuestaEvaluacion, Notificacion, NotificacionEstudiante, Plan, Venta, MissionExternalLink, Suscripcion, DailyChallengeQuestion
+from .models import CustomUser, Clase, Evaluation, MediaItem, Club, ClubMaterial, Especializacion, Evaluacion, RespuestaEvaluacion, Notificacion, NotificacionEstudiante, NotificacionAdmin, Plan, Venta, MissionExternalLink, Suscripcion, DailyChallengeQuestion
 
 class UserSerializer(serializers.ModelSerializer):
     especializacion_nombre = serializers.SerializerMethodField()
@@ -81,14 +81,26 @@ class LoginSerializer(serializers.Serializer):
 
 class ClubSerializer(serializers.ModelSerializer):
     profesor_name = serializers.SerializerMethodField()
+    is_member = serializers.SerializerMethodField()
+    students_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Club
-        fields = ['id', 'name', 'description', 'profesor', 'profesor_name', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        fields = ['id', 'name', 'description', 'profesor', 'profesor_name', 'is_member', 'students_count', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at', 'is_member', 'students_count']
 
     def get_profesor_name(self, obj):
         return obj.profesor.get_full_name() or obj.profesor.username
+
+    def get_is_member(self, obj):
+        request = self.context.get('request')
+        user = getattr(request, 'user', None) if request else None
+        if user and user.is_authenticated:
+            return obj.students.filter(pk=user.pk).exists()
+        return False
+
+    def get_students_count(self, obj):
+        return obj.students.count()
 
 
 class ClubMaterialSerializer(serializers.ModelSerializer):
@@ -240,6 +252,10 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         # Establecer is_profesor si el rol es profesor
         if validated_data.get('role') == 'profesor':
             user.is_profesor = True
+        
+        # Sincronizar english_level con level para que reportes y otras vistas lo lean
+        if user.english_level:
+            user.level = user.english_level
         
         # Buscar y asignar especialización si se proporciona
         if especializacion_str:
@@ -410,6 +426,35 @@ class NotificacionEstudianteSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'fecha_creacion']
 
 
+class NotificacionAdminSerializer(serializers.ModelSerializer):
+    admin_nombre = serializers.CharField(source='admin.get_full_name', read_only=True)
+    tiempo_transcurrido = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = NotificacionAdmin
+        fields = ['id', 'tipo', 'titulo', 'mensaje', 'prioridad', 'leida', 
+                 'admin_nombre', 'datos_adicionales', 'tiempo_transcurrido', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
+    
+    def get_tiempo_transcurrido(self, obj):
+        from django.utils import timezone
+        from datetime import timedelta
+        
+        now = timezone.now()
+        diff = now - obj.created_at
+        
+        if diff.days > 0:
+            return f"hace {diff.days} día{'s' if diff.days > 1 else ''}"
+        elif diff.seconds > 3600:
+            hours = diff.seconds // 3600
+            return f"hace {hours} hora{'s' if hours > 1 else ''}"
+        elif diff.seconds > 60:
+            minutes = diff.seconds // 60
+            return f"hace {minutes} minuto{'s' if minutes > 1 else ''}"
+        else:
+            return "hace unos segundos"
+
+
 class EspecializacionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Especializacion
@@ -468,10 +513,11 @@ class SuscripcionSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at', 'updated_at']
     
     def get_estudiante_nombre(self, obj):
-        return f"{obj.estudiante.first_name} {obj.estudiante.last_name}"
+        nombre = f"{obj.estudiante.first_name or ''} {obj.estudiante.last_name or ''}".strip()
+        return nombre or obj.estudiante.username or obj.estudiante.email or f"Usuario #{obj.estudiante.id}"
     
     def get_plan_nombre(self, obj):
-        return obj.plan.nombre
+        return obj.plan.nombre or f"Plan #{obj.plan.id}"
 
 
 class DailyChallengeQuestionSerializer(serializers.ModelSerializer):

@@ -1,0 +1,57 @@
+.misiones-admin-container {
+  color: #1f2937;
+}
+
+.misiones-admin-container h3 {
+  color: #1f2937;
+  margin-top: 0;
+}
+
+.misiones-admin-container .card {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.misiones-form input,
+.misiones-form select {
+  color: #1f2937;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+
+.misiones-form label {
+  color: #1f2937;
+}
+
+.misiones-filter {
+  color: #1f2937;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+
+.misiones-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.misiones-table th,
+.misiones-table td {
+  padding: 12px;
+  border-bottom: 1px solid #e5e7eb;
+  color: #1f2937;
+}
+
+.misiones-table th {
+  background-color: #f9fafb;
+  font-weight: 600;
+  text-align: left;
+}
+
+.misiones-table tr:hover {
+  background-color: #f9fafb;
+}

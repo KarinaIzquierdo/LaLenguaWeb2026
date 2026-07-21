@@ -3,7 +3,7 @@ from rest_framework.decorators import api_view, permission_classes, parser_class
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
-from .models import Evaluacion, CustomUser, RespuestaEvaluacion, Notificacion
+from .models import Evaluacion, CustomUser, RespuestaEvaluacion, Notificacion, Evaluation, Clase, Asistencia
 from .serializers import EvaluacionSerializer, UserSerializer, RespuestaEvaluacionSerializer
 from django.http import HttpResponse, Http404
 from django.shortcuts import get_object_or_404
@@ -549,7 +549,8 @@ def enviar_respuestas_view(request, pk):
 @permission_classes([IsAuthenticated])
 def reportes_progreso_view(request):
     """
-    Obtener reportes de progreso de estudiantes con datos reales
+    Obtener reportes de progreso de estudiantes con datos reales.
+    Combina asistencias a clases del profesor y evaluaciones asignadas.
     """
     print(f"DEBUG: Usuario actual: {request.user.username}, ID: {request.user.id}, Es profesor: {request.user.is_profesor}")
     
@@ -559,94 +560,160 @@ def reportes_progreso_view(request):
             'message': 'Usuario no es profesor'
         }, status=status.HTTP_403_FORBIDDEN)
     
-    # Obtener todas las evaluaciones del profesor
+    # Evaluaciones del profesor
     evaluaciones_profesor = Evaluacion.objects.filter(profesor=request.user)
-    print(f"DEBUG: Evaluaciones del profesor: {evaluaciones_profesor.count()}")
-    for eval in evaluaciones_profesor:
-        print(f"  - {eval.titulo} (ID: {eval.id})")
     
-    # Obtener todos los estudiantes que tienen evaluaciones asignadas
+    # Clases del profesor (el modelo guarda profesor como nombre completo)
+    profesor_nombre = f"{request.user.first_name or ''} {request.user.last_name or ''}".strip()
+    clases_profesor = Clase.objects.filter(profesor=profesor_nombre) if profesor_nombre else Clase.objects.none()
+    
+    # Estudiantes con evaluaciones asignadas o con asistencia en clases del profesor
     estudiantes_con_evaluaciones = CustomUser.objects.filter(
         evaluaciones_asignadas__in=evaluaciones_profesor,
         role='student'
     ).distinct()
-    print(f"DEBUG: Estudiantes con evaluaciones: {estudiantes_con_evaluaciones.count()}")
+    
+    estudiantes_con_asistencia = CustomUser.objects.filter(
+        asistencias__clase__in=clases_profesor,
+        role='student'
+    ).distinct()
+    
+    estudiante_ids = set(
+        estudiantes_con_evaluaciones.values_list('id', flat=True)
+    ) | set(
+        estudiantes_con_asistencia.values_list('id', flat=True)
+    )
+    
+    estudiantes = CustomUser.objects.filter(id__in=estudiante_ids)
+    print(f"DEBUG: Estudiantes encontrados: {estudiantes.count()}")
     
     reportes_data = []
     
-    for estudiante in estudiantes_con_evaluaciones:
-        # Obtener evaluaciones asignadas a este estudiante
+    for estudiante in estudiantes:
+        # Datos de evaluaciones
         evaluaciones_estudiante = evaluaciones_profesor.filter(estudiantes_asignados=estudiante)
         total_evaluaciones = evaluaciones_estudiante.count()
-        
-        # Obtener respuestas del estudiante
-        from .models import RespuestaEvaluacion
         respuestas = RespuestaEvaluacion.objects.filter(
             estudiante=estudiante,
             evaluacion__in=evaluaciones_estudiante
         )
-        
         evaluaciones_completadas = respuestas.filter(completado=True).count()
         
-        # Calcular progreso
-        progreso = (evaluaciones_completadas / total_evaluaciones * 100) if total_evaluaciones > 0 else 0
+        # Datos de asistencia a clases
+        asistencias_estudiante = Asistencia.objects.filter(estudiante=estudiante, clase__in=clases_profesor)
+        total_clases = asistencias_estudiante.count()
+        clases_presentes = asistencias_estudiante.filter(estado='presente').count()
         
-        # Calcular calificación promedio basada en respuestas reales
-        respuestas_completadas = respuestas.filter(completado=True)
-        if respuestas_completadas.exists():
-            # Simulamos una calificación basada en el tiempo gastado y advertencias
-            calificaciones = []
-            for respuesta in respuestas_completadas:
-                # Calificación base de 10, menos penalizaciones
-                calificacion = 10.0
-                # Penalizar por advertencias (cada advertencia resta 0.5 puntos)
-                calificacion -= respuesta.advertencias * 0.5
-                # Asegurar que no sea menor a 0
-                calificacion = max(0, calificacion)
-                calificaciones.append(calificacion)
-            
-            calificacion_promedio = sum(calificaciones) / len(calificaciones)
+        # Preferir asistencia para progreso y clases completadas (más representativo del día a día)
+        if total_clases > 0:
+            progreso = (clases_presentes / total_clases * 100) if total_clases > 0 else 0
+            clases_completadas = clases_presentes
+            clases_totales = total_clases
+            ultima_asistencia = asistencias_estudiante.order_by('-fecha').first()
+            ultima_actividad = ultima_asistencia.fecha if ultima_asistencia else None
+        elif total_evaluaciones > 0:
+            progreso = (evaluaciones_completadas / total_evaluaciones * 100) if total_evaluaciones > 0 else 0
+            clases_completadas = evaluaciones_completadas
+            clases_totales = total_evaluaciones
+            ultima_respuesta = respuestas.order_by('-fecha_envio').first()
+            ultima_actividad = ultima_respuesta.fecha_envio if ultima_respuesta else None
         else:
-            calificacion_promedio = 0.0
+            progreso = 0
+            clases_completadas = 0
+            clases_totales = 0
+            ultima_actividad = None
         
-        # Última actividad
-        ultima_respuesta = respuestas.order_by('-fecha_envio').first()
-        ultima_actividad = ultima_respuesta.fecha_envio if ultima_respuesta else None
+        # Calificación promedio real (0-100)
+        respuestas_completadas = respuestas.filter(completado=True)
+        calificaciones = []
+        for respuesta in respuestas_completadas:
+            if respuesta.calificacion is not None:
+                calificaciones.append(float(respuesta.calificacion))
+            elif respuesta.advertencias is not None:
+                # Fallback: simular calificación sobre 100 cuando aún no hay calificación del profesor
+                calificacion = 100.0 - (respuesta.advertencias * 5.0)
+                calificaciones.append(max(0, calificacion))
         
-        # Determinar fortalezas y áreas a mejorar basado en el desempeño
+        calificacion_promedio = sum(calificaciones) / len(calificaciones) if calificaciones else 0.0
+        
+        # Determinar fortalezas y áreas a mejorar
         fortalezas = []
         areas_a_mejorar = []
         
-        if calificacion_promedio >= 8:
+        if calificacion_promedio >= 80:
             fortalezas.append("Excelente desempeño en evaluaciones")
-        if evaluaciones_completadas == total_evaluaciones:
+        if evaluaciones_completadas == total_evaluaciones and total_evaluaciones > 0:
             fortalezas.append("Completó todas las evaluaciones asignadas")
         if respuestas.filter(advertencias=0).count() > respuestas.count() / 2:
             fortalezas.append("Buena disciplina durante los exámenes")
-            
-        if calificacion_promedio < 7:
+        if clases_presentes > 0:
+            fortalezas.append(f"Asistencia registrada: {clases_presentes} clase(s)")
+        
+        if calificacion_promedio < 70:
             areas_a_mejorar.append("Mejorar comprensión del contenido")
         if evaluaciones_completadas < total_evaluaciones:
             areas_a_mejorar.append("Completar evaluaciones pendientes")
         if respuestas.filter(advertencias__gt=0).exists():
             areas_a_mejorar.append("Seguir las reglas del examen")
         
-        # Si no hay áreas específicas, agregar una general
         if not areas_a_mejorar:
             areas_a_mejorar.append("Mantener el buen rendimiento")
+        
+        # Detalle de asistencias
+        asistencias_detalle = [
+            {
+                'fecha': a.fecha.isoformat() if a.fecha else '',
+                'estado': a.get_estado_display() if hasattr(a, 'get_estado_display') else a.estado,
+                'clase': a.clase.nombre if a.clase else 'Sin clase'
+            }
+            for a in asistencias_estudiante.order_by('-fecha')
+        ]
+        
+        # Detalle de evaluaciones asignadas
+        evaluaciones_detalle = []
+        for ev in evaluaciones_estudiante.order_by('-created_at'):
+            resp = respuestas.filter(evaluacion=ev).first()
+            if resp and resp.calificacion is not None:
+                estado_evaluacion = 'Calificado'
+            elif resp and resp.completado:
+                estado_evaluacion = 'Completado'
+            elif resp and resp.fecha_envio:
+                estado_evaluacion = 'Enviado'
+            else:
+                estado_evaluacion = 'Pendiente'
+            evaluaciones_detalle.append({
+                'titulo': ev.titulo,
+                'tipo': ev.get_tipo_display() if hasattr(ev, 'get_tipo_display') else ev.tipo,
+                'estado': estado_evaluacion,
+                'calificacion': float(resp.calificacion) if resp and resp.calificacion is not None else None,
+                'fecha_envio': resp.fecha_envio.isoformat() if resp and resp.fecha_envio else None
+            })
         
         reporte = {
             'id': estudiante.id,
             'nombre': f"{estudiante.first_name} {estudiante.last_name}" if estudiante.first_name else estudiante.username,
             'email': estudiante.email,
-            'nivel': estudiante.level or 'No especificado',
+            'correo_personal': estudiante.correo_personal,
+            'phone': estudiante.phone,
+            'country': estudiante.country,
+            'city': estudiante.city,
+            'birth_date': estudiante.birth_date.isoformat() if estudiante.birth_date else None,
+            'cedula': estudiante.cedula,
+            'address': estudiante.address,
+            'emergency_contact': estudiante.emergency_contact,
+            'emergency_phone': estudiante.emergency_phone,
+            'learning_goals': estudiante.learning_goals,
+            'especializacion': estudiante.especializacion.nombre if estudiante.especializacion else None,
+            'nivel': estudiante.level or estudiante.english_level or 'No especificado',
             'progreso': round(progreso, 1),
-            'clasesCompletadas': evaluaciones_completadas,
-            'clasesTotales': total_evaluaciones,
+            'clasesCompletadas': clases_completadas,
+            'clasesTotales': clases_totales,
             'ultimaClase': ultima_actividad.isoformat() if ultima_actividad else None,
             'calificacionPromedio': round(calificacion_promedio, 1),
             'fortalezas': fortalezas,
-            'areasAMejorar': areas_a_mejorar
+            'areasAMejorar': areas_a_mejorar,
+            'asistencias_detalle': asistencias_detalle,
+            'evaluaciones_detalle': evaluaciones_detalle
         }
         
         reportes_data.append(reporte)
@@ -667,3 +734,65 @@ def reportes_progreso_view(request):
             }
         }
     })
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def student_evaluation_result_view(request):
+    """
+    Registra el resultado de un quiz del estudiante y actualiza su progreso.
+    """
+    user = request.user
+    data = request.data
+
+    evaluation_type = data.get('evaluation_type')
+    score = int(data.get('score', 0))
+    total_questions = int(data.get('total_questions', 0))
+    correct_answers = int(data.get('correct_answers', 0))
+
+    if evaluation_type not in ['vocabulary', 'grammar', 'comprehension']:
+        return Response({
+            'success': False,
+            'message': 'Tipo de evaluación inválido'
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    # Guardar registro del quiz
+    Evaluation.objects.create(
+        usuario=user,
+        tipo=evaluation_type,
+        score=score,
+        intentos=1
+    )
+
+    # Calcular recompensas basadas en el puntaje
+    xp_ganado = max(5, round(score / 100 * 10))
+    dulces_ganados = 5
+
+    # Actualizar XP y dulces
+    user.total_xp = (getattr(user, 'total_xp', 0) or 0) + xp_ganado
+    user.total_dulces = (getattr(user, 'total_dulces', 0) or 0) + dulces_ganados
+
+    # Subir la habilidad correspondiente según el tipo de evaluación
+    if score >= 70:
+        if evaluation_type == 'vocabulary':
+            user.skill_vocabulario = min(3, (getattr(user, 'skill_vocabulario', 0) or 0) + 1)
+        elif evaluation_type == 'grammar':
+            user.skill_gramatica = min(3, (getattr(user, 'skill_gramatica', 0) or 0) + 1)
+        elif evaluation_type == 'comprehension':
+            user.skill_conversacion = min(3, (getattr(user, 'skill_conversacion', 0) or 0) + 1)
+
+    user.save(update_fields=['total_xp', 'total_dulces', 'skill_vocabulario', 'skill_gramatica', 'skill_conversacion'])
+
+    return Response({
+        'success': True,
+        'message': 'Resultado registrado y progreso actualizado',
+        'data': {
+            'total_xp': user.total_xp,
+            'total_dulces': user.total_dulces,
+            'xp_ganado': xp_ganado,
+            'dulces_ganados': dulces_ganados,
+            'skill_vocabulario': user.skill_vocabulario,
+            'skill_gramatica': user.skill_gramatica,
+            'skill_conversacion': user.skill_conversacion,
+        }
+    }, status=status.HTTP_201_CREATED)

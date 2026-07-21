@@ -2,14 +2,36 @@ import { useState, useEffect } from 'react';
 import './ReportesProgreso.css';
 import DetalleEstudianteModal from './DetalleEstudianteModal';
 import { evaluacionService } from '../../services/evaluacionService';
-import { userService } from '../../services/userService';
-import { ClaseService } from '../../services/claseService';
-import { asistenciaService } from '../../services/asistenciaService';
-import { calificacionService } from '../../services/calificacionService';
+
+interface AsistenciaDetalle {
+  fecha: string;
+  estado: string;
+  clase: string;
+}
+
+interface EvaluacionDetalle {
+  titulo: string;
+  tipo: string;
+  estado: string;
+  calificacion: number | null;
+  fecha_envio: string | null;
+}
 
 interface EstudianteProgreso {
   id: number;
   nombre: string;
+  email: string;
+  correo_personal?: string;
+  phone?: string;
+  country?: string;
+  city?: string;
+  birth_date?: string;
+  cedula?: string;
+  address?: string;
+  emergency_contact?: string;
+  emergency_phone?: string;
+  learning_goals?: string;
+  especializacion?: string;
   nivel: string;
   progreso: number;
   clasesCompletadas: number;
@@ -18,6 +40,8 @@ interface EstudianteProgreso {
   fortalezas: string[];
   areasAMejorar: string[];
   calificacionPromedio: number;
+  asistencias_detalle?: AsistenciaDetalle[];
+  evaluaciones_detalle?: EvaluacionDetalle[];
 }
 
 interface EstadisticasGenerales {
@@ -44,132 +68,48 @@ export default function ReportesProgreso() {
     try {
       setLoading(true);
       setError(null);
-      
-      // Obtener el usuario actual (profesor) desde localStorage
-      const userStr = localStorage.getItem('user');
-      if (!userStr) {
-        setError('No se pudo obtener el usuario actual');
-        setLoading(false);
-        return;
-      }
-      const currentUser = JSON.parse(userStr);
-      if (!currentUser || !currentUser.id) {
-        setError('Usuario inválido');
-        setLoading(false);
-        return;
-      }
 
-      // Cargar calificaciones reales ya calificadas para este profesor
-      const mapaCalificaciones: Record<number, { suma: number; count: number }> = {};
-      try {
-        const respCalif = await calificacionService.obtenerRespuestasCalificadas();
-        if (respCalif.success && Array.isArray(respCalif.respuestas)) {
-          respCalif.respuestas.forEach((resp: any) => {
-            const estudianteId = resp.estudiante;
-            const nota = resp.calificacion;
-            if (!estudianteId || nota === null || nota === undefined) return;
+      const response = await evaluacionService.getReportesProgreso();
 
-            if (!mapaCalificaciones[estudianteId]) {
-              mapaCalificaciones[estudianteId] = { suma: 0, count: 0 };
-            }
-            mapaCalificaciones[estudianteId].suma += Number(nota);
-            mapaCalificaciones[estudianteId].count += 1;
-          });
-        }
-      } catch (e) {
-        console.error('Error obteniendo calificaciones para reportes:', e);
-      }
-
-      // Cargar todos los usuarios desde el backend PHP
-      const usuarios = await userService.getAll();
-
-      // Filtrar solo estudiantes (por ahora, sin segmentar por profesor específico)
-      const estudiantesFiltrados = usuarios.filter((u: any) => u.rol === 'student');
-
-      if (estudiantesFiltrados.length === 0) {
+      if (!response.success || !response.data) {
+        setError(response.message || 'Error al cargar reportes de progreso');
         setEstudiantes([]);
-        const statsVacias: EstadisticasGenerales = {
-          total_estudiantes: 0,
-          progreso_promedio: 0,
-          calificacion_promedio: 0
-        };
-        setEstadisticas(statsVacias);
+        setEstadisticas(null);
         setLoading(false);
         return;
       }
 
-      // Construir datos de progreso usando asistencias reales y calificaciones reales
-      const estudiantesData: EstudianteProgreso[] = await Promise.all(
-        estudiantesFiltrados.map(async (u: any) => {
-          let progreso = 0;
-          let clasesCompletadas = 0;
-          let clasesTotales = 0;
-          let ultimaClase = u.date_joined || new Date().toISOString();
-
-          try {
-            const asistencias = await asistenciaService.getAsistenciasPorEstudiante(u.id);
-            if (Array.isArray(asistencias) && asistencias.length > 0) {
-              clasesTotales = asistencias.length;
-              clasesCompletadas = asistencias.filter((a: any) => a.estado === 'presente').length;
-              progreso = clasesTotales > 0 
-                ? Math.round((clasesCompletadas / clasesTotales) * 100)
-                : 0;
-
-              // El endpoint PHP devuelve las asistencias ordenadas por fecha DESC,
-              // por lo que la primera es la última clase registrada
-              const ultima = asistencias[0];
-              if (ultima && ultima.fecha) {
-                ultimaClase = ultima.fecha;
-              }
-            }
-          } catch (e) {
-            console.error('Error obteniendo asistencias para', u.id, e);
-          }
-
-          // Calificación promedio real (0-100) basada en respuestas calificadas
-          const infoCalif = mapaCalificaciones[u.id];
-          const calificacionPromedio = infoCalif && infoCalif.count > 0
-            ? infoCalif.suma / infoCalif.count
-            : 0;
-
-          return {
-            id: u.id,
-            nombre: `${u.nombres} ${u.apellidos}`,
-            nivel: u.nivel || 'Sin nivel',
-            progreso,
-            clasesCompletadas,
-            clasesTotales,
-            ultimaClase,
-            fortalezas: [],
-            areasAMejorar: [],
-            calificacionPromedio
-          };
-        })
-      );
+      const estudiantesData: EstudianteProgreso[] = (response.data.estudiantes || []).map((est: any) => ({
+        id: est.id,
+        nombre: est.nombre,
+        email: est.email || '',
+        correo_personal: est.correo_personal,
+        phone: est.phone,
+        country: est.country,
+        city: est.city,
+        birth_date: est.birth_date,
+        cedula: est.cedula,
+        address: est.address,
+        emergency_contact: est.emergency_contact,
+        emergency_phone: est.emergency_phone,
+        learning_goals: est.learning_goals,
+        especializacion: est.especializacion,
+        nivel: est.nivel || 'Sin nivel',
+        progreso: est.progreso || 0,
+        clasesCompletadas: est.clasesCompletadas || 0,
+        clasesTotales: est.clasesTotales || 0,
+        ultimaClase: est.ultimaClase || new Date().toISOString(),
+        fortalezas: est.fortalezas || [],
+        areasAMejorar: est.areasAMejorar || [],
+        calificacionPromedio: est.calificacionPromedio || 0,
+        asistencias_detalle: est.asistencias_detalle || [],
+        evaluaciones_detalle: est.evaluaciones_detalle || []
+      }));
 
       setEstudiantes(estudiantesData);
-
-      // Calcular estadísticas generales basadas en los datos de los estudiantes
-      const totalEstudiantesCalc = estudiantesData.length;
-      const sumaProgreso = estudiantesData.reduce((acc, est) => acc + (est.progreso || 0), 0);
-      const progresoPromedioCalc = totalEstudiantesCalc > 0 ? sumaProgreso / totalEstudiantesCalc : 0;
-      const sumaCalificaciones = estudiantesData.reduce(
-        (acc, est) => acc + (est.calificacionPromedio || 0),
-        0
-      );
-      const calificacionPromedioCalc = totalEstudiantesCalc > 0
-        ? sumaCalificaciones / totalEstudiantesCalc
-        : 0;
-
-      const stats: EstadisticasGenerales = {
-        total_estudiantes: totalEstudiantesCalc,
-        progreso_promedio: progresoPromedioCalc,
-        calificacion_promedio: calificacionPromedioCalc
-      };
-      setEstadisticas(stats);
-      
-    } catch (err) {
-      setError('Error al cargar reportes de progreso');
+      setEstadisticas(response.data.estadisticas || null);
+    } catch (err: any) {
+      setError(err.message || 'Error al cargar reportes de progreso');
       console.error('Error loading reportes:', err);
     } finally {
       setLoading(false);
@@ -207,25 +147,329 @@ export default function ReportesProgreso() {
   };
 
   const generarReporte = (estudiante: EstudianteProgreso) => {
-    const reporteTexto = `
-REPORTE DE PROGRESO - ${estudiante.nombre}
-===============================================
+    const formatDate = (dateString?: string | null) => {
+      if (!dateString) return 'No registrada';
+      return new Date(dateString).toLocaleDateString('es-ES');
+    };
 
-INFORMACIÓN GENERAL:
-- Nivel: ${estudiante.nivel}
-- Progreso general: ${estudiante.progreso}%
-- Clases completadas: ${estudiante.clasesCompletadas} de ${estudiante.clasesTotales}
-- Calificación promedio: ${estudiante.calificacionPromedio.toFixed(1)}/100
-- Última clase: ${new Date(estudiante.ultimaClase).toLocaleDateString('es-ES')}
+    const formatValue = (value?: string | null) => value || 'No registrado';
 
-Generado el: ${new Date().toLocaleDateString('es-ES')}
+    const asistenciasRows = (estudiante.asistencias_detalle || [])
+      .map(a => `
+        <tr>
+          <td>${formatDate(a.fecha)}</td>
+          <td>${a.clase}</td>
+          <td><span class="badge ${a.estado.toLowerCase().replace(' ', '-')}">${a.estado}</span></td>
+        </tr>
+      `)
+      .join('');
+
+    const evaluacionesRows = (estudiante.evaluaciones_detalle || [])
+      .map(e => `
+        <tr>
+          <td>${e.titulo}</td>
+          <td>${e.tipo}</td>
+          <td><span class="badge ${e.estado.toLowerCase()}">${e.estado}</span></td>
+          <td>${e.calificacion !== null ? e.calificacion.toFixed(1) : '—'}</td>
+          <td>${formatDate(e.fecha_envio)}</td>
+        </tr>
+      `)
+      .join('');
+
+    const html = `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Reporte de Progreso - ${estudiante.nombre}</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f8fafc;
+      color: #1e293b;
+      margin: 0;
+      padding: 40px;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: #ffffff;
+      border-radius: 16px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+      padding: 48px;
+    }
+    .header {
+      text-align: center;
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 24px;
+      margin-bottom: 32px;
+    }
+    .header h1 {
+      margin: 0;
+      color: #4f46e5;
+      font-size: 2rem;
+    }
+    .header p {
+      margin: 8px 0 0;
+      color: #64748b;
+    }
+    .section {
+      margin-bottom: 32px;
+    }
+    .section h2 {
+      color: #4f46e5;
+      font-size: 1.25rem;
+      border-bottom: 2px solid #e0e7ff;
+      padding-bottom: 8px;
+      margin-bottom: 16px;
+    }
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 16px;
+    }
+    .info-item {
+      background: #f8fafc;
+      border-radius: 8px;
+      padding: 12px 16px;
+    }
+    .info-item .label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #64748b;
+      margin-bottom: 4px;
+    }
+    .info-item .value {
+      font-weight: 600;
+      color: #1e293b;
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      color: white;
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+    }
+    .stat-card .number {
+      font-size: 2rem;
+      font-weight: 700;
+      display: block;
+    }
+    .stat-card .label {
+      font-size: 0.85rem;
+      opacity: 0.9;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+    }
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    th {
+      background: #f1f5f9;
+      font-weight: 600;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      color: #475569;
+    }
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .badge.presente { background: #dcfce7; color: #166534; }
+    .badge.ausente { background: #fee2e2; color: #991b1b; }
+    .badge.tardanza { background: #fef3c7; color: #92400e; }
+    .badge.justificado { background: #e0e7ff; color: #3730a3; }
+    .badge.completado { background: #dcfce7; color: #166534; }
+    .badge.pendiente { background: #fee2e2; color: #991b1b; }
+    .badge.enviado { background: #fef3c7; color: #92400e; }
+    .badge.calificado { background: #dbeafe; color: #1e40af; }
+    .list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .list li {
+      background: #f8fafc;
+      border-left: 4px solid #4f46e5;
+      padding: 12px 16px;
+      margin-bottom: 8px;
+      border-radius: 0 8px 8px 0;
+    }
+    .footer {
+      text-align: center;
+      margin-top: 40px;
+      color: #94a3b8;
+      font-size: 0.85rem;
+    }
+    @media print {
+      body { background: white; padding: 0; }
+      .container { box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Reporte de Progreso</h1>
+      <p>${estudiante.nombre}</p>
+      <p>Generado el ${new Date().toLocaleDateString('es-ES')}</p>
+    </div>
+
+    <div class="section">
+      <h2>Información Personal</h2>
+      <div class="info-grid">
+        <div class="info-item">
+          <div class="label">Correo institucional</div>
+          <div class="value">${formatValue(estudiante.email)}</div>
+        </div>
+        <div class="info-item">
+          <div class="label">Correo personal</div>
+          <div class="value">${formatValue(estudiante.correo_personal)}</div>
+        </div>
+        <div class="info-item">
+          <div class="label">Teléfono</div>
+          <div class="value">${formatValue(estudiante.phone)}</div>
+        </div>
+        <div class="info-item">
+          <div class="label">Cédula</div>
+          <div class="value">${formatValue(estudiante.cedula)}</div>
+        </div>
+        <div class="info-item">
+          <div class="label">Fecha de nacimiento</div>
+          <div class="value">${formatDate(estudiante.birth_date)}</div>
+        </div>
+        <div class="info-item">
+          <div class="label">País / Ciudad</div>
+          <div class="value">${formatValue(estudiante.country)}${estudiante.city ? `, ${estudiante.city}` : ''}</div>
+        </div>
+        <div class="info-item">
+          <div class="label">Dirección</div>
+          <div class="value">${formatValue(estudiante.address)}</div>
+        </div>
+        <div class="info-item">
+          <div class="label">Contacto de emergencia</div>
+          <div class="value">${formatValue(estudiante.emergency_contact)}${estudiante.emergency_phone ? ` (${estudiante.emergency_phone})` : ''}</div>
+        </div>
+        <div class="info-item">
+          <div class="label">Nivel de inglés</div>
+          <div class="value">${estudiante.nivel}</div>
+        </div>
+        <div class="info-item">
+          <div class="label">Especialización</div>
+          <div class="value">${formatValue(estudiante.especializacion)}</div>
+        </div>
+        <div class="info-item" style="grid-column: 1 / -1;">
+          <div class="label">Objetivos de aprendizaje</div>
+          <div class="value">${formatValue(estudiante.learning_goals)}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Resumen Académico</h2>
+      <div class="stats">
+        <div class="stat-card">
+          <span class="number">${estudiante.progreso}%</span>
+          <span class="label">Progreso General</span>
+        </div>
+        <div class="stat-card">
+          <span class="number">${estudiante.clasesCompletadas}</span>
+          <span class="label">Clases Completadas</span>
+        </div>
+        <div class="stat-card">
+          <span class="number">${estudiante.clasesTotales}</span>
+          <span class="label">Total de Clases</span>
+        </div>
+        <div class="stat-card">
+          <span class="number">${estudiante.calificacionPromedio.toFixed(1)}</span>
+          <span class="label">Calificación Promedio</span>
+        </div>
+      </div>
+      <div class="info-grid">
+        <div class="info-item">
+          <div class="label">Última clase</div>
+          <div class="value">${formatDate(estudiante.ultimaClase)}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Detalle de Asistencias</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Clase</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${asistenciasRows || '<tr><td colspan="3" style="text-align:center;color:#64748b;">No hay registros de asistencia</td></tr>'}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <h2>Evaluaciones Asignadas</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Evaluación</th>
+            <th>Tipo</th>
+            <th>Estado</th>
+            <th>Calificación</th>
+            <th>Fecha de envío</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${evaluacionesRows || '<tr><td colspan="5" style="text-align:center;color:#64748b;">No hay evaluaciones asignadas</td></tr>'}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <h2>Fortalezas</h2>
+      <ul class="list">
+        ${estudiante.fortalezas.length > 0 ? estudiante.fortalezas.map(f => `<li>${f}</li>`).join('') : '<li style="border-left-color:#94a3b8;">Sin fortalezas registradas</li>'}
+      </ul>
+    </div>
+
+    <div class="section">
+      <h2>Áreas a Mejorar</h2>
+      <ul class="list">
+        ${estudiante.areasAMejorar.length > 0 ? estudiante.areasAMejorar.map(a => `<li>${a}</li>`).join('') : '<li style="border-left-color:#94a3b8;">Sin áreas a mejorar registradas</li>'}
+      </ul>
+    </div>
+
+    <div class="footer">
+      Reporte generado por The Language - ${new Date().toLocaleDateString('es-ES')}
+    </div>
+  </div>
+</body>
+</html>
     `.trim();
 
-    const blob = new Blob([reporteTexto], { type: 'text/plain' });
+    const blob = new Blob([html], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `Reporte_${estudiante.nombre.replace(' ', '_')}_${new Date().toISOString().split('T')[0]}.txt`;
+    a.download = `Reporte_${estudiante.nombre.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.html`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { missionService, type MissionLink } from '../../services/missionService';
 import { userService } from '../../services/userService';
 import './admin.css';
+import './MisionesAdmin.css';
 
 export default function MisionesAdmin() {
   const [items, setItems] = useState<MissionLink[]>([]);
@@ -18,7 +19,17 @@ export default function MisionesAdmin() {
       setItems(data);
       setError(null);
     } catch (e: any) {
-      setError(e.message || 'Error cargando enlaces');
+      const message = e.message || 'Error cargando enlaces';
+      console.error('[MisionesAdmin] Error cargando enlaces:', message, e);
+      if (message.includes('403') || message.includes('Forbidden') || message.includes('permisos')) {
+        setError(
+          'No tienes permisos de administrador para gestionar misiones. ' +
+          'Verifica que tu usuario tenga role="admin", is_staff=True o is_superuser=True en el backend. ' +
+          'Si el problema persiste, cierra sesión y vuelve a ingresar con una cuenta de administrador.'
+        );
+      } else {
+        setError(message);
+      }
     } finally {
       setLoading(false);
     }
@@ -71,7 +82,7 @@ export default function MisionesAdmin() {
   };
 
   return (
-    <div className="dashboard-container">
+    <div className="dashboard-container misiones-admin-container">
       <header className="dashboard-header">
         <h2>Gestión de Misiones</h2>
         <p>Administra enlaces externos (Gimkit, Kahoot, Quizizz) y su vigencia.</p>
@@ -110,14 +121,14 @@ export default function MisionesAdmin() {
       <div className="card" style={{ padding: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
           <h3>Enlaces</h3>
-          <input placeholder="Filtrar por mission_key" value={filterKey} onChange={e => setFilterKey(e.target.value)} />
+          <input className="misiones-filter" placeholder="Filtrar por mission_key" value={filterKey} onChange={e => setFilterKey(e.target.value)} />
         </div>
         {loading ? (
           <div>Cargando...</div>
         ) : error ? (
           <div style={{ color: 'red' }}>{error}</div>
         ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <table className="misiones-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
                 <th style={{ textAlign: 'left' }}>mission_key</th>

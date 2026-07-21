@@ -63,20 +63,29 @@
   border-radius: 12px;
   font-size: 0.875rem;
   font-weight: 600;
-  color: #111827; /* texto oscuro para mejor lectura */
-  background: #e5e7eb; /* fondo gris claro para que destaque el nivel */
+  color: #374151;
+  background: #e5e7eb;
 }
 
-.nivel-badge-table.básico {
+.nivel-badge-table.básico,
+.nivel-badge-table.a1,
+.nivel-badge-table.a2 {
   background: #3b82f6;
+  color: #ffffff;
 }
 
-.nivel-badge-table.intermedio {
+.nivel-badge-table.intermedio,
+.nivel-badge-table.b1,
+.nivel-badge-table.b2 {
   background: #f59e0b;
+  color: #ffffff;
 }
 
-.nivel-badge-table.avanzado {
+.nivel-badge-table.avanzado,
+.nivel-badge-table.c1,
+.nivel-badge-table.c2 {
   background: #10b981;
+  color: #ffffff;
 }
 
 /* Barra de progreso en tabla */

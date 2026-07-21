@@ -76,6 +76,9 @@ def delete_user_view(request, user_id):
                 user.correo_personal = data['correo_personal']
             if 'english_level' in data:
                 user.english_level = data['english_level']
+                user.level = data['english_level']
+            if 'especializacion' in data:
+                user.especializacion_id = data['especializacion'] if data['especializacion'] else None
             if 'is_active' in data:
                 user.is_active = data['is_active']
             

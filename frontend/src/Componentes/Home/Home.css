@@ -1325,13 +1325,92 @@ html {
   .contact-form-section {
     padding: 3rem 1rem 0;
   }
-  
+
   .contact-title {
     font-size: 2rem;
   }
-  
+
   .form-card {
     padding: 1.5rem;
+  }
+}
+
+/* Responsive adicional para evitar desbordamientos */
+@media (max-width: 640px) {
+  .hero-section {
+    padding: 5rem 1rem 2rem;
+    gap: 1.5rem;
+  }
+
+  .hero-content {
+    max-width: 100%;
+  }
+
+  .title-3d,
+  .title-trend {
+    font-size: 2.2rem;
+  }
+
+  .workshop-info h2 {
+    font-size: 1.1rem;
+  }
+
+  .free-text {
+    font-size: 1rem;
+  }
+
+  .description {
+    font-size: 0.95rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .hero-image {
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  .character-img,
+  .hero-lengua-logo {
+    max-width: 100%;
+    max-height: 35vh;
+    height: auto;
+  }
+
+  .programs-section,
+  .program-level2-section,
+  .program-level3-section {
+    padding: 3rem 1rem;
+  }
+
+  .programs-title {
+    font-size: 1.8rem;
+  }
+
+  .section-subtitle {
+    font-size: 1rem;
+  }
+
+  .whatsapp-float {
+    width: 50px;
+    height: 50px;
+    bottom: 16px;
+    right: 16px;
+  }
+
+  .whatsapp-float svg {
+    width: 24px;
+    height: 24px;
+  }
+}
+
+@media (max-width: 400px) {
+  .title-3d,
+  .title-trend {
+    font-size: 1.8rem;
+  }
+
+  .programs-title {
+    font-size: 1.5rem;
   }
 }
 

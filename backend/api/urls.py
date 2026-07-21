@@ -6,6 +6,7 @@ from . import especializacion_views
 from . import evaluacion_views
 from . import notificacion_views
 from . import notificacion_estudiante_views
+from . import notificacion_admin_views
 from . import calificacion_views
 from . import mission_views
 from . import profesor_views
@@ -66,7 +67,7 @@ urlpatterns = [
     path('missions/links/<int:pk>/', mission_views.mission_link_detail_view, name='mission_link_detail'),
 
     # Endpoints para Clubs (CLB)
-    # path('clubs/', views.clubs_list_view, name='clubs_list'),  # ❌ Comentado - Conflicto con endpoint móvil
+    path('clubs/list/', views.clubs_list_view, name='clubs_list'),
     path('clubs/create/', views.club_create_view, name='club_create'),
     path('clubs/<int:club_id>/update/', views.club_update_view, name='club_update'),
     path('clubs/<int:club_id>/delete/', views.club_delete_view, name='club_delete'),
@@ -78,6 +79,8 @@ urlpatterns = [
     path('clubs/<int:club_id>/students/', views.club_students_list_view, name='club_students_list'),
     path('clubs/<int:club_id>/students/add/', views.club_add_student_view, name='club_student_add'),
     path('clubs/<int:club_id>/students/<int:user_id>/remove/', views.club_remove_student_view, name='club_student_remove'),
+    path('clubs/<int:club_id>/join/', views.club_join_view, name='club_join'),
+    path('clubs/<int:club_id>/leave/', views.club_leave_view, name='club_leave'),
     
     # Endpoints para especializaciones
     path('especializaciones/', especializacion_views.especializaciones_list_view, name='especializaciones_list'),
@@ -95,7 +98,8 @@ urlpatterns = [
     path('evaluaciones/<int:pk>/publish/', evaluacion_views.evaluacion_publish_view, name='evaluacion_publish'),
     path('evaluaciones/students/', evaluacion_views.students_list_view, name='students_list'),
     path('student/evaluaciones/', evaluacion_views.student_evaluaciones_view, name='student_evaluaciones'),
-    
+    path('student/evaluacion/result/', evaluacion_views.student_evaluation_result_view, name='student_evaluation_result'),
+
     # Endpoints para descarga y subida de respuestas
     path('evaluaciones/<int:pk>/download/', evaluacion_views.download_evaluacion_view, name='download_evaluacion'),
     path('evaluaciones/<int:pk>/upload-respuesta/', evaluacion_views.upload_respuesta_view, name='upload_respuesta'),
@@ -106,11 +110,16 @@ urlpatterns = [
     path('evaluaciones/<int:pk>/respuestas/', evaluacion_views.profesor_respuestas_view, name='profesor_respuestas'),
     path('reportes/progreso/', evaluacion_views.reportes_progreso_view, name='reportes_progreso'),
     
-    # Endpoints para notificaciones
+    # Endpoints para notificaciones de profesores
     path('notificaciones/', notificacion_views.obtener_notificaciones, name='obtener_notificaciones'),
     path('notificaciones/crear/', notificacion_views.crear_notificacion, name='crear_notificacion'),
     path('notificaciones/<int:notificacion_id>/marcar-leida/', notificacion_views.marcar_notificacion_leida, name='marcar_notificacion_leida'),
     path('notificaciones/marcar-todas-leidas/', notificacion_views.marcar_todas_leidas, name='marcar_todas_leidas'),
+
+    # Endpoints para notificaciones de administradores
+    path('notificaciones/admin/', notificacion_admin_views.obtener_notificaciones_admin, name='obtener_notificaciones_admin'),
+    path('notificaciones/admin/<int:notificacion_id>/marcar-leida/', notificacion_admin_views.marcar_notificacion_admin_leida, name='marcar_notificacion_admin_leida'),
+    path('notificaciones/admin/marcar-todas-leidas/', notificacion_admin_views.marcar_todas_admin_leidas, name='marcar_todas_admin_leidas'),
     
     # Endpoints para calificación
     path('calificaciones/panel/', calificacion_views.panel_calificaciones_view, name='panel_calificaciones'),

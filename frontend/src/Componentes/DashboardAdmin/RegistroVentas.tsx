@@ -139,29 +139,17 @@ const RegistroVentas: React.FC = () => {
 
   const getEstadoBadge = (estado: string) => {
     const badges = {
-      'pendiente': { class: 'warning', icon: '⏳', text: 'Pendiente' },
-      'pagado': { class: 'success', icon: '✅', text: 'Pagado' },
-      'cancelado': { class: 'danger', icon: '❌', text: 'Cancelado' },
-      'reembolsado': { class: 'info', icon: '↩️', text: 'Reembolsado' }
+      'pendiente': { class: 'warning', text: 'Pendiente' },
+      'pagado': { class: 'success', text: 'Pagado' },
+      'cancelado': { class: 'danger', text: 'Cancelado' },
+      'reembolsado': { class: 'info', text: 'Reembolsado' }
     };
     const badge = badges[estado as keyof typeof badges] || badges.pendiente;
     return (
       <span className={`badge ${badge.class}`}>
-        {badge.icon} {badge.text}
+        {badge.text}
       </span>
     );
-  };
-
-  const getMetodoPagoIcon = (metodo: string) => {
-    const iconos = {
-      'efectivo': '💵',
-      'tarjeta_credito': '💳',
-      'tarjeta_debito': '💳',
-      'transferencia': '🏦',
-      'paypal': '🅿️',
-      'otro': '💰'
-    };
-    return iconos[metodo as keyof typeof iconos] || iconos.otro;
   };
 
   const totalVentas = ventas.length;
@@ -340,7 +328,7 @@ const RegistroVentas: React.FC = () => {
               <tbody>
                 {ventasPagina.map((venta) => (
                   <tr key={venta.id}>
-                    <td>#{venta.id}</td>
+                    <td className="venta-id">#{venta.id}</td>
                     <td>
                       <div className="estudiante-info">
                         <div className="nombre">{venta.estudiante_nombre}</div>
@@ -370,7 +358,7 @@ const RegistroVentas: React.FC = () => {
                     </td>
                     <td>
                       <div className="metodo-pago">
-                        {getMetodoPagoIcon(venta.metodo_pago)} {venta.metodo_pago.replace('_', ' ')}
+                        {venta.metodo_pago.replace('_', ' ')}
                       </div>
                     </td>
                     <td>{getEstadoBadge(venta.estado)}</td>

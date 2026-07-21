@@ -25,10 +25,12 @@ export interface Plan {
 
 export interface Suscripcion {
   id: number;
-  estudiante_nombre: string;
-  plan_nombre: string;
-  fecha_inicio: string;
-  fecha_fin: string;
+  estudiante?: number;
+  estudiante_nombre?: string;
+  plan?: number;
+  plan_nombre?: string;
+  fecha_inicio?: string;
+  fecha_fin?: string;
   fecha_inicio_plan?: string;  // Mantener por compatibilidad
   fecha_fin_plan?: string;      // Mantener por compatibilidad
   precio_total?: number;

@@ -377,21 +377,28 @@ export default function FormularioUsuarios() {
 
   return (
     <div className="gestion-usuarios-container">
-      <h2>Gestión de Usuarios</h2>
-
-      <button 
-        onClick={handleAddUserClick} 
-        className="add-user-button"
-        disabled={isLoading}
-        aria-label="Agregar nuevo usuario"
-      >
-        {isLoading ? <FaSpinner className="loading-spinner" /> : <FaPlus />}
-        Agregar Usuario
-      </button>
+      <div className="gestion-usuarios-header">
+        <div className="gestion-usuarios-title">
+          <h2>Gestión de Usuarios</h2>
+          <p>Administra los usuarios del sistema</p>
+        </div>
+        <button 
+          onClick={handleAddUserClick} 
+          className="add-user-button"
+          disabled={isLoading}
+          aria-label="Agregar nuevo usuario"
+        >
+          {isLoading ? <FaSpinner className="loading-spinner" /> : <FaPlus />}
+          Agregar Usuario
+        </button>
+      </div>
 
       {!showForm && (
         <div className="users-table-container">
-          <h3>Lista de Usuarios</h3>
+          <div className="users-table-header">
+            <h3>Lista de Usuarios</h3>
+            <span className="users-count">{users.length} usuarios</span>
+          </div>
           <div className="users-table-wrapper">
             <table className="users-table" role="table">
               <thead>
@@ -408,16 +415,16 @@ export default function FormularioUsuarios() {
                 {usersPagina.map((user) => {
                   return (
                     <tr key={user.id}>
-                      <td>{user.id}</td>
-                      <td>{`${user.nombres} ${user.apellidos}`}</td>
-                      <td>{user.correo_personal || 'Sin correo personal'}</td>
-                      <td>{user.rol}</td>
-                      <td>
+                      <td data-label="ID">{user.id}</td>
+                      <td data-label="Nombre Completo">{`${user.nombres} ${user.apellidos}`}</td>
+                      <td data-label="Correo Personal">{user.correo_personal || 'Sin correo personal'}</td>
+                      <td data-label="Rol">{user.rol}</td>
+                      <td data-label="Especialización">
                         <span className="especializacion-badge">
                           {user.especializacion || 'Sin asignar'}
                         </span>
                       </td>
-                      <td>
+                      <td data-label="Nivel de Inglés">
                         <span className="nivel-badge">
                           {user.nivel || 'N/A'}
                         </span>

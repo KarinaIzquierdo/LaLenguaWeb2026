@@ -13,6 +13,15 @@
   margin-left: 250px;
 }
 
+.main-content {
+  background: white;
+  border-radius: 16px;
+  min-height: 600px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  padding: 24px;
+}
+
 .dashboard-home {
   margin-bottom: 2rem;
 }
@@ -99,14 +108,6 @@
   margin-top: 4px;
 }
 
-/* Contenido principal */
-.main-content {
-  background: white;
-  border-radius: 16px;
-  min-height: 600px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
-}
 
 /* MisClubs grid layout */
 .clubs-grid {
@@ -406,6 +407,61 @@
   gap: 8px;
   padding-top: 12px;
   border-top: 1px solid #e5e7eb;
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+
+.club-card-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.club-card-actions .btn-edit,
+.club-card-actions .btn-delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  min-height: 36px;
+  min-width: 100px;
+}
+
+.club-card-actions .btn-edit {
+  background: linear-gradient(135deg, #60a5fa, #3b82f6);
+  color: white;
+}
+
+.club-card-actions .btn-edit:hover {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+}
+
+.club-card-actions .btn-delete {
+  background: linear-gradient(135deg, #f87171, #ef4444);
+  color: white;
+}
+
+.club-card-actions .btn-delete:hover {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
+}
+
+.club-card-actions .btn-delete:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .club-profesor {
@@ -716,11 +772,60 @@
 }
 
 @media (max-width: 768px) {
+  .profesor-layout {
+    flex-direction: column;
+    height: auto;
+  }
+
   .profesor-content {
     padding: 1rem;
     margin-left: 0;
   }
-  
+
+  .main-content {
+    padding: 16px;
+    min-height: auto;
+  }
+
+  .profesor-header {
+    padding: 24px;
+  }
+
+  .welcome-section h1 {
+    font-size: 24px;
+  }
+
+  .welcome-section p {
+    font-size: 14px;
+  }
+
+  .stats-cards {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .stat-card {
+    padding: 20px;
+  }
+
+  .stat-icon {
+    width: 50px;
+    height: 50px;
+    font-size: 28px;
+  }
+
+  .stat-number {
+    font-size: 20px;
+  }
+
+  .dashboard-content {
+    padding: 16px;
+  }
+
+  .clubs-grid {
+    grid-template-columns: 1fr;
+  }
+
   .clubs-cards-grid {
     grid-template-columns: 1fr;
   }

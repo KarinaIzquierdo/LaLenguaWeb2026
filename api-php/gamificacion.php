@@ -477,7 +477,7 @@ try {
     // ============ POST /gamificacion/reto-diario-fallo/ ============
     if ($method === 'POST' && $seg1 === 'reto-diario-fallo') {
         // Solo incrementa el contador de fallos, no modifica racha ni dulces/XP
-        $stmt = $pdo->prepare('SELECT reto_fallidos_total FROM api_customuser WHERE id = ? FOR UPDATE');
+        $stmt = $pdo->prepare('SELECT reto_fallidos_total, reto_intentos_fallidos_total FROM api_customuser WHERE id = ? FOR UPDATE');
         $pdo->beginTransaction();
         $stmt->execute([$userId]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -489,11 +489,11 @@ try {
             return;
         }
 
-        $retosFallidos = (int)($row['reto_fallidos_total'] ?? 0);
-        $retosFallidos += 1;
+        $retosFallidos = (int)($row['reto_fallidos_total'] ?? 0) + 1;
+        $intentosFallidos = (int)($row['reto_intentos_fallidos_total'] ?? 0) + 1;
 
-        $update = $pdo->prepare('UPDATE api_customuser SET reto_fallidos_total = ? WHERE id = ?');
-        $update->execute([$retosFallidos, $userId]);
+        $update = $pdo->prepare('UPDATE api_customuser SET reto_fallidos_total = ?, reto_intentos_fallidos_total = ? WHERE id = ?');
+        $update->execute([$retosFallidos, $intentosFallidos, $userId]);
 
         $pdo->commit();
 
@@ -502,6 +502,7 @@ try {
             'message' => 'Fallo de reto diario registrado',
             'data' => [
                 'reto_fallidos_total' => $retosFallidos,
+                'reto_intentos_fallidos_total' => $intentosFallidos,
             ],
         ]);
         return;

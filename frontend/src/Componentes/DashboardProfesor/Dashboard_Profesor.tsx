@@ -21,6 +21,17 @@ interface DashboardProfesorProps {
   onLogout?: () => void;
 }
 
+const parseYearMonth = (dateString: string) => {
+  const [yearStr, monthStr] = dateString.split(/[-T]/);
+  return { year: parseInt(yearStr, 10), month: parseInt(monthStr, 10) - 1 };
+};
+
+const isCurrentMonth = (dateString: string) => {
+  const { year, month } = parseYearMonth(dateString);
+  const now = new Date();
+  return year === now.getFullYear() && month === now.getMonth();
+};
+
 export default function DashboardProfesor({ onLogout }: DashboardProfesorProps = {}) {
   const [activeView, setActiveView] = useState('clases');
   const [profesorData, setProfessorData] = useState({
@@ -72,8 +83,11 @@ export default function DashboardProfesor({ onLogout }: DashboardProfesorProps =
           const clasesProfesor: any[] = await ClaseService.getClasesPorProfesor(0);
           const clasesArray = Array.isArray(clasesProfesor) ? clasesProfesor : [];
 
+          // Filtrar clases del mes actual para restablecer estadísticas mensualmente
+          const clasesMes = clasesArray.filter((clase: any) => clase.fecha && isCurrentMonth(clase.fecha));
+
           const estudiantesIds = new Set<number>();
-          clasesArray.forEach((clase: any) => {
+          clasesMes.forEach((clase: any) => {
             const est = clase.estudiantes;
             if (Array.isArray(est)) {
               est.forEach((id: any) => {
@@ -96,10 +110,12 @@ export default function DashboardProfesor({ onLogout }: DashboardProfesorProps =
           try {
             const pendientes = await calificacionService.obtenerRespuestasPorCalificar();
             if (pendientes.success) {
-              if (typeof pendientes.total === 'number') {
+              if (Array.isArray(pendientes.respuestas)) {
+                evaluacionesPendientes = pendientes.respuestas.filter(
+                  (r: any) => r.fecha_envio && isCurrentMonth(r.fecha_envio)
+                ).length;
+              } else if (typeof pendientes.total === 'number') {
                 evaluacionesPendientes = pendientes.total;
-              } else if (Array.isArray(pendientes.respuestas)) {
-                evaluacionesPendientes = pendientes.respuestas.length;
               }
             }
           } catch (e) {
@@ -108,7 +124,7 @@ export default function DashboardProfesor({ onLogout }: DashboardProfesorProps =
 
           setProfessorData(prev => ({
             ...prev,
-            clasesTotales: clasesArray.length,
+            clasesTotales: clasesMes.length,
             estudiantesActivos: estudiantesIds.size,
             evaluacionesPendientes,
           }));
