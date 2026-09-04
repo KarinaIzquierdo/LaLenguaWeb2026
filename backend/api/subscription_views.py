@@ -188,7 +188,7 @@ def usuarios_sin_plan_view(request):
     """
     try:
         # Obtener todos los estudiantes
-        todos_estudiantes = CustomUser.objects.filter(role='estudiante')
+        todos_estudiantes = CustomUser.objects.filter(role='student')
         
         # Obtener IDs de estudiantes con suscripciones activas o por vencer
         estudiantes_con_plan = Suscripcion.objects.filter(

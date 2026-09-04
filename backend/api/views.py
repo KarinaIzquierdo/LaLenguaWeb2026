@@ -1,6 +1,6 @@
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.decorators import api_view, permission_classes, parser_classes
+from rest_framework.decorators import api_view, permission_classes, parser_classes, authentication_classes
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -140,11 +140,18 @@ def favicon_view(request):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@authentication_classes([])
 def login_view(request):
     """
     Endpoint unificado para autenticar usuarios de todos los roles y generar tokens JWT
     """
-    print(f"Login request data: {request.data}")  # Debug
+    print("\n" + "!"*60)
+    print("🚀 ¡LLAMADA RECIBIDA EN EL SERVIDOR!")
+    print(f"Path: {request.path}")
+    print(f"Metodo: {request.method}")
+    print(f"Data recibida: {request.data}")
+    print("!"*60 + "\n")
+    
     serializer = LoginSerializer(data=request.data)
     if serializer.is_valid():
         user = serializer.validated_data['user']
@@ -179,47 +186,35 @@ def login_view(request):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@authentication_classes([])
 def mobile_login_view(request):
     """
     Endpoint específico para aplicaciones móviles Android
-    Acepta username/password y devuelve solo el token
     """
-    print(f"Mobile login request data: {request.data}")  # Debug
+    print("\n" + "!"*60)
+    print("🚀 PETICIÓN RECIBIDA EN mobile_login_view (ANDROID)")
+    print(f"Data: {request.data}")
+    print("!"*60 + "\n")
     
-    username = request.data.get('username')
-    password = request.data.get('password')
-    
-    if not username or not password:
+    serializer = LoginSerializer(data=request.data)
+    if serializer.is_valid():
+        user = serializer.validated_data['user']
+        refresh = RefreshToken.for_user(user)
+        
         return Response({
-            'error': 'Username y password son requeridos'
-        }, status=status.HTTP_400_BAD_REQUEST)
+            'success': True,
+            'token': str(refresh.access_token),
+            'refresh': str(refresh),
+            'user': UserSerializer(user).data,
+            'message': 'Login móvil exitoso',
+            'role': user.role if hasattr(user, 'role') else 'student'
+        }, status=status.HTTP_200_OK)
     
-    # Buscar usuario por correo_personal (username es el correo personal)
-    try:
-        user = CustomUser.objects.get(correo_personal__iexact=username)
-        if user.check_password(password):
-            if user.is_active:
-                # Generar token JWT
-                refresh = RefreshToken.for_user(user)
-                access_token = refresh.access_token
-                
-                # Respuesta con token y rol para Android
-                return Response({
-                    'token': str(access_token),
-                    'role': user.role if hasattr(user, 'role') else 'student'
-                }, status=status.HTTP_200_OK)
-            else:
-                return Response({
-                    'error': 'Cuenta desactivada'
-                }, status=status.HTTP_400_BAD_REQUEST)
-        else:
-            return Response({
-                'error': 'Credenciales inválidas'
-            }, status=status.HTTP_400_BAD_REQUEST)
-    except CustomUser.DoesNotExist:
-        return Response({
-            'error': 'Credenciales inválidas'
-        }, status=status.HTTP_400_BAD_REQUEST)
+    return Response({
+        'success': False,
+        'message': 'Credenciales inválidas',
+        'errors': serializer.errors
+    }, status=status.HTTP_401_UNAUTHORIZED)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -507,6 +502,26 @@ def mobile_create_class_view(request):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+def admin_temas_list_view(request):
+    """
+    Endpoint para obtener la lista de temas únicos de clases existentes
+    """ 
+    try:
+        temas = Clase.objects.exclude(tema__isnull=True).exclude(tema='').values_list('tema', flat=True).distinct()
+        topics = [{'id': idx + 1, 'name': tema} for idx, tema in enumerate(sorted(set(temas)))]
+        return Response({
+            'success': True,
+            'total': len(topics),
+            'topics': topics
+        }, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({
+            'success': False,
+            'message': f'Error al obtener temas: {str(e)}',
+            'topics': []
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 def mobile_professors_list_view(request):
     """
     Endpoint para obtener la lista de profesores
@@ -1590,7 +1605,10 @@ class ClaseViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(estudiantes__id=usuario_id)
 
         if profesor:
-            queryset = queryset.filter(profesor__iexact=profesor)
+            from django.db.models import Q
+            queryset = queryset.filter(
+                Q(profesor__iexact=profesor) | Q(profesor='') | Q(profesor__isnull=True)
+            )
 
         return queryset.order_by('-created_at')
     
@@ -1598,6 +1616,12 @@ class ClaseViewSet(viewsets.ModelViewSet):
         """Crear clase asegurando asignación de estudiantes y enviar notificaciones."""
         # Hacer una copia mutable de los datos
         data = request.data.copy()
+        
+        # El app móvil envía '' para campos ocultos; convertir a None
+        if data.get('fecha') == '':
+            data['fecha'] = None
+        if data.get('hora') == '':
+            data['hora'] = None
 
         # Compatibilidad: si solo viene "estudiantes" pero no "estudiantesSeleccionados",
         # mapearlo al campo que usa el serializer para poblar el ManyToMany
@@ -1609,13 +1633,10 @@ class ClaseViewSet(viewsets.ModelViewSet):
         self.perform_create(serializer)
 
         headers = self.get_success_headers(serializer.data)
-        response = Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
-        # Si la creación fue exitosa, enviar notificaciones
-        if response.status_code == status.HTTP_201_CREATED:
-            clase = Clase.objects.get(id=response.data['id'])
-
-            # Crear notificación para cada estudiante asignado
+        # Enviar notificaciones a los estudiantes asignados
+        try:
+            clase = Clase.objects.get(id=serializer.data['id'])
             for estudiante in clase.estudiantes.all():
                 NotificacionEstudiante.objects.create(
                     estudiante=estudiante,
@@ -1629,12 +1650,25 @@ class ClaseViewSet(viewsets.ModelViewSet):
                         'meet_link': clase.meet_link
                     }
                 )
+        except Exception as e:
+            # No dejar de responder por un error en notificaciones
+            print(f"Error enviando notificaciones de clase: {e}")
 
-        return response
+        return Response({
+            'success': True,
+            'data': serializer.data,
+            'message': 'Clase creada exitosamente'
+        }, status=status.HTTP_201_CREATED, headers=headers)
     
     def update(self, request, *args, **kwargs):
         """Actualizar clase asegurando asignación de estudiantes y notificar a los nuevos."""
         data = request.data.copy()
+        
+        # El app móvil envía '' para campos ocultos; convertir a None
+        if data.get('fecha') == '':
+            data['fecha'] = None
+        if data.get('hora') == '':
+            data['hora'] = None
         
         # Compatibilidad: si solo viene "estudiantes" pero no "estudiantesSeleccionados",
         # mapearlo al campo que usa el serializer para poblar el ManyToMany
@@ -1676,7 +1710,11 @@ class ClaseViewSet(viewsets.ModelViewSet):
             except CustomUser.DoesNotExist:
                 pass
         
-        return Response(serializer.data)
+        return Response({
+            'success': True,
+            'data': serializer.data,
+            'message': 'Clase actualizada exitosamente'
+        })
     
     @action(detail=True, methods=['patch'])
     def cambiar_estado(self, request, pk=None):
@@ -1795,10 +1833,56 @@ def list_users_view(request):
     """
     Endpoint para listar todos los usuarios
     """
+    print("\n" + "="*50)
+    print("👥 LISTANDO USUARIOS - PETICIÓN RECIBIDA")
+    print(f"Usuario: {request.user.email} (Role: {getattr(request.user, 'role', 'N/A')})")
+    
     from .serializers import MobileUserSerializer
     users = CustomUser.objects.all().order_by('-date_joined')
+    print(f"Total usuarios en DB: {users.count()}")
+    
     serializer = MobileUserSerializer(users, many=True)
-    return Response(serializer.data)
+    data = serializer.data
+    
+    response = Response(data)
+    response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response['Pragma'] = 'no-cache'
+    response['Expires'] = '0'
+    return response
+
+
+def _build_admin_chart_data():
+    """Helper que devuelve datos de la gráfica de estudiantes nuevos vs egresados por mes."""
+    today = timezone.now().date().replace(day=1)
+    months = []
+    for i in range(5, -1, -1):
+        m = today.month - i
+        y = today.year
+        while m <= 0:
+            m += 12
+            y -= 1
+        months.append(date(y, m, 1))
+
+    def month_label(d):
+        return d.strftime('%b %Y')
+
+    new_counts = {m: 0 for m in months}
+    for u in CustomUser.objects.filter(role='student', date_joined__isnull=False).only('date_joined'):
+        d = timezone.localtime(u.date_joined).date().replace(day=1)
+        if d in new_counts:
+            new_counts[d] += 1
+
+    removed_counts = {m: 0 for m in months}
+    for r in RegistroEliminacion.objects.exclude(fecha_eliminacion__isnull=True).only('fecha_eliminacion'):
+        d = timezone.localtime(r.fecha_eliminacion).date().replace(day=1)
+        if d in removed_counts:
+            removed_counts[d] += 1
+
+    return {
+        'labels': [month_label(m) for m in months],
+        'new': [new_counts[m] for m in months],
+        'removed': [removed_counts[m] for m in months],
+    }
 
 
 @api_view(['GET'])
@@ -1818,6 +1902,9 @@ def admin_dashboard_stats_view(request):
     # Total de estudiantes activos
     total_students = CustomUser.objects.filter(role='student', is_active=True).count()
 
+    # Total de profesores activos
+    total_profesores = CustomUser.objects.filter(role='profesor', is_active=True).count()
+
     # Clases programadas (hoy en adelante) con estado programada o activa
     scheduled_classes = Clase.objects.filter(
         fecha__gte=today,
@@ -1825,14 +1912,24 @@ def admin_dashboard_stats_view(request):
     ).count()
 
     # Ingresos del mes: ventas pagadas en el mes actual
+    from django.db.models import Q
     from .models import Venta
     ventas_mes = Venta.objects.filter(
-        estado='pagado',
-        fecha_venta__date__gte=start_of_month,
-        fecha_venta__date__lte=today
+        Q(
+            fecha_pago__isnull=False,
+            fecha_pago__date__gte=start_of_month,
+            fecha_pago__date__lte=today
+        ) | Q(
+            fecha_pago__isnull=True,
+            fecha_venta__date__gte=start_of_month,
+            fecha_venta__date__lte=today
+        ),
+        estado='pagado'
     ).aggregate(total=Sum('precio_total'))
 
     monthly_revenue = float(ventas_mes['total'] or 0)
+
+    chart_data = _build_admin_chart_data()
 
     return Response({
         'success': True,
@@ -1842,6 +1939,17 @@ def admin_dashboard_stats_view(request):
             'monthly_revenue': monthly_revenue,
             'month_start': start_of_month.isoformat(),
             'today': today.isoformat(),
+        },
+        'stats': {
+            'total_estudiantes': total_students,
+            'total_profesores': total_profesores,
+            'clases_programadas': scheduled_classes,
+            'ingresos_mes': int(monthly_revenue),
+        },
+        'chart': {
+            'labels': chart_data['labels'],
+            'nuevos_estudiantes': chart_data['new'],
+            'egresados': chart_data['removed'],
         }
     }, status=status.HTTP_200_OK)
 
@@ -1860,31 +1968,10 @@ def admin_dashboard_charts_view(request):
     today = timezone.now().date()
 
     # ========== 1) NUEVOS ESTUDIANTES Y EGRESADOS POR MES ==========
-    # Agrupar últimos 6 meses por month (date)
-    new_qs = CustomUser.objects.filter(
-        role='student',
-        date_joined__isnull=False
-    ).annotate(month=TruncMonth('date_joined')).values('month').annotate(count=Count('id')).order_by('month')
-
-    removed_qs = RegistroEliminacion.objects.annotate(
-        month=TruncMonth('fecha_eliminacion')
-    ).values('month').annotate(count=Count('id')).order_by('month')
-
-    months = sorted({e['month'] for e in new_qs} | {e['month'] for e in removed_qs})
-    # Limitar a los últimos 6 meses
-    months = months[-6:]
+    students_monthly = _build_admin_chart_data()
 
     def month_label(dt):
         return dt.strftime('%b %Y') if dt else ''
-
-    new_map = {e['month']: e['count'] for e in new_qs}
-    removed_map = {e['month']: e['count'] for e in removed_qs}
-
-    students_monthly = {
-        'labels': [month_label(m) for m in months],
-        'new': [new_map.get(m, 0) for m in months],
-        'removed': [removed_map.get(m, 0) for m in months],
-    }
 
     # ========== 2) DISTRIBUCIÓN POR NIVEL ==========
     level_qs = CustomUser.objects.filter(role='student', is_active=True).values('english_level').annotate(count=Count('id')).order_by('english_level')
@@ -1951,6 +2038,53 @@ def admin_dashboard_charts_view(request):
             'level_distribution': level_distribution,
             'attendance_monthly': attendance_monthly,
             'level_progress': level_progress,
+        }
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def profesor_dashboard_stats_view(request):
+    """Devuelve estadísticas del profesor autenticado para el dashboard móvil"""
+    user = request.user
+    if not (getattr(user, 'role', None) == 'profesor' or user.is_profesor):
+        return Response({
+            'success': False,
+            'message': 'Solo profesores pueden ver estas estadísticas'
+        }, status=status.HTTP_403_FORBIDDEN)
+
+    today = timezone.now().date()
+    profesor_name = f"{user.first_name or ''} {user.last_name or ''}".strip() or user.username
+
+    # Clases del mes actual asignadas a este profesor
+    clases_mes = Clase.objects.filter(
+        profesor=profesor_name,
+        fecha__year=today.year,
+        fecha__month=today.month
+    )
+    clases_totales = clases_mes.count()
+
+    # Estudiantes activos únicos en esas clases
+    estudiantes_ids = set()
+    for clase in clases_mes:
+        for estudiante_id in clase.estudiantes.values_list('id', flat=True):
+            estudiantes_ids.add(estudiante_id)
+    estudiantes_activos = len(estudiantes_ids)
+
+    # Respuestas de evaluación enviadas este mes y aún sin calificar
+    evaluaciones_pendientes = RespuestaEvaluacion.objects.filter(
+        evaluacion__profesor=user,
+        calificacion__isnull=True,
+        fecha_envio__year=today.year,
+        fecha_envio__month=today.month
+    ).count()
+
+    return Response({
+        'success': True,
+        'estadisticas': {
+            'clases_totales': clases_totales,
+            'estudiantes_activos': estudiantes_activos,
+            'evaluaciones_pendientes': evaluaciones_pendientes,
         }
     }, status=status.HTTP_200_OK)
 
@@ -2360,7 +2494,7 @@ def gallery_create_view(request):
     }, status=status.HTTP_400_BAD_REQUEST)
 
 
-@api_view(['PUT'])
+@api_view(['PUT', 'PATCH'])
 @permission_classes([IsAuthenticated])
 @parser_classes([MultiPartParser, FormParser, JSONParser])
 def gallery_update_view(request, pk):
@@ -2375,6 +2509,7 @@ def gallery_update_view(request, pk):
             'message': 'Elemento no encontrado'
         }, status=status.HTTP_404_NOT_FOUND)
     
+    print(f"📋 Datos recibidos en actualización: {request.data}")
     serializer = MediaItemSerializer(media_item, data=request.data, partial=True, context={'request': request})
     if serializer.is_valid():
         serializer.save()
@@ -2384,8 +2519,10 @@ def gallery_update_view(request, pk):
             'message': 'Elemento actualizado exitosamente'
         }, status=status.HTTP_200_OK)
     
+    print(f"❌ Error en actualización de galería: {serializer.errors}")
     return Response({
         'success': False,
+        'message': 'Error de validación',
         'errors': serializer.errors
     }, status=status.HTTP_400_BAD_REQUEST)
 

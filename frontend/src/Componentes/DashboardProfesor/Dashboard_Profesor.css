@@ -11,6 +11,8 @@
   overflow-y: auto;
   padding: 2rem;
   margin-left: 250px;
+  min-height: 100vh;
+  box-sizing: border-box;
 }
 
 .main-content {
@@ -182,12 +184,15 @@
 @media (max-width: 768px) {
   .profesor-layout {
     flex-direction: column;
+    min-height: 100vh;
     height: auto;
+    background: #f8fafc;
   }
   
   .profesor-content {
     margin-left: 0;
     padding: 1rem;
+    min-height: 100vh;
   }
   
   .dashboard-content {

@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import './DashboardStudent.css';
-import PiePagina from '../Layout/PiePagina';
 import EvaluationModal from './EvaluationModal';
 import ResultsModal from './ResultsModal';
 import NotesModal from './NotesModal';
@@ -973,7 +972,6 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
 
       <AdventureModal isOpen={showAdventureModal} onClose={() => setShowAdventureModal(false)} />
 
-      <PiePagina />
     </>
   );
 }

@@ -481,10 +481,6 @@ export default function DriveEvaluaciones() {
     <div className="drive-evaluaciones-container">
       <div className="evaluaciones-header">
         <h1>📝 Gestión de Evaluaciones</h1>
-        <p>Crea y gestiona evaluaciones organizadas por unidad y clase</p>
-        <div className="flujo-info">
-          <p><strong>📋 Flujo:</strong> 1️⃣ Crear → 2️⃣ Asignar estudiantes → 3️⃣ Publicar (para que aparezca a los estudiantes)</p>
-        </div>
         <button className="btn-nueva-evaluacion" onClick={openModal}>
           + Nueva Evaluación
         </button>

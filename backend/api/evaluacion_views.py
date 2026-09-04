@@ -560,31 +560,14 @@ def reportes_progreso_view(request):
             'message': 'Usuario no es profesor'
         }, status=status.HTTP_403_FORBIDDEN)
     
-    # Evaluaciones del profesor
-    evaluaciones_profesor = Evaluacion.objects.filter(profesor=request.user)
+    # Evaluaciones de todos los profesores
+    evaluaciones_profesor = Evaluacion.objects.all()
     
-    # Clases del profesor (el modelo guarda profesor como nombre completo)
-    profesor_nombre = f"{request.user.first_name or ''} {request.user.last_name or ''}".strip()
-    clases_profesor = Clase.objects.filter(profesor=profesor_nombre) if profesor_nombre else Clase.objects.none()
+    # Clases de todos los profesores
+    clases_profesor = Clase.objects.all()
     
-    # Estudiantes con evaluaciones asignadas o con asistencia en clases del profesor
-    estudiantes_con_evaluaciones = CustomUser.objects.filter(
-        evaluaciones_asignadas__in=evaluaciones_profesor,
-        role='student'
-    ).distinct()
-    
-    estudiantes_con_asistencia = CustomUser.objects.filter(
-        asistencias__clase__in=clases_profesor,
-        role='student'
-    ).distinct()
-    
-    estudiante_ids = set(
-        estudiantes_con_evaluaciones.values_list('id', flat=True)
-    ) | set(
-        estudiantes_con_asistencia.values_list('id', flat=True)
-    )
-    
-    estudiantes = CustomUser.objects.filter(id__in=estudiante_ids)
+    # Todos los estudiantes del sistema para el reporte de progreso
+    estudiantes = CustomUser.objects.filter(role='student')
     print(f"DEBUG: Estudiantes encontrados: {estudiantes.count()}")
     
     reportes_data = []

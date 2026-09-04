@@ -37,6 +37,11 @@ export const Sidebar = ({ onLogout, isOpen, onClose }: SidebarProps) => {
             </NavLink>
           </li>
           <li>
+            <NavLink to="/admin/gestion-clases" className={({ isActive }) => isActive ? 'active' : ''}>
+              Gestión de Clases
+            </NavLink>
+          </li>
+          <li>
             <NavLink to="/admin/gestion-estudiantes" className={({ isActive }) => isActive ? 'active' : ''}>
               Gestión de Estudiantes
             </NavLink>

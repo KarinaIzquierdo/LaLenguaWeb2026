@@ -90,9 +90,9 @@ const PlanesPrecios: React.FC = () => {
 
   const getIconoPlan = (tipo: string) => {
     switch (tipo) {
-      case 'basico': return '🌱';
+      case 'basico': return '●';
       case 'especializado': return '🎯';
-      case 'premium': return '👑';
+      case 'premium': return '';
       default: return '📚';
     }
   };
@@ -153,7 +153,6 @@ const PlanesPrecios: React.FC = () => {
               style={{ '--plan-color': plan.color_tema } as React.CSSProperties}
             >
               <div className="plan-header">
-                <div className="plan-icon">{getIconoPlan(plan.tipo)}</div>
                 <div className="plan-info">
                   <h4>{plan.nombre}</h4>
                   <span className={`plan-badge ${plan.tipo}`}>{plan.tipo.toUpperCase()}</span>
@@ -166,8 +165,6 @@ const PlanesPrecios: React.FC = () => {
               </div>
 
               <div className="plan-content compact">
-                <p className="plan-description">{plan.descripcion}</p>
-
                 <div className="plan-stats compact">
                   <div className="stat">
                     <span className="stat-label">Duración:</span>

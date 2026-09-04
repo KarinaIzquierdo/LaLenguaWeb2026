@@ -141,8 +141,7 @@ export default function StudentLayout({
         </nav>
 
         <button className="sidebar-logout" onClick={onLogout}>
-          <span>⬅️</span>
-          <span>Cerrar sesión</span>
+          Cerrar sesión
         </button>
       </aside>
 

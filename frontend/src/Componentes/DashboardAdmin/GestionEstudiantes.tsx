@@ -71,13 +71,18 @@ const GestionEstudiantes = () => {
     try {
       setLoading(true);
       const data = await userService.getAll();
-      console.log('Datos de usuarios:', data);
+      console.log('📡 [GestionEstudiantes] Usuarios recibidos del servicio:', data);
+      
+      if (!data || data.length === 0) {
+        console.warn('⚠️ No se recibieron usuarios o la lista está vacía');
+      }
+
       // Filtrar solo estudiantes (excluir admin, teacher, profesor)
       const estudiantesOnly = data.filter((u: any) => 
         u.rol === 'student' || u.rol === 'estudiante'
       );
-      console.log('Estudiantes filtrados:', estudiantesOnly);
-      console.log('Especializaciones:', estudiantesOnly.map((e: any) => ({ id: e.id, esp: e.especializacion })));
+      console.log('🎓 Estudiantes filtrados:', estudiantesOnly.length, estudiantesOnly);
+      
       setStudents(estudiantesOnly);
       setFilteredStudents(estudiantesOnly);
     } catch (error) {

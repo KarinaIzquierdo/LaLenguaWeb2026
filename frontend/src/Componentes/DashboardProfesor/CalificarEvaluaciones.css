@@ -171,11 +171,21 @@
 /* Respuestas List */
 .respuestas-list {
   margin-top: 0.75rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  border-radius: 12px;
+}
+
+.respuestas-list::-webkit-scrollbar {
+  display: none;
 }
 
 /* Tabla de calificaciones */
 .tabla-calificaciones {
   width: 100%;
+  min-width: 700px;
   border-collapse: separate;
   border-spacing: 0;
   background-color: var(--bg-card, #ffffff);
@@ -853,5 +863,65 @@
   .btn-descargar {
     width: 100%;
     justify-content: center;
+  }
+}
+
+/* Responsive para tabla de calificaciones */
+@media (max-width: 768px) {
+  .calificar-evaluaciones {
+    padding: 1rem;
+  }
+
+  .calificar-header h2 {
+    font-size: 1.5rem;
+  }
+
+  .calificar-header p {
+    font-size: 0.95rem;
+  }
+
+  .filtro-container {
+    justify-content: center;
+  }
+
+  .filtro-container input {
+    width: 100%;
+  }
+
+  .tabs-container {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .tabs-left {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .tab {
+    flex: 1;
+    padding: 0.75rem 0.5rem;
+    font-size: 0.85rem;
+    text-align: center;
+  }
+
+  .tabla-calificaciones {
+    min-width: 650px;
+    font-size: 0.85rem;
+  }
+
+  .tabla-calificaciones th,
+  .tabla-calificaciones td {
+    padding: 0.65rem 0.75rem;
+  }
+
+  .celda-nota input[type="number"] {
+    width: 100%;
+    min-width: 80px;
+  }
+
+  .comentario-input {
+    min-width: 140px;
+    max-width: 100%;
   }
 }

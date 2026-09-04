@@ -33,6 +33,7 @@ urlpatterns = [
     # Endpoints para estudiantes
     path('estudiantes/<int:estudiante_id>/detalle-academico/', views.estudiante_detalle_academico_view, name='estudiante_detalle_academico'),
     path('auth/login/', views.login_view, name='login'),
+    path('login/', views.login_view, name='mobile_login_direct'),
     path('auth/verify-token/', views.verify_token_view, name='verify_token'),
     path('auth/change-password/', views.change_password_view, name='change_password'),
     path('auth/request-password-reset/', views.request_password_reset_view, name='request_password_reset'),
@@ -40,7 +41,6 @@ urlpatterns = [
     path('auth/profile/', views.user_profile_view, name='user_profile'),
     path('auth/update-profile/', views.update_profile_view, name='update_profile'),
     path('auth/register/', views.register_view, name='register'),
-    # path('evaluations/', views.user_evaluations_view, name='user_evaluations'),  # ❌ OBSOLETO - Conflicto con endpoint móvil
     
     # Endpoints para profesores
     path('auth/profesor/login/', views.profesor_login_view, name='profesor_login'),
@@ -48,6 +48,7 @@ urlpatterns = [
     path('auth/profesor/profile/', views.profesor_profile_view, name='profesor_profile'),
     path('auth/profesor/change-password/', views.profesor_change_password_view, name='profesor_change_password'),
     path('profesores/list/', profesor_views.get_profesores_list, name='profesores_list'),
+    path('profesor/estadisticas/', views.profesor_dashboard_stats_view, name='profesor_dashboard_stats'),
     path('users/<int:user_id>/toggle-active/', views.toggle_user_active_view, name='toggle_user_active'),
     path('users/', views.list_users_view, name='list_users'),
     path('users/<int:user_id>/', user_views.delete_user_view, name='delete_user'),
@@ -114,12 +115,14 @@ urlpatterns = [
     path('notificaciones/', notificacion_views.obtener_notificaciones, name='obtener_notificaciones'),
     path('notificaciones/crear/', notificacion_views.crear_notificacion, name='crear_notificacion'),
     path('notificaciones/<int:notificacion_id>/marcar-leida/', notificacion_views.marcar_notificacion_leida, name='marcar_notificacion_leida'),
+    path('notificaciones/<int:notificacion_id>/eliminar/', notificacion_views.eliminar_notificacion, name='eliminar_notificacion'),
     path('notificaciones/marcar-todas-leidas/', notificacion_views.marcar_todas_leidas, name='marcar_todas_leidas'),
 
     # Endpoints para notificaciones de administradores
     path('notificaciones/admin/', notificacion_admin_views.obtener_notificaciones_admin, name='obtener_notificaciones_admin'),
     path('notificaciones/admin/<int:notificacion_id>/marcar-leida/', notificacion_admin_views.marcar_notificacion_admin_leida, name='marcar_notificacion_admin_leida'),
     path('notificaciones/admin/marcar-todas-leidas/', notificacion_admin_views.marcar_todas_admin_leidas, name='marcar_todas_admin_leidas'),
+    path('notificaciones/admin/<int:notificacion_id>/eliminar/', notificacion_admin_views.eliminar_notificacion_admin, name='eliminar_notificacion_admin'),
     
     # Endpoints para calificación
     path('calificaciones/panel/', calificacion_views.panel_calificaciones_view, name='panel_calificaciones'),
@@ -153,13 +156,14 @@ urlpatterns = [
     # Endpoints específicos para móviles
     path('mobile/info/', mobile_views.api_info_view, name='mobile_api_info'),
     path('mobile/config/', mobile_views.mobile_config_view, name='mobile_config'),
-    path('login/', views.mobile_login_view, name='mobile_login'),  # Endpoint para Android
+    path('login-mobile/', views.mobile_login_view, name='mobile_login'),  # Endpoint para Android
     path('profile/', views.mobile_profile_view, name='mobile_profile'),  # Perfil para Android
     path('profile/update/', views.mobile_update_profile_view, name='mobile_update_profile'),  # Actualizar perfil desde Android
     path('classes/', views.mobile_classes_view, name='mobile_classes'),  # Clases programadas del usuario
     path('classes/create/', views.mobile_create_class_view, name='mobile_create_class'),  # Crear clase desde móvil
     path('professors/', views.mobile_professors_list_view, name='mobile_professors_list'),  # Lista de profesores
     path('students/', views.mobile_students_list_view, name='mobile_students_list'),  # Lista de estudiantes
+    path('admin/temas/', views.admin_temas_list_view, name='admin_temas_list'),  # Temas de clases
     path('evaluations/', views.mobile_evaluations_view, name='mobile_evaluations'),  # Evaluaciones asignadas al usuario
     path('clubs/', views.mobile_clubs_view, name='mobile_clubs'),  # Clubs y materiales del usuario
     

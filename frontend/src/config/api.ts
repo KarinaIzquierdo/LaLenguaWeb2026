@@ -3,10 +3,9 @@ const isDevelopment = import.meta.env.MODE === 'development';
 const isProduction = import.meta.env.MODE === 'production';
 
 export const API_CONFIG = {
-  // URL base del API - Usa variables de entorno con fallback
   BASE_URL: import.meta.env.VITE_API_URL || 
            import.meta.env.VITE_API_BASE_URL || 
-           (isDevelopment ? 'http://localhost:8000/api' : 'https://lalenguacolombia.co/api'),
+           (isDevelopment ? 'http://127.0.0.1:8000/api' : 'https://lalenguacolombia.co/api'),
   
   // Timeout para requests
   TIMEOUT: 10000,

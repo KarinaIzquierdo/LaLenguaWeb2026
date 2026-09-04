@@ -244,10 +244,11 @@ export default function EvaluacionesEstudiante() {
                 const respuesta = respuestasMap[evaluacion.id];
                 const hasRespuesta = !!respuesta;
                 const isCalificada = hasRespuesta && respuesta.calificacion !== undefined && respuesta.calificacion !== null;
+                const vencida = overdue && !hasRespuesta;
                 
                 return (
                   <React.Fragment key={evaluacion.id}>
-                    <tr className={overdue ? 'evaluacion-vencida' : ''}>
+                    <tr className={vencida ? 'evaluacion-vencida' : ''}>
                       <td>{evaluacion.titulo}</td>
                       <td>
                         <span className={`tipo-badge tipo-${evaluacion.tipo}`}>
@@ -259,9 +260,14 @@ export default function EvaluacionesEstudiante() {
                       <td>{evaluacion.profesor_nombre || 'Sin profesor'}</td>
                       <td>
                         {evaluacion.fecha_limite ? (
-                          <span className={overdue ? 'fecha-vencida' : 'fecha-limite'}>
-                            {formatDateTime(evaluacion.fecha_limite)}
-                          </span>
+                          <div className="fecha-limite-cell">
+                            <span className={vencida ? 'fecha-vencida' : 'fecha-limite'}>
+                              {formatDateTime(evaluacion.fecha_limite)}
+                            </span>
+                            {vencida && (
+                              <span className="badge-vencida">Vencida</span>
+                            )}
+                          </div>
                         ) : (
                           'Sin fecha límite'
                         )}
@@ -299,9 +305,9 @@ export default function EvaluacionesEstudiante() {
                               </button>
                             ) : null}
                             <button
-                              className={`btn-subir-tarea ${hasRespuesta ? 'btn-tarea-enviada' : ''}`}
+                              className="btn-subir-tarea"
                               onClick={() => subirRespuesta(evaluacion)}
-                              disabled={subiendoRespuesta === evaluacion.id || overdue || isCalificada}
+                              disabled={subiendoRespuesta === evaluacion.id || isCalificada || hasRespuesta || vencida}
                             >
                               {subiendoRespuesta === evaluacion.id
                                 ? '⏳ Subiendo...'
@@ -309,20 +315,24 @@ export default function EvaluacionesEstudiante() {
                                   ? '✅ Tarea calificada'
                                   : hasRespuesta
                                     ? '✅ Tarea enviada'
-                                    : '📤 Subir Tarea'}
+                                    : vencida
+                                      ? 'Vencida'
+                                      : '📤 Subir Tarea'}
                             </button>
                           </div>
                         ) : (
-                          <button 
+                          <button
                             className="btn-acceder-evaluacion"
                             onClick={() => window.open(evaluacion.enlace, '_blank')}
-                            disabled={!evaluacion.activa || overdue || isCalificada}
+                            disabled={!evaluacion.activa || isCalificada || hasRespuesta || vencida}
                           >
                             {isCalificada
                               ? '✅ Evaluación calificada'
                               : hasRespuesta
                                 ? '✅ Evaluación enviada'
-                                : '🚀 Realizar Evaluación'}
+                                : vencida
+                                  ? 'Vencida'
+                                  : '🚀 Realizar Evaluación'}
                           </button>
                         )}
                       </td>

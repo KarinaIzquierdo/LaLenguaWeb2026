@@ -250,6 +250,31 @@ def marcar_todas_leidas(request):
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def eliminar_notificacion(request, notificacion_id):
+    """
+    Elimina una notificación del profesor
+    """
+    try:
+        notificacion = Notificacion.objects.get(
+            id=notificacion_id,
+            profesor=request.user
+        )
+        notificacion.delete()
+
+        return Response({
+            'success': True,
+            'message': 'Notificación eliminada'
+        }, status=status.HTTP_200_OK)
+
+    except Notificacion.DoesNotExist:
+        return Response({
+            'success': False,
+            'message': 'Notificación no encontrada'
+        }, status=status.HTTP_404_NOT_FOUND)
+
+
 @api_view(['POST'])
 def crear_notificacion(request):
     """

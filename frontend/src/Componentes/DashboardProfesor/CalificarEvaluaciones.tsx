@@ -40,8 +40,8 @@ export default function CalificarEvaluaciones({}: CalificarEvaluacionesProps) {
         if (item.calificacion !== null) {
           inicialNotas[key] = item.calificacion.toString();
         }
-        if ((item as any).comentarios_profesor) {
-          inicialComentarios[key] = (item as any).comentarios_profesor as string;
+        if (item.comentarios_profesor) {
+          inicialComentarios[key] = item.comentarios_profesor;
         }
       });
       setNotas(inicialNotas);
@@ -94,6 +94,9 @@ export default function CalificarEvaluaciones({}: CalificarEvaluacionesProps) {
       if (response.success) {
         alert(response.message || 'Calificación guardada exitosamente');
         await cargarPanel();
+        if (activeTab === 'por-calificar') {
+          setActiveTab('calificadas');
+        }
       } else {
         alert(response.error || 'Error al guardar calificación');
       }

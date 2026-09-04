@@ -44,11 +44,11 @@ export default function PlanesPublicos() {
   const getIconoPlan = (tipo: Plan['tipo']) => {
     switch (tipo) {
       case 'basico':
-        return '🌱';
+        return '●';
       case 'especializado':
         return '🎯';
       case 'premium':
-        return '👑';
+        return '';
       default:
         return '📚';
     }

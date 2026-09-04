@@ -145,9 +145,9 @@ class Clase(models.Model):
     ]
     
     nombre = models.CharField(max_length=100)
-    profesor = models.CharField(max_length=100)
-    fecha = models.DateField()
-    hora = models.CharField(max_length=20, default='08:00')
+    profesor = models.CharField(max_length=100, blank=True, null=True)
+    fecha = models.DateField(blank=True, null=True)
+    hora = models.CharField(max_length=20, blank=True, null=True, default='08:00')
     duracion = models.IntegerField(default=60, help_text="Duración en minutos")
     tema = models.CharField(max_length=200, blank=True)
     descripcion = models.TextField(blank=True)
@@ -236,7 +236,7 @@ class ClubMaterial(models.Model):
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True, null=True)
     resource_type = models.CharField(max_length=10, choices=[('url', 'URL'), ('file', 'Archivo')])
-    url = models.URLField(blank=True, null=True)
+    url = models.CharField(max_length=500, blank=True, null=True)
     file = models.FileField(upload_to='clubs/', blank=True, null=True)
     created_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, related_name='materials_created')
     created_at = models.DateTimeField(auto_now_add=True)

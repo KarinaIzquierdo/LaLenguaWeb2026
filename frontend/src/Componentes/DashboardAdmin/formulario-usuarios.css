@@ -43,7 +43,7 @@
   width: 100%;
   max-width: 1400px;
   margin: 0 auto;
-  padding: var(--spacing-xl);
+  padding: var(--spacing-2xl);
   color: var(--text-primary);
 }
 
@@ -51,8 +51,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: var(--spacing-md);
-  margin-bottom: var(--spacing-xl);
+  gap: var(--spacing-2xl);
+  margin-bottom: var(--spacing-2xl);
   flex-wrap: wrap;
   min-width: 0;
 }
@@ -81,6 +81,7 @@
 .gestion-usuarios-title {
   min-width: 0;
   flex: 1;
+  padding-right: var(--spacing-md);
 }
 
 .gestion-usuarios-title p {
@@ -149,7 +150,8 @@
   padding: var(--spacing-2xl);
   border: 1px solid var(--border-color);
   box-shadow: 0 4px 15px var(--shadow-color);
-  overflow: hidden; /* Mejor manejo del overflow */
+  overflow: hidden;
+  margin-bottom: var(--spacing-2xl);
 }
 
 .users-table-header {
@@ -197,28 +199,15 @@
 /* Wrapper responsivo para la tabla */
 .users-table-wrapper {
   overflow-x: auto;
-  margin: var(--spacing-lg) calc(-1 * var(--spacing-2xl));
-  padding: 0 var(--spacing-2xl);
-  scrollbar-width: thin;
-  scrollbar-color: var(--border-color) transparent;
+  margin: var(--spacing-lg) 0;
+  padding: 0;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  border-radius: var(--border-radius-md);
 }
 
 .users-table-wrapper::-webkit-scrollbar {
-  height: 8px;
-}
-
-.users-table-wrapper::-webkit-scrollbar-track {
-  background: var(--bg-secondary);
-  border-radius: 4px;
-}
-
-.users-table-wrapper::-webkit-scrollbar-thumb {
-  background: var(--border-color);
-  border-radius: 4px;
-}
-
-.users-table-wrapper::-webkit-scrollbar-thumb:hover {
-  background: var(--text-secondary);
+  display: none;
 }
 
 /* Estilos de la tabla */
@@ -271,8 +260,7 @@
 .users-table td:last-child {
   text-align: right;
   white-space: nowrap;
-  width: 280px; /* Ancho aumentado para 3 botones */
-  min-width: 280px;
+  min-width: 120px;
 }
 
 /* Estilos para el estado Activo/Inactivo */
@@ -821,13 +809,17 @@
 /* Media queries mejoradas */
 @media (max-width: 1024px) {
   .gestion-usuarios-container {
-    padding: var(--spacing-md);
+    padding: var(--spacing-lg);
   }
 
   .gestion-usuarios-header {
     flex-direction: column;
     align-items: stretch;
     gap: var(--spacing-md);
+  }
+
+  .gestion-usuarios-title {
+    padding-right: 0;
   }
 
   .add-user-button {
@@ -846,9 +838,9 @@
   }
 
   .users-table-wrapper {
-    margin: 0 calc(-1 * var(--spacing-lg));
-    padding: 0 var(--spacing-lg);
-    overflow: visible;
+    margin: var(--spacing-md) 0;
+    padding: 0;
+    overflow-x: auto;
   }
 
   .users-table {
@@ -926,7 +918,7 @@
 
 @media (max-width: 480px) {
   .gestion-usuarios-container {
-    padding: var(--spacing-sm);
+    padding: var(--spacing-md);
   }
 
   .gestion-usuarios-title h2 {
@@ -938,8 +930,8 @@
   }
 
   .users-table-wrapper {
-    margin: 0 calc(-1 * var(--spacing-md));
-    padding: 0 var(--spacing-md);
+    margin: var(--spacing-sm) 0;
+    padding: 0;
   }
 
   .users-table tbody tr {

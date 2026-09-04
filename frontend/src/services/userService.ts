@@ -85,6 +85,7 @@ export const userService = {
         };
       });
     } catch (error) {
+      console.error('🔴 Error fatal en userService.getAll:', error);
       return [];
     }
   },

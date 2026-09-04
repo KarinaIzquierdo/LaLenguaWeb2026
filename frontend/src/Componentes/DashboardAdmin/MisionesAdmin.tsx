@@ -90,7 +90,7 @@ export default function MisionesAdmin() {
 
       <div className="card" style={{ padding: 16, marginBottom: 16 }}>
         <h3>Nuevo enlace</h3>
-        <form className="misiones-form" onSubmit={handleCreate} style={{ display: 'grid', gap: 12, gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr auto' }}>
+        <form className="misiones-form" onSubmit={handleCreate}>
           <input placeholder="mission_key (slug)" value={form.mission_key || ''} onChange={e => setForm({ ...form, mission_key: e.target.value })} />
           <select value={form.platform || 'custom'} onChange={e => setForm({ ...form, platform: e.target.value as any })}>
             <option value="custom">Custom</option>
@@ -128,7 +128,8 @@ export default function MisionesAdmin() {
         ) : error ? (
           <div style={{ color: 'red' }}>{error}</div>
         ) : (
-          <table className="misiones-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <div className="misiones-table-wrapper">
+            <table className="misiones-table">
             <thead>
               <tr>
                 <th style={{ textAlign: 'left' }}>mission_key</th>
@@ -171,7 +172,8 @@ export default function MisionesAdmin() {
                 </tr>
               ))}
             </tbody>
-          </table>
+            </table>
+          </div>
         )}
       </div>
     </div>

@@ -62,6 +62,7 @@
   gap: 0.5rem;
   justify-content: center;
   min-width: 160px;
+  white-space: normal;
 }
 
 .btn-acceder-evaluacion:hover:not(:disabled) {
@@ -237,11 +238,20 @@
 /* Evaluaciones Grid */
 .evaluaciones-tabla {
   margin-top: 0;
+  width: 100%;
   background: white;
   border-radius: 12px;
   overflow-x: auto;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
   border: 1px solid #e5e7eb;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.evaluaciones-tabla::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 .tabla-evaluaciones {
@@ -255,11 +265,22 @@
   color: white;
 }
 
-.tabla-evaluaciones th {
+.tabla-evaluaciones th,
+.tabla-evaluaciones td {
   padding: 15px 12px;
   text-align: left;
   font-weight: 600;
   font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.tabla-evaluaciones th {
+  font-weight: 600;
+}
+
+.tabla-evaluaciones td {
+  font-weight: 400;
+  vertical-align: middle;
 }
 
 .tabla-evaluaciones tbody tr {
@@ -279,9 +300,30 @@
   background-color: #fed7d7;
 }
 
-.tabla-evaluaciones td {
-  padding: 15px 12px;
-  vertical-align: middle;
+.tabla-evaluaciones tbody tr.evaluacion-vencida {
+  opacity: 0.85;
+  background-color: #fff5f5;
+}
+
+.tabla-evaluaciones tbody tr.evaluacion-vencida:hover {
+  background-color: #fed7d7;
+}
+
+.fecha-limite-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+}
+
+.badge-vencida {
+  background: #e74c3c;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
 }
 
 .evaluacion-info h4 {
@@ -404,6 +446,7 @@
   background: #eef2ff;
   color: #3730a3;
   transition: all 0.2s ease;
+  white-space: normal;
 }
 
 .btn-subir-tarea:hover:not(:disabled) {
@@ -523,6 +566,7 @@
   color: #4b5563;
   max-width: 200px;
   word-wrap: break-word;
+  white-space: normal;
 }
 
 .sin-calificacion {
@@ -610,9 +654,28 @@
 }
 
 /* Responsive Design */
+@media (max-width: 1024px) {
+  .tabla-evaluaciones {
+    min-width: auto;
+  }
+
+  .tabla-evaluaciones th,
+  .tabla-evaluaciones td {
+    padding: 10px 8px;
+    font-size: 0.9rem;
+    white-space: normal;
+  }
+
+  .tabla-evaluaciones td:nth-child(3),
+  .tabla-evaluaciones th:nth-child(3) {
+    display: none;
+  }
+}
+
 @media (max-width: 768px) {
   .evaluaciones-section {
     margin: 0;
+    padding: 1rem;
   }
 
   .section-title {
@@ -653,36 +716,72 @@
     flex-direction: column;
   }
 
-  .tabla-evaluaciones th,
-  .tabla-evaluaciones td {
-    padding: 12px 10px;
-    font-size: 0.85rem;
-  }
-
-  .btn-acceder-evaluacion {
-    min-width: auto;
-    padding: 0.6rem 1rem;
-    font-size: 0.8rem;
-  }
-
-  .acciones-tarea {
-    min-width: 140px;
-  }
-}
-
-@media (max-width: 480px) {
   .tabla-evaluaciones {
-    min-width: 520px;
+    min-width: auto;
   }
 
   .tabla-evaluaciones th,
   .tabla-evaluaciones td {
     padding: 10px 8px;
-    font-size: 0.8rem;
+    font-size: 0.85rem;
+    white-space: normal;
+  }
+
+  .tabla-evaluaciones td:nth-child(3),
+  .tabla-evaluaciones th:nth-child(3) {
+    display: none;
+  }
+
+  .btn-acceder-evaluacion {
+    min-width: auto;
+    width: 100%;
+    padding: 0.5rem 0.25rem;
+    font-size: 0.78rem;
+    white-space: normal;
+  }
+
+  .acciones-tarea {
+    width: 100%;
+    min-width: auto;
+  }
+
+  .btn-subir-tarea {
+    width: 100%;
+    text-align: center;
+    padding: 0.5rem 0.25rem;
+    font-size: 0.78rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .tabla-evaluaciones {
+    min-width: auto;
+  }
+
+  .tabla-evaluaciones th,
+  .tabla-evaluaciones td {
+    padding: 8px 5px;
+    font-size: 0.75rem;
+  }
+
+  .tabla-evaluaciones td:nth-child(2),
+  .tabla-evaluaciones th:nth-child(2) {
+    display: none;
   }
 
   .tipo-badge {
     padding: 3px 8px;
     font-size: 0.75rem;
+  }
+
+  .calificacion-badge {
+    padding: 6px 10px;
+    font-size: 0.85rem;
+    min-width: auto;
+  }
+
+  .btn-acceder-evaluacion,
+  .btn-subir-tarea {
+    font-size: 0.7rem;
   }
 }

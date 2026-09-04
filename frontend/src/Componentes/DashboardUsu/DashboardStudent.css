@@ -132,7 +132,7 @@
   gap: 0.75rem;
   padding: 0.85rem 1rem;
   border: none;
-  border-radius: 12px;
+  border-radius: 0;
   background: transparent;
   color: var(--text-muted);
   font-size: 0.95rem;
@@ -152,44 +152,47 @@
   color: var(--primary);
   font-weight: 600;
   position: relative;
+  border-radius: 0;
 }
 
 .sidebar-item.active::after {
   content: '';
   position: absolute;
-  bottom: 6px;
+  bottom: 8px;
   left: 1rem;
   right: 1rem;
-  height: 3px;
-  background: linear-gradient(90deg, #7c3aed, #ec4899);
-  border-radius: 2px;
+  height: 1px;
+  background: linear-gradient(90deg, #7c3aed, #3b82f6, #ec4899);
+  border-radius: 1px;
+  box-shadow:
+    0 0 5px 0.5px rgba(124, 58, 237, 0.2),
+    0 0 10px 1px rgba(59, 130, 246, 0.15),
+    0 0 15px 1.5px rgba(236, 72, 153, 0.12);
 }
 
 .sidebar-icon {
-  font-size: 1.15rem;
-  width: 24px;
-  text-align: center;
+  display: none;
 }
 
 .sidebar-logout {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  justify-content: center;
   padding: 0.85rem 1rem;
   border: none;
   border-radius: 12px;
-  background: transparent;
+  background: #fee2e2;
   color: #ef4444;
   font-size: 0.95rem;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
-  text-align: left;
+  text-align: center;
   margin-top: auto;
 }
 
 .sidebar-logout:hover {
-  background: #fee2e2;
+  background: #fecaca;
 }
 
 .sidebar-toggle {
@@ -230,6 +233,22 @@
   backdrop-filter: blur(2px);
 }
 
+/* Ocultar scrollbars */
+.student-dashboard *::-webkit-scrollbar,
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.student-dashboard *,
+html,
+body {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+
 /* Main area */
 .student-main {
   flex: 1;
@@ -237,6 +256,7 @@
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  background: var(--bg);
 }
 
 .student-header {
@@ -1292,21 +1312,7 @@
 
 /* Help floating button */
 .help-floating-btn {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--primary), #ec4899);
-  color: white;
-  border: none;
-  font-size: 1.25rem;
-  font-weight: 700;
-  cursor: pointer;
-  box-shadow: 0 4px 15px rgba(124, 58, 237, 0.35);
-  z-index: 80;
-  transition: transform 0.2s;
+  display: none;
 }
 
 .help-floating-btn:hover {
@@ -1731,6 +1737,46 @@
   .material-list-card,
   .mission-list-card {
     padding: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .student-header {
+    padding: 0.5rem 0.75rem;
+    gap: 0.5rem;
+  }
+
+  .header-actions {
+    gap: 0.35rem;
+  }
+
+  .user-stats-pill {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.4rem;
+  }
+
+  .pill-item {
+    padding: 0.2rem 0.35rem;
+    gap: 0.2rem;
+  }
+
+  .pill-label {
+    display: none;
+  }
+
+  .pill-value {
+    font-size: 0.8rem;
+  }
+
+  .pill-icon {
+    font-size: 0.85rem;
+  }
+
+  .header-btn,
+  .header-avatar {
+    width: 34px;
+    height: 34px;
+    font-size: 0.85rem;
   }
 }
 

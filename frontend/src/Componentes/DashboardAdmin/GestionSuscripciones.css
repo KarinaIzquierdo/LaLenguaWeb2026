@@ -6,14 +6,14 @@
 }
 
 .page-header {
-  margin-bottom: 30px;
+  margin-bottom: 40px;
 }
 
 .header-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 20px;
+  gap: 24px;
   flex-wrap: wrap;
 }
 
@@ -21,7 +21,7 @@
   font-size: 2rem;
   font-weight: 600;
   color: #1f2937;
-  margin: 0 0 8px 0;
+  margin: 0 0 12px 0;
 }
 
 .page-header p {
@@ -89,13 +89,18 @@
 
 /* Estadísticas */
 .stats-section {
-  margin-bottom: 30px;
+  margin-bottom: 40px;
+}
+
+.planes-vencer-section,
+.suscripciones-activas-section {
+  margin-bottom: 40px;
 }
 
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 20px;
+  gap: 24px;
 }
 
 .stat-card {
@@ -143,8 +148,9 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-  padding-bottom: 12px;
+  margin-bottom: 24px;
+  margin-top: 8px;
+  padding-bottom: 16px;
   border-bottom: 2px solid #f3f4f6;
 }
 
@@ -167,6 +173,7 @@
 .empty-state {
   text-align: center;
   padding: 40px 20px;
+  margin-bottom: 16px;
   color: #6b7280;
   background-color: #f9fafb;
   border-radius: 8px;
@@ -232,7 +239,7 @@
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  margin-bottom: 30px;
+  margin-bottom: 40px;
 }
 
 .planes-vencer-table table, .suscripciones-table table {
@@ -785,4 +792,248 @@
   background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
   color: white;
   box-shadow: 0 2px 8px rgba(107, 114, 128, 0.3);
+}
+
+/* ===== RESPONSIVE MEJORAS ===== */
+
+/* Tablas scrollables en pantallas medianas y pequeñas */
+.planes-vencer-table,
+.suscripciones-table,
+.tabla-estudiantes-container {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.planes-vencer-table::-webkit-scrollbar,
+.suscripciones-table::-webkit-scrollbar,
+.tabla-estudiantes-container::-webkit-scrollbar {
+  display: none;
+}
+
+.planes-vencer-table table,
+.suscripciones-table table,
+.tabla-estudiantes {
+  min-width: 700px;
+  width: 100%;
+}
+
+/* Ajustes de tablas en pantallas pequeñas */
+@media (max-width: 1024px) {
+  .gestion-suscripciones-container {
+    padding: 16px;
+    max-width: 100%;
+  }
+
+  .header-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .page-header h2 {
+    font-size: 1.6rem;
+  }
+
+  .btn-asignar-principal {
+    width: 100%;
+    text-align: center;
+  }
+}
+
+@media (max-width: 768px) {
+  .gestion-suscripciones-container {
+    padding: 12px;
+  }
+
+  .page-header h2 {
+    font-size: 1.4rem;
+  }
+
+  .page-header p {
+    font-size: 0.9rem;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .stat-card {
+    padding: 16px;
+  }
+
+  .stat-content h3 {
+    font-size: 1.6rem;
+  }
+
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding-bottom: 10px;
+    margin-bottom: 16px;
+  }
+
+  .section-header h3 {
+    font-size: 1.1rem;
+  }
+
+  .planes-vencer-table th,
+  .planes-vencer-table td,
+  .suscripciones-table th,
+  .suscripciones-table td,
+  .tabla-estudiantes th,
+  .tabla-estudiantes td {
+    padding: 10px 12px;
+    font-size: 0.85rem;
+    white-space: nowrap;
+  }
+
+  .acciones-cell {
+    flex-direction: column;
+    gap: 6px;
+    min-width: 110px;
+  }
+
+  .btn-recordatorio,
+  .btn-renovar,
+  .btn-cancelar-plan {
+    width: 100%;
+    justify-content: center;
+    font-size: 0.75rem;
+    padding: 6px 10px;
+  }
+
+  .estado-badge {
+    font-size: 0.7rem;
+    padding: 0.3rem 0.6rem;
+  }
+
+  .dias-badge {
+    font-size: 0.7rem;
+  }
+
+  .formulario-asignar-plan {
+    padding: 20px;
+    margin: 0;
+    max-width: 100%;
+  }
+
+  .form-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .btn-cancelar,
+  .btn-confirmar {
+    width: 100%;
+    text-align: center;
+  }
+
+  .empty-state {
+    padding: 24px 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .gestion-suscripciones-container {
+    padding: 10px;
+  }
+
+  .page-header h2 {
+    font-size: 1.25rem;
+  }
+
+  .page-header p {
+    font-size: 0.85rem;
+  }
+
+  .btn-asignar-principal {
+    padding: 10px 16px;
+    font-size: 0.9rem;
+  }
+
+  .stat-card {
+    padding: 14px;
+    gap: 12px;
+  }
+
+  .stat-icon {
+    font-size: 1.6rem;
+  }
+
+  .stat-content h3 {
+    font-size: 1.4rem;
+  }
+
+  .stat-content p {
+    font-size: 0.8rem;
+  }
+
+  .section-header h3 {
+    font-size: 1rem;
+  }
+
+  .count {
+    font-size: 0.8rem;
+  }
+
+  .planes-vencer-table th,
+  .planes-vencer-table td,
+  .suscripciones-table th,
+  .suscripciones-table td,
+  .tabla-estudiantes th,
+  .tabla-estudiantes td {
+    padding: 8px 10px;
+    font-size: 0.8rem;
+  }
+
+  .planes-vencer-table table,
+  .suscripciones-table table,
+  .tabla-estudiantes {
+    min-width: 600px;
+  }
+
+  .btn-recordatorio,
+  .btn-renovar,
+  .btn-cancelar-plan {
+    font-size: 0.7rem;
+    padding: 5px 8px;
+  }
+
+  .estado-badge {
+    font-size: 0.65rem;
+    padding: 0.25rem 0.5rem;
+  }
+
+  .dias-badge {
+    font-size: 0.65rem;
+    padding: 3px 6px;
+  }
+
+  .formulario-asignar-plan {
+    padding: 16px;
+  }
+
+  .form-group {
+    margin-bottom: 18px;
+  }
+
+  .form-select,
+  .form-input,
+  .form-textarea {
+    padding: 10px;
+    font-size: 0.9rem;
+  }
+
+  .tabla-estudiantes-container {
+    padding: 12px;
+  }
+
+  .tabla-estudiantes tbody tr:hover {
+    transform: none;
+  }
 }

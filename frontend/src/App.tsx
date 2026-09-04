@@ -18,6 +18,7 @@ import Dashboard_Admin from './Componentes/DashboardAdmin/Dashboard_Admin'
 import FormularioUsuarios from './Componentes/DashboardAdmin/FormularioUsuarios'
 import GestionEstudiantes from './Componentes/DashboardAdmin/GestionEstudiantes'
 import ProgramarClases from './Componentes/DashboardAdmin/ProgramarClases'
+import GestionClases from './Componentes/DashboardAdmin/GestionClases'
 // import GestionCursos from './Componentes/DashboardAdmin/GestionCursos'
 import GestionGaleria from './Componentes/DashboardAdmin/GestionGaleria'
 import Especializaciones from './Componentes/DashboardAdmin/Especializaciones'
@@ -241,6 +242,7 @@ function App() {
               <Route path="gestion-estudiantes" element={<GestionEstudiantes />} />
               <Route path="registros-eliminacion" element={<RegistrosEliminacion />} />
               <Route path="programar-clases" element={<ProgramarClases />} />
+              <Route path="gestion-clases" element={<GestionClases />} />
               {/** Gestión de cursos movida al Dashboard del Profesor como "Gestión CLB" **/}
               <Route path="galeria" element={<GestionGaleria />} />
               <Route path="especializaciones" element={<Especializaciones />} />

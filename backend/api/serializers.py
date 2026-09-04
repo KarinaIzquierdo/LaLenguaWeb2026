@@ -36,45 +36,52 @@ class MobileUserSerializer(serializers.ModelSerializer):
         return None
 
 class LoginSerializer(serializers.Serializer):
-    email = serializers.EmailField(required=False)
-    username = serializers.CharField(required=False)
+    email = serializers.CharField(required=False, allow_blank=True)
+    username = serializers.CharField(required=False, allow_blank=True)
     password = serializers.CharField()
 
     def validate(self, data):
-        # Aceptar tanto email como username para compatibilidad con Android
-        email = data.get('email')
-        username = data.get('username')
-        password = data.get('password')
+        # Debug para ver qué llega exactamente
+        email = data.get('email', '').strip()
+        username = data.get('username', '').strip()
+        password = data.get('password', '')
 
-        # Si viene username, usarlo como email (para Android)
-        if username and not email:
-            email = username
+        print(f"DEBUG LOGIN - Email: '{email}', Username: '{username}'")
 
-        if email and password:
-            # Buscar usuario por correo_personal (case insensitive)
-            user = None
-            try:
-                user = CustomUser.objects.get(correo_personal__iexact=email)
-            except CustomUser.DoesNotExist:
-                # Si no se encuentra por correo_personal, intentar por email institucional
-                try:
-                    user = CustomUser.objects.get(email__iexact=email)
-                except CustomUser.DoesNotExist:
-                    user = None
+        # Prioridad al identificador (email o username)
+        identifier = email if email else username
 
-            if not user:
-                raise serializers.ValidationError('Email o contraseña incorrectos.')
-
-            # Verificar contraseña
-            if user.check_password(password):
-                if user.is_active:
-                    data['user'] = user
-                else:
-                    raise serializers.ValidationError('La cuenta de usuario está desactivada.')
-            else:
-                raise serializers.ValidationError('Email o contraseña incorrectos.')
-        else:
+        if not identifier or not password:
             raise serializers.ValidationError('Debe proporcionar email/username y contraseña.')
+
+        # Intentar buscar el usuario por múltiples campos
+        user = None
+        
+        # 1. Buscar por correo_personal
+        user = CustomUser.objects.filter(correo_personal__iexact=identifier).first()
+        
+        # 2. Si no, buscar por email institucional
+        if not user:
+            user = CustomUser.objects.filter(email__iexact=identifier).first()
+            
+        # 3. Si no, buscar por username
+        if not user:
+            user = CustomUser.objects.filter(username__iexact=identifier).first()
+
+        if not user:
+            print(f"DEBUG LOGIN - Usuario no encontrado: {identifier}")
+            raise serializers.ValidationError('Email o contraseña incorrectos.')
+
+        # Verificar contraseña
+        if user.check_password(password):
+            if user.is_active:
+                data['user'] = user
+                print(f"DEBUG LOGIN - Éxito para: {user.username}")
+            else:
+                raise serializers.ValidationError('La cuenta de usuario está desactivada.')
+        else:
+            print(f"DEBUG LOGIN - Contraseña incorrecta para: {user.username}")
+            raise serializers.ValidationError('Email o contraseña incorrectos.')
 
         return data
 
@@ -155,6 +162,15 @@ class ClaseSerializer(serializers.ModelSerializer):
                  'tipo_clase', 'modalidad', 'meet_link', 'estado', 'estudiantes', 'estudiantesSeleccionados', 
                  'created_at', 'updated_at']
     
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        # El app móvil espera strings no nulos; el modelo permite null
+        if data.get('fecha') is None:
+            data['fecha'] = ''
+        if data.get('profesor') is None:
+            data['profesor'] = ''
+        return data
+
     def create(self, validated_data):
         # Debug: Ver qué datos están llegando
         print("=" * 50)

@@ -521,14 +521,6 @@ export default function ReportesProgreso() {
             <span className="resumen-valor">{progresoPromedio.toFixed(1)}%</span>
           </div>
         </div>
-        
-        <div className="resumen-card">
-          <div className="resumen-icon">⭐</div>
-          <div className="resumen-info">
-            <h3>Calificación Promedio</h3>
-            <span className="resumen-valor">{calificacionPromedio.toFixed(1)}</span>
-          </div>
-        </div>
       </div>
 
       {/* Loading state */}
@@ -573,16 +565,8 @@ export default function ReportesProgreso() {
                         {estudiante.nivel}
                       </span>
                     </td>
-                    <td>
-                      <div className="progreso-cell">
-                        <div className="progreso-barra-table">
-                          <div 
-                            className="progreso-relleno-table"
-                            style={{ width: `${estudiante.progreso}%` }}
-                          ></div>
-                        </div>
-                        <span className="progreso-porcentaje">{estudiante.progreso}%</span>
-                      </div>
+                    <td className="text-center">
+                      <span className="progreso-porcentaje">{estudiante.progreso}%</span>
                     </td>
                     <td className="text-center">
                       {estudiante.clasesCompletadas} / {estudiante.clasesTotales}

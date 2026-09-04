@@ -26,7 +26,6 @@ def generar_notificaciones_admin(admin):
             admin=admin,
             tipo='nuevo_estudiante',
             datos_adicionales__contains={'estudiante_id': estudiante.id},
-            created_at__date=hoy
         ).exists():
             notif = NotificacionAdmin.objects.create(
                 admin=admin,
@@ -45,7 +44,6 @@ def generar_notificaciones_admin(admin):
             admin=admin,
             tipo='nueva_venta',
             datos_adicionales__contains={'venta_id': venta.id},
-            created_at__date=hoy
         ).exists():
             notif = NotificacionAdmin.objects.create(
                 admin=admin,
@@ -88,7 +86,6 @@ def generar_notificaciones_admin(admin):
             admin=admin,
             tipo='plan_por_vencer',
             datos_adicionales__contains={'suscripcion_id': suscripcion.id},
-            created_at__date=hoy
         ).exists():
             notif = NotificacionAdmin.objects.create(
                 admin=admin,
@@ -110,7 +107,6 @@ def generar_notificaciones_admin(admin):
             admin=admin,
             tipo='plan_vencido',
             datos_adicionales__contains={'suscripcion_id': suscripcion.id},
-            created_at__date=hoy
         ).exists():
             notif = NotificacionAdmin.objects.create(
                 admin=admin,
@@ -129,7 +125,6 @@ def generar_notificaciones_admin(admin):
             admin=admin,
             tipo='nueva_clase',
             datos_adicionales__contains={'clase_id': clase.id},
-            created_at__date=hoy
         ).exists():
             notif = NotificacionAdmin.objects.create(
                 admin=admin,
@@ -231,3 +226,28 @@ def marcar_todas_admin_leidas(request):
             'success': False,
             'message': f'Error: {str(e)}'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def eliminar_notificacion_admin(request, notificacion_id):
+    """
+    Elimina una notificación de administrador
+    """
+    try:
+        notificacion = NotificacionAdmin.objects.get(
+            id=notificacion_id,
+            admin=request.user
+        )
+        notificacion.delete()
+
+        return Response({
+            'success': True,
+            'message': 'Notificación eliminada'
+        }, status=status.HTTP_200_OK)
+
+    except NotificacionAdmin.DoesNotExist:
+        return Response({
+            'success': False,
+            'message': 'Notificación no encontrada'
+        }, status=status.HTTP_404_NOT_FOUND)

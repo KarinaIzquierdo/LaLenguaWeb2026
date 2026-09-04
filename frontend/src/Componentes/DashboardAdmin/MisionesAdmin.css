@@ -34,8 +34,22 @@
   padding: 8px 12px;
 }
 
+.misiones-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  align-items: end;
+}
+
+.misiones-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .misiones-table {
   width: 100%;
+  min-width: 900px;
   border-collapse: collapse;
 }
 
@@ -44,6 +58,7 @@
   padding: 12px;
   border-bottom: 1px solid #e5e7eb;
   color: #1f2937;
+  white-space: nowrap;
 }
 
 .misiones-table th {
@@ -54,4 +69,14 @@
 
 .misiones-table tr:hover {
   background-color: #f9fafb;
+}
+
+.misiones-actions-cell {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.misiones-actions-cell button {
+  white-space: nowrap;
 }

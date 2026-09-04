@@ -131,26 +131,27 @@
 .plan-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 1rem;
+  justify-content: flex-start;
+  margin-bottom: 1.25rem;
   flex-wrap: wrap;
-  gap: 0.75rem;
+  gap: 1rem;
 }
 
 .plan-icon {
-  font-size: 2rem;
-  margin-right: 0.75rem;
+  font-size: 1.8rem;
+  min-width: 2rem;
+  text-align: center;
 }
 
 .plan-info {
   flex: 1;
-  min-width: 120px;
+  min-width: 140px;
 }
 
 .plan-info h4 {
   font-size: 1.25rem;
   color: #1e293b;
-  margin: 0 0 0.25rem 0;
+  margin: 0 0 0.35rem 0;
   font-weight: 700;
 }
 
@@ -180,19 +181,23 @@
 
 .plan-price {
   text-align: right;
-  color: var(--plan-color, #3b82f6);
+  color: #1e293b;
+  display: flex;
+  align-items: baseline;
+  gap: 0.1rem;
 }
 
 .plan-price .currency {
   font-size: 1.2rem;
   font-weight: 600;
-  vertical-align: top;
+  color: #64748b;
 }
 
 .plan-price .amount {
   font-size: 1.8rem;
   font-weight: 700;
   line-height: 1;
+  color: #1e293b;
 }
 
 .plan-price .period {
@@ -201,17 +206,55 @@
   font-weight: 500;
 }
 
+/* ===== PRECIOS DEL PLAN ===== */
+
+.plan-pricing {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.plan-price-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.plan-price-label {
+  font-size: 0.85rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.plan-price {
+  text-align: right;
+  color: #1e293b;
+  display: flex;
+  align-items: baseline;
+  gap: 0.1rem;
+}
+
+.plan-price.total-price .amount {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
 /* ===== CONTENIDO DEL PLAN ===== */
 
 .plan-content {
   flex: 1;
-  margin-bottom: 1rem;
+  margin-bottom: 1.25rem;
 }
 
 .plan-content.compact {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 1rem;
 }
 
 .plan-description {
@@ -267,7 +310,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 0.75rem;
+  gap: 1rem;
+  padding-top: 1rem;
 }
 
 .plan-stats.compact .stat {
@@ -292,7 +336,7 @@
 
 .stat-value {
   font-size: 0.95rem;
-  color: #1e293b;
+  color: #374151;
   font-weight: 500;
 }
 
@@ -332,6 +376,7 @@
   display: flex;
   gap: 0.75rem;
   flex-wrap: wrap;
+  margin-top: auto;
 }
 
 .btn-edit-plan,
@@ -452,7 +497,7 @@
 }
 
 .calculation .total {
-  color: #10b981;
+  color: #1e293b;
   font-size: 1.1rem;
   font-weight: 700;
 }
@@ -507,7 +552,7 @@
 }
 
 .resumen-item .price {
-  color: #10b981;
+  color: #1e293b;
   font-weight: 700;
   font-size: 1.1rem;
 }

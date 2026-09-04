@@ -24,21 +24,22 @@
   border: 1px solid #e5e7eb;
   border-radius: 12px;
   overflow: visible;
+  padding: 24px;
 }
 
 .form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0;
+  gap: 24px;
+  align-items: start;
 }
 
 .form-section {
-  padding: 32px;
-  border-right: 1px solid #e5e7eb;
-}
-
-.form-section:last-child {
-  border-right: none;
+  padding: 24px 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  min-width: 0;
 }
 
 .form-section h3 {
@@ -78,6 +79,8 @@
   border-radius: 8px;
   font-size: 14px;
   transition: border-color 0.2s ease;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .form-group input:focus,
@@ -402,18 +405,26 @@
 }
 
 /* Responsive */
-@media (max-width: 1024px) {
+@media (max-width: 1200px) {
   .form-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .form-section {
-    border-right: none;
-    border-bottom: 1px solid #e5e7eb;
+    padding: 24px 0;
   }
-  
-  .form-section:last-child {
-    border-bottom: none;
+
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .estudiantes-list {
+    max-height: 45vh;
+  }
+
+  .clase-form {
+    padding: 20px;
   }
 }
 
@@ -421,24 +432,79 @@
   .programar-clase {
     padding: 20px;
   }
-  
+
   .form-section {
-    padding: 24px;
+    padding: 20px 0;
   }
-  
+
   .form-row {
     grid-template-columns: 1fr;
     gap: 12px;
   }
-  
+
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    padding: 10px;
+    font-size: 16px;
+  }
+
   .form-actions {
     padding: 20px 24px;
     flex-direction: column;
   }
-  
+
   .btn-primary,
   .btn-secondary {
     width: 100%;
+  }
+
+  .programar-header h2 {
+    font-size: 20px;
+  }
+
+  .programar-header p {
+    font-size: 14px;
+  }
+
+  .estudiantes-list {
+    max-height: 40vh;
+  }
+
+  .panel-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .btn-seleccionar-todos {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .programar-clase {
+    padding: 12px;
+  }
+
+  .form-section {
+    padding: 16px 0;
+  }
+
+  .programar-header h2 {
+    font-size: 18px;
+  }
+
+  .programar-header p {
+    font-size: 13px;
+  }
+
+  .form-group label {
+    font-size: 13px;
+  }
+
+  .estudiantes-list {
+    max-height: 35vh;
   }
 }
 

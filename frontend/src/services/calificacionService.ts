@@ -29,9 +29,9 @@ interface PanelCalificacionItem {
   respuesta_id: number | null;
   tiene_respuesta: boolean;
   calificacion: number | null;
+  comentarios_profesor?: string | null;
   fecha_envio: string | null;
   archivo_respuesta_url?: string | null;
-  comentarios_profesor?: string | null;
 }
 
 interface CalificacionData {
@@ -41,11 +41,11 @@ interface CalificacionData {
 
 class CalificacionService {
   private getBaseUrl() {
-    // Si se define VITE_DJANGO_API_URL, usarla (por ejemplo, para probar contra Django local)
+    // Override opcional para apuntar a otra instancia de Django
     if (import.meta.env.VITE_DJANGO_API_URL) {
       return import.meta.env.VITE_DJANGO_API_URL as string;
     }
-    // En cualquier otro caso (dev o prod) usar la base global configurada (normalmente PHP)
+    // Base global configurada (Django por defecto: http://127.0.0.1:8000/api en dev)
     return API_BASE_URL;
   }
 

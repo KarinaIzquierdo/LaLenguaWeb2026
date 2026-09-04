@@ -82,7 +82,7 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # Configuración para MySQL (desarrollo y producción)
 DATABASES = {
     'default': {
-        'ENGINE': 'mysql.connector.django',
+        'ENGINE': 'django.db.backends.mysql',
         'NAME': config('DB_NAME', default='La_lengua_bd2'),
         'USER': config('DB_USER', default='root'),
         'PASSWORD': config('DB_PASSWORD', default=''),
@@ -91,7 +91,6 @@ DATABASES = {
         'OPTIONS': {
             'charset': 'utf8mb4',
             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
-            'use_pure': True,  # Forzar el conector de Python puro para evitar desvíos del sistema
         },
     }
 }
@@ -129,7 +128,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'America/Bogota'
 
 USE_I18N = True
 
