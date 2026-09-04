@@ -1,5 +1,5 @@
 // src/components/Layout/PiePagina.tsx
-import "./Layout.css";
+import "./layout.css";
 
 function PiePagina() {
   const handleSocialClick = (url: string, name: string) => {
