@@ -840,8 +840,7 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
             <div className="estado-vacio">
               <div className="vacio-icon">📅</div>
               <h3>No tienes clases activas</h3>
-              <p>Programa tu primera clase para comenzar</p>
-              <button className="btn-programar-primera">➕ Programar Clase</button>
+              <p>Aún no tienes clases programadas</p>
             </div>
           )}
         </div>
