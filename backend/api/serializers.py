@@ -232,6 +232,12 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         model = CustomUser
         fields = ('username', 'first_name', 'last_name', 'email', 'role', 'password', 'especializacion', 'correo_personal', 'english_level')
 
+    def validate_role(self, value):
+        """Solo puede existir un administrador en el sistema"""
+        if value == 'admin' and CustomUser.objects.filter(role='admin').exists():
+            raise serializers.ValidationError('Ya existe un administrador en el sistema.')
+        return value
+
     def validate_correo_personal(self, value):
         """Validar que el correo personal sea único"""
         if CustomUser.objects.filter(correo_personal__iexact=value).exists():
