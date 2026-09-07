@@ -2,9 +2,8 @@ import React, { useEffect, useState } from 'react';
 import Header from '../Layout/Encabezado';
 import Footer from '../Layout/PiePagina';
 import type { Plan } from '../../services/financialService';
+import { API_BASE_URL } from '../../config/api';
 import './PlanesPublicos.css';
-
-const PHP_API_BASE_URL = 'https://lalenguacolombia.co/api/index.php';
 
 export default function PlanesPublicos() {
   const [planes, setPlanes] = useState<Plan[]>([]);
@@ -15,7 +14,7 @@ export default function PlanesPublicos() {
     const loadPlanes = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`${PHP_API_BASE_URL}/planes/public/`);
+        const response = await fetch(`${API_BASE_URL}/planes/`);
         if (!response.ok) {
           throw new Error(`Error al obtener planes públicos: ${response.status}`);
         }
