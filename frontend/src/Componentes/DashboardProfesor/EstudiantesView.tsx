@@ -325,17 +325,51 @@ export default function EstudiantesView() {
     setEstudianteSeleccionado(null);
   };
 
-  // Manejar cambio de asistencia (solo actualiza estado temporal)
-  const handleAsistenciaChange = (estudianteId: string, estado: 'presente' | 'ausente') => {
+  // Manejar cambio de asistencia: guarda inmediatamente en el backend
+  const handleAsistenciaChange = async (estudianteId: string, estado: 'presente' | 'ausente') => {
     if (!claseSeleccionada) {
       alert('Por favor selecciona una clase antes de marcar asistencia');
       return;
     }
-    
+
+    // Actualizar estado temporal de inmediato para reflejar el clic
     setAsistenciasTemporal(prev => ({
       ...prev,
       [estudianteId]: estado
     }));
+
+    // Evitar dobles clics mientras se guarda este estudiante
+    if (guardandoAsistencia[estudianteId]) return;
+    setGuardandoAsistencia(prev => ({ ...prev, [estudianteId]: true }));
+
+    try {
+      await asistenciaService.registrarAsistencia({
+        estudiante_id: Number(estudianteId),
+        clase_id: claseSeleccionada.id,
+        fecha: claseSeleccionada.fecha,
+        estado
+      });
+
+      // Marcar como guardada en el mapa de asistencias de la clase
+      setAsistenciasClaseActual(prev => ({
+        ...prev,
+        [estudianteId]: estado
+      }));
+
+      // Actualizar contador de clases asistidas del estudiante
+      const estadisticas = await asistenciaService.getEstadisticasAsistencia(Number(estudianteId));
+      setEstadisticasAsistencia(prev => ({ ...prev, [estudianteId]: estadisticas }));
+      setEstudiantes(prev => prev.map(est =>
+        est.id === estudianteId
+          ? { ...est, clasesCompletadas: estadisticas.presentes }
+          : est
+      ));
+    } catch (error) {
+      console.error('Error guardando asistencia individual:', error);
+      alert('❌ No se pudo guardar la asistencia. Usa el botón "Guardar Asistencia" para reintentar.');
+    } finally {
+      setGuardandoAsistencia(prev => ({ ...prev, [estudianteId]: false }));
+    }
   };
 
   // Guardar todas las asistencias de la clase
@@ -526,6 +560,9 @@ export default function EstudiantesView() {
                       </td>
                       <td className="text-center" style={{ minWidth: '260px' }}>
                         <div className="asistencia-controls">
+                          {guardandoAsistencia[estudiante.id] && (
+                            <span className="asistencia-guardando">⏳</span>
+                          )}
                           <label className="asistencia-option">
                             <input 
                               type="radio" 
@@ -533,7 +570,7 @@ export default function EstudiantesView() {
                               value="presente"
                               checked={asistenciasTemporal[estudiante.id] === 'presente'}
                               onChange={() => handleAsistenciaChange(estudiante.id, 'presente')}
-                              disabled={guardandoTodasAsistencias || !claseSeleccionada}
+                              disabled={guardandoTodasAsistencias || guardandoAsistencia[estudiante.id] || !claseSeleccionada}
                             />
                             <span className="asistencia-label presente">
                               ✓ Presente
@@ -547,7 +584,7 @@ export default function EstudiantesView() {
                               value="ausente"
                               checked={asistenciasTemporal[estudiante.id] === 'ausente'}
                               onChange={() => handleAsistenciaChange(estudiante.id, 'ausente')}
-                              disabled={guardandoTodasAsistencias || !claseSeleccionada}
+                              disabled={guardandoTodasAsistencias || guardandoAsistencia[estudiante.id] || !claseSeleccionada}
                             />
                             <span className="asistencia-label ausente">
                               ✗ Ausente

@@ -790,3 +790,52 @@
     gap: 12px;
   }
 }
+
+/* Indicador de guardado de asistencia individual */
+.asistencia-guardando {
+  font-size: 0.9rem;
+  margin-right: 4px;
+  animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.asistencia-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.asistencia-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.asistencia-option input[type="radio"] {
+  cursor: pointer;
+  accent-color: #667eea;
+}
+
+.asistencia-option input[type="radio"]:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.asistencia-label {
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.asistencia-label.presente {
+  color: #10b981;
+}
+
+.asistencia-label.ausente {
+  color: #ef4444;
+}
