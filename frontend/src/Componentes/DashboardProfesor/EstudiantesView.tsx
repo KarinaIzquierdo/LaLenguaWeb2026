@@ -327,10 +327,9 @@ export default function EstudiantesView() {
 
   // Manejar cambio de asistencia: guarda inmediatamente en el backend
   const handleAsistenciaChange = async (estudianteId: string, estado: 'presente' | 'ausente') => {
-    if (!claseSeleccionada) {
-      alert('Por favor selecciona una clase antes de marcar asistencia');
-      return;
-    }
+    // Si no hay clase seleccionada, usar la fecha de hoy sin clase asociada
+    const fechaAsistencia = claseSeleccionada?.fecha || new Date().toISOString().split('T')[0];
+    const claseId = claseSeleccionada?.id || null;
 
     // Actualizar estado temporal de inmediato para reflejar el clic
     setAsistenciasTemporal(prev => ({
@@ -345,8 +344,8 @@ export default function EstudiantesView() {
     try {
       await asistenciaService.registrarAsistencia({
         estudiante_id: Number(estudianteId),
-        clase_id: claseSeleccionada.id,
-        fecha: claseSeleccionada.fecha,
+        clase_id: claseId ?? undefined,
+        fecha: fechaAsistencia,
         estado
       });
 
@@ -375,16 +374,15 @@ export default function EstudiantesView() {
   // Guardar todas las asistencias de la clase
   const guardarTodasAsistencias = async () => {
     try {
-      if (!claseSeleccionada) {
-        alert('Por favor selecciona una clase');
-        return;
-      }
-
       // Validar que haya al menos una asistencia marcada
       if (Object.keys(asistenciasTemporal).length === 0) {
         alert('Por favor marca al menos una asistencia antes de guardar');
         return;
       }
+
+      // Si no hay clase seleccionada, usar la fecha de hoy sin clase asociada
+      const fechaAsistencia = claseSeleccionada?.fecha || new Date().toISOString().split('T')[0];
+      const claseId = claseSeleccionada?.id || null;
 
       setGuardandoTodasAsistencias(true);
 
@@ -392,8 +390,8 @@ export default function EstudiantesView() {
       const promesas = Object.entries(asistenciasTemporal).map(([estudianteId, estado]) => 
         asistenciaService.registrarAsistencia({
           estudiante_id: Number(estudianteId),
-          clase_id: claseSeleccionada.id,
-          fecha: claseSeleccionada.fecha,
+          clase_id: claseId ?? undefined,
+          fecha: fechaAsistencia,
           estado: estado as 'presente' | 'ausente'
         })
       );
@@ -418,7 +416,7 @@ export default function EstudiantesView() {
       })));
 
       alert('✅ Asistencia guardada correctamente');
-      console.log(`Asistencias guardadas para clase: ${claseSeleccionada.nombre} (${claseSeleccionada.fecha})`);
+      console.log(`Asistencias guardadas: ${claseSeleccionada?.nombre || 'sin clase'} (${fechaAsistencia})`);
     } catch (error) {
       console.error('Error guardando asistencias:', error);
       alert('❌ Error al guardar las asistencias. Por favor intenta de nuevo.');
@@ -497,7 +495,7 @@ export default function EstudiantesView() {
           <button 
             className="btn-guardar-asistencia"
             onClick={guardarTodasAsistencias}
-            disabled={!claseSeleccionada || guardandoTodasAsistencias || Object.keys(asistenciasTemporal).length === 0}
+            disabled={guardandoTodasAsistencias || Object.keys(asistenciasTemporal).length === 0}
           >
             {guardandoTodasAsistencias ? '⏳ Guardando...' : '💾 Guardar Asistencia'}
           </button>
@@ -570,7 +568,7 @@ export default function EstudiantesView() {
                               value="presente"
                               checked={asistenciasTemporal[estudiante.id] === 'presente'}
                               onChange={() => handleAsistenciaChange(estudiante.id, 'presente')}
-                              disabled={guardandoTodasAsistencias || guardandoAsistencia[estudiante.id] || !claseSeleccionada}
+                              disabled={guardandoTodasAsistencias || guardandoAsistencia[estudiante.id]}
                             />
                             <span className="asistencia-label presente">
                               ✓ Presente
@@ -584,7 +582,7 @@ export default function EstudiantesView() {
                               value="ausente"
                               checked={asistenciasTemporal[estudiante.id] === 'ausente'}
                               onChange={() => handleAsistenciaChange(estudiante.id, 'ausente')}
-                              disabled={guardandoTodasAsistencias || guardandoAsistencia[estudiante.id] || !claseSeleccionada}
+                              disabled={guardandoTodasAsistencias || guardandoAsistencia[estudiante.id]}
                             />
                             <span className="asistencia-label ausente">
                               ✗ Ausente
