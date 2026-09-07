@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { FaEdit, FaTrash, FaPlus, FaSpinner, FaBars } from 'react-icons/fa';
+import { FaPencilAlt, FaTrashAlt, FaPlus, FaSpinner } from 'react-icons/fa';
 import { ClaseService } from '../../services/claseService';
 import './GestionClases.css';
 
@@ -178,16 +178,18 @@ export default function GestionClases() {
                         onClick={() => handleEdit(clase)}
                         disabled={isLoading}
                         aria-label="Editar"
+                        title="Editar clase"
                       >
-                        <FaEdit />
+                        <FaPencilAlt size={18} color="#ffffff" />
                       </button>
                       <button
                         className="gestion-clases-delete-btn"
                         onClick={() => handleDelete(clase.id)}
                         disabled={isLoading}
                         aria-label="Eliminar"
+                        title="Eliminar clase"
                       >
-                        <FaTrash />
+                        <FaTrashAlt size={18} color="#ffffff" />
                       </button>
                     </div>
                   </td>
