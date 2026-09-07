@@ -24,11 +24,8 @@ interface ChangePasswordData {
   new_password: string;
 }
 
-// En desarrollo usamos la misma BASE_URL que el resto de servicios (Django/local)
-// En producción mantenemos el endpoint legacy en PHP
-const API_BASE_URL = import.meta.env.MODE === 'development'
-  ? CONFIG_API_BASE_URL
-  : 'https://lalenguacolombia.co/api/index.php';
+// Usamos la BASE_URL centralizada de Django
+const API_BASE_URL = CONFIG_API_BASE_URL;
 
 export const authService = {
   // Login del usuario
