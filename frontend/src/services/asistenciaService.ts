@@ -59,6 +59,20 @@ export const asistenciaService = {
     }
   },
 
+  // Obtener asistencias por fecha
+  getAsistenciasPorFecha: async (fecha: string) => {
+    try {
+      const response = await axios.get(
+        `${API_URL}/asistencias/?fecha=${fecha}`,
+        { headers: getAuthHeaders() }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error obteniendo asistencias por fecha:', error);
+      throw error;
+    }
+  },
+
   // Obtener estadísticas de asistencia de un estudiante
   getEstadisticasAsistencia: async (estudianteId: number) => {
     try {

@@ -47,11 +47,31 @@ export default function HistorialAsistencias() {
       setCargando(true);
       setClaseSeleccionada(clase);
       
-      // Obtener asistencias guardadas desde el backend
-      const asistenciasData = await asistenciaService.getAsistenciasPorClase(clase.id);
+      // Obtener asistencias guardadas desde el backend (por clase y por fecha)
+      let asistenciasData: any[] = [];
+      try {
+        asistenciasData = await asistenciaService.getAsistenciasPorClase(clase.id);
+      } catch (e) {
+        console.error('Error cargando asistencias por clase:', e);
+      }
+
+      // También buscar asistencias guardadas con la misma fecha pero sin clase asignada
+      if (clase.fecha) {
+        try {
+          const porFecha = await asistenciaService.getAsistenciasPorFecha(clase.fecha);
+          const idsYaIncluidos = new Set(asistenciasData.map((a: any) => a.id));
+          porFecha.forEach((a: any) => {
+            if (!idsYaIncluidos.has(a.id)) {
+              asistenciasData.push(a);
+            }
+          });
+        } catch (e) {
+          console.error('Error cargando asistencias por fecha:', e);
+        }
+      }
       
       // Obtener todos los estudiantes asignados a esta clase
-      const estudiantesAsignados: number[] = clase.estudiantes || [];
+      const estudiantesAsignados: number[] = Array.isArray(clase.estudiantes) ? clase.estudiantes : [];
       
       let todosLosUsuarios: any[] = [];
       try {
@@ -60,18 +80,22 @@ export default function HistorialAsistencias() {
         console.error('Error cargando usuarios:', e);
       }
       
+      // Unir: estudiantes asignados + estudiantes que tienen asistencia registrada
+      const idsConAsistencia = asistenciasData.map((a: any) => a.estudiante_id);
+      const idsEstudiantes = Array.from(new Set([...estudiantesAsignados, ...idsConAsistencia]));
+      
       const estudiantesInfo = todosLosUsuarios.filter((u: any) => 
-        estudiantesAsignados.includes(u.id)
+        idsEstudiantes.includes(u.id)
       );
       
-      // Construir lista completa: todos los estudiantes asignados + su estado de asistencia
+      // Construir lista completa: todos los estudiantes + su estado de asistencia
       const asistenciasCompletas: AsistenciaHistorial[] = estudiantesInfo.map((estudiante: any) => {
         const asistenciaGuardada = asistenciasData.find((a: any) => a.estudiante_id === estudiante.id);
         return {
           id: asistenciaGuardada?.id || 0,
           estudiante_id: estudiante.id,
           estudiante_nombre: `${estudiante.nombres || estudiante.first_name || ''} ${estudiante.apellidos || estudiante.last_name || ''}`.trim(),
-          fecha: asistenciaGuardada?.fecha || clase.fecha,
+          fecha: asistenciaGuardada?.fecha || clase.fecha || '',
           estado: asistenciaGuardada?.estado || 'sin_marcar',
           clase_id: clase.id
         };
@@ -83,6 +107,18 @@ export default function HistorialAsistencias() {
     } finally {
       setCargando(false);
     }
+  };
+
+  // Formatear fecha de forma segura (evita "Invalid Date" cuando viene vacía)
+  const formatFecha = (fecha: string | null | undefined) => {
+    if (!fecha) return 'Sin fecha';
+    const d = new Date(fecha + 'T12:00:00');
+    if (isNaN(d.getTime())) return 'Sin fecha';
+    return d.toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
   };
 
   const getEstadoBadge = (estado: string) => {
@@ -138,11 +174,7 @@ export default function HistorialAsistencias() {
                 >
                   <div className="clase-nombre">{clase.nombre}</div>
                   <div className="clase-fecha">
-                    {new Date(clase.fecha + 'T12:00:00').toLocaleDateString('es-ES', {
-                      day: '2-digit',
-                      month: 'short',
-                      year: 'numeric'
-                    })}
+                    {formatFecha(clase.fecha)}
                   </div>
                   <div className="clase-hora">{clase.hora}</div>
                   <span className={`clase-estado ${clase.estado}`}>
@@ -173,7 +205,7 @@ export default function HistorialAsistencias() {
               <div className="clase-info-card">
                 <h3>{claseSeleccionada.nombre}</h3>
                 <div className="clase-details">
-                  <span>📅 {new Date(claseSeleccionada.fecha + 'T12:00:00').toLocaleDateString('es-ES')}</span>
+                  <span>📅 {formatFecha(claseSeleccionada.fecha)}</span>
                   <span>🕐 {claseSeleccionada.hora}</span>
                   <span className={`estado-clase ${claseSeleccionada.estado}`}>
                     {claseSeleccionada.estado}
@@ -230,7 +262,7 @@ export default function HistorialAsistencias() {
                             {getEstadoBadge(asistencia.estado)}
                           </td>
                           <td className="text-center">
-                            {new Date(asistencia.fecha + 'T12:00:00').toLocaleDateString('es-ES')}
+                            {formatFecha(asistencia.fecha)}
                           </td>
                         </tr>
                       ))}
