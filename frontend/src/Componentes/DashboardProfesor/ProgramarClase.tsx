@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import './ProgramarClase.css';
 import { userService } from '../../services/userService';
+import axios from 'axios';
+import { API_BASE_URL } from '../../config/api';
 
 interface EstudianteDisponible {
   id: string;
@@ -41,17 +43,9 @@ export default function ProgramarClase() {
   const [filtroNivel, setFiltroNivel] = useState('todos');
   const [seleccionarTodos, setSeleccionarTodos] = useState(false);
 
-  const temasComunes = [
-    'Conversación Básica',
-    'Gramática Avanzada',
-    'Vocabulario de Negocios',
-    'Pronunciación',
-    'Comprensión Auditiva',
-    'Escritura Académica',
-    'Inglés Conversacional',
-    'Preparación TOEFL',
-    'Inglés para Viajes'
-  ];
+  // Temas reales cargados desde la base de datos
+  const [temasComunes, setTemasComunes] = useState<string[]>([]);
+  const [cargandoTemas, setCargandoTemas] = useState(true);
 
   const nivelesSistema = ['A1', 'A1+', 'A2', 'A2+', 'B1', 'B1+', 'B2', 'B2+', 'C1', 'C1+', 'C2'];
   const nivelesBaseOrden = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
@@ -85,6 +79,27 @@ export default function ProgramarClase() {
 
     return na.localeCompare(nb, 'es', { sensitivity: 'base' });
   };
+
+  // Cargar temas reales de la base de datos
+  useEffect(() => {
+    const cargarTemas = async () => {
+      setCargandoTemas(true);
+      try {
+        const token = localStorage.getItem('token');
+        const res = await axios.get(`${API_BASE_URL}/admin/temas/`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {}
+        });
+        if (res.data?.success && Array.isArray(res.data.topics)) {
+          setTemasComunes(res.data.topics.map((t: any) => t.name));
+        }
+      } catch (error) {
+        console.error('Error cargando temas:', error);
+      } finally {
+        setCargandoTemas(false);
+      }
+    };
+    cargarTemas();
+  }, []);
 
   // Cargar estudiantes reales de la base de datos
   useEffect(() => {
@@ -365,7 +380,9 @@ export default function ProgramarClase() {
                 onChange={handleInputChange}
                 required
               >
-                <option value="">Selecciona un tema</option>
+                <option value="">
+                  {cargandoTemas ? 'Cargando temas...' : 'Selecciona un tema'}
+                </option>
                 {temasComunes.map(tema => (
                   <option key={tema} value={tema}>{tema}</option>
                 ))}
