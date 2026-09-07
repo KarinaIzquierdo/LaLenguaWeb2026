@@ -30,7 +30,10 @@ export default function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.email || !formData.password) {
+    const email = formData.email.trim();
+    const password = formData.password.trim();
+
+    if (!email || !password) {
       setError('Por favor, completa todos los campos');
       return;
     }
@@ -39,9 +42,10 @@ export default function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps
     setError('');
 
     try {
-      await onLogin(formData);
-    } catch (error) {
-      setError('Email o contraseña incorrectos');
+      await onLogin({ email, password });
+    } catch (err: any) {
+      console.error('Login submit error:', err);
+      setError(err?.message || 'Email o contraseña incorrectos');
     } finally {
       setIsLoading(false);
     }
