@@ -176,8 +176,19 @@ SIMPLE_JWT = {
 # CORS Configuration
 CORS_ALLOWED_ORIGINS = config(
     'CORS_ALLOWED_ORIGINS', 
-    default='http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173,http://179.199.144.149'
+    default='http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173,http://179.199.144.149,http://lalenguacolombia.co,https://lalenguacolombia.co,http://www.lalenguacolombia.co,https://www.lalenguacolombia.co'
 ).split(',')
+
+CSRF_TRUSTED_ORIGINS = [
+    'http://lalenguacolombia.co',
+    'https://lalenguacolombia.co',
+    'http://www.lalenguacolombia.co',
+    'https://www.lalenguacolombia.co',
+    'http://api.lalenguacolombia.co',
+    'https://api.lalenguacolombia.co',
+    'http://179.199.144.149',
+    'http://179.199.144.149:8001',
+]
 
 # Para desarrollo con Android (solo en desarrollo)
 CORS_ALLOW_ALL_ORIGINS = config('DEBUG', default=True, cast=bool)  # Solo en desarrollo
