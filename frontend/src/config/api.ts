@@ -10,10 +10,12 @@ const getBaseUrl = () => {
   
   // En producción, si no hay variable de entorno, usar el mismo host del navegador
   const { protocol, hostname } = window.location;
-  // Si estamos en la IP 179... o similar, asumimos que el backend está en el puerto 8000
-  if (hostname.includes('179.199.144.149')) {
+  
+  // Si estamos accediendo por IP, el backend suele estar en el puerto 8000
+  if (hostname.match(/\d+\.\d+\.\d+\.\d+/)) {
     return `${protocol}//${hostname}:8000/api`;
   }
+  
   return 'https://api.lalenguacolombia.co/api';
 };
 

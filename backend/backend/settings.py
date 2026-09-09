@@ -189,10 +189,8 @@ SIMPLE_JWT = {
 }
 
 # CORS Configuration
-CORS_ALLOWED_ORIGINS = config(
-    'CORS_ALLOWED_ORIGINS', 
-    default='http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173,http://179.199.144.149,http://lalenguacolombia.co,https://lalenguacolombia.co,http://www.lalenguacolombia.co,https://www.lalenguacolombia.co'
-).split(',')
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
 
 CSRF_TRUSTED_ORIGINS = [
     'http://lalenguacolombia.co',
@@ -202,29 +200,10 @@ CSRF_TRUSTED_ORIGINS = [
     'http://api.lalenguacolombia.co',
     'https://api.lalenguacolombia.co',
     'http://179.199.144.149',
+    'http://179.199.144.149:8000',
     'http://179.199.144.149:8001',
+    'http://179.199.144.149:3000',
 ]
-
-# Para desarrollo con Android (solo en desarrollo)
-CORS_ALLOW_ALL_ORIGINS = config('DEBUG', default=True, cast=bool)  # Solo en desarrollo
-CORS_ALLOW_CREDENTIALS = True
-
-# Headers permitidos para Android
-CORS_ALLOW_HEADERS = [
-    'accept',
-    'accept-encoding',
-    'authorization',
-    'content-type',
-    'dnt',
-    'origin',
-    'user-agent',
-    'x-csrftoken',
-    'x-requested-with',
-]
-
-# Allow hosts for development and production
-ALLOWED_HOSTS = ['*']
-CORS_ALLOW_ALL_ORIGINS = True
 
 # Email Configuration
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
