@@ -1,11 +1,24 @@
 // Configuración de API para diferentes entornos
 const isDevelopment = import.meta.env.MODE === 'development';
-const isProduction = import.meta.env.MODE === 'production';
+
+// Detectar la URL del servidor actual dinámicamente
+const getBaseUrl = () => {
+  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+  if (import.meta.env.VITE_API_BASE_URL) return import.meta.env.VITE_API_BASE_URL;
+  
+  if (isDevelopment) return 'http://127.0.0.1:8000/api';
+  
+  // En producción, si no hay variable de entorno, usar el mismo host del navegador
+  const { protocol, hostname } = window.location;
+  // Si estamos en la IP 179... o similar, asumimos que el backend está en el puerto 8000
+  if (hostname.includes('179.199.144.149')) {
+    return `${protocol}//${hostname}:8000/api`;
+  }
+  return 'https://api.lalenguacolombia.co/api';
+};
 
 export const API_CONFIG = {
-  BASE_URL: import.meta.env.VITE_API_URL || 
-           import.meta.env.VITE_API_BASE_URL || 
-           (isDevelopment ? 'http://127.0.0.1:8000/api' : 'https://api.lalenguacolombia.co/api'),
+  BASE_URL: getBaseUrl(),
   
   // Timeout para requests
   TIMEOUT: 10000,
