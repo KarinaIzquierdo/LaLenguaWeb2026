@@ -29,6 +29,7 @@ import MisionesAdmin from './Componentes/DashboardAdmin/MisionesAdmin';
 import RetosDiariosAdmin from './Componentes/DashboardAdmin/RetosDiariosAdmin';
 import RankingRetosAdmin from './Componentes/DashboardAdmin/RankingRetosAdmin';
 import RegistrosEliminacion from './Componentes/DashboardAdmin/RegistrosEliminacion';
+import HistorialDocente from './Componentes/DashboardAdmin/HistorialDocente';
 import NotificacionesProfesor from './Componentes/DashboardProfesor/NotificacionesProfesor';
 
 function App() {
@@ -239,6 +240,7 @@ function App() {
               <Route index element={<Navigate to="dashboard" replace />} />
               <Route path="dashboard" element={<Dashboard_Admin />} />
               <Route path="usuarios" element={<FormularioUsuarios />} />
+              <Route path="historial-docente" element={<HistorialDocente />} />
               <Route path="gestion-estudiantes" element={<GestionEstudiantes />} />
               <Route path="registros-eliminacion" element={<RegistrosEliminacion />} />
               <Route path="programar-clases" element={<ProgramarClases />} />
