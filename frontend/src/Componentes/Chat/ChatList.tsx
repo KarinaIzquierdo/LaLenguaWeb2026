@@ -111,11 +111,10 @@ const ChatList: React.FC<ChatListProps> = ({ onSelectRoom }) => {
                 </p>
               </div>
               
-              {/* Indicador de Mensajes No Leídos (Estilo WhatsApp) */}
+              {/* Indicador de Mensajes No Leídos (Estilo WhatsApp simplificado) */}
               {contact.unread_count > 0 && (
-                <div className="flex flex-col items-end gap-1 ml-2">
-                  <span className="text-[10px] text-emerald-600 font-bold">NUEVO</span>
-                  <div className="bg-emerald-500 text-white text-[11px] font-bold min-w-[22px] h-[22px] rounded-full flex items-center justify-center px-1.5 shadow-md border border-white">
+                <div className="flex flex-col items-end justify-center ml-2">
+                  <div className="bg-emerald-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center shadow-sm">
                     {contact.unread_count}
                   </div>
                 </div>
