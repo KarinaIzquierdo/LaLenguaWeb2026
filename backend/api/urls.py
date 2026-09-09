@@ -30,6 +30,9 @@ router.register(r'clases', ClaseViewSet)
 router.register(r'media', MediaItemViewSet)
 
 urlpatterns = [
+    # Health check
+    path('health/', views.health_check, name='health_check'),
+    
     # Endpoints para estudiantes
     path('estudiantes/<int:estudiante_id>/detalle-academico/', views.estudiante_detalle_academico_view, name='estudiante_detalle_academico'),
     path('auth/login/', views.login_view, name='login'),
