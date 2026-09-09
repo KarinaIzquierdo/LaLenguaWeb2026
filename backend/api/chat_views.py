@@ -88,8 +88,27 @@ def chat_contacts_view(request):
         contacts = estudiantes
 
     from .serializers import UserSerializer
-    serializer = UserSerializer(contacts, many=True)
-    return Response(serializer.data)
+    data = []
+    for contact in contacts:
+        # Buscar si existe una sala entre el usuario actual y este contacto
+        room = ChatRoom.objects.filter(
+            (Q(estudiante=user) & Q(profesor=contact)) | 
+            (Q(estudiante=contact) & Q(profesor=user))
+        ).first()
+        
+        unread_count = 0
+        if room:
+            # Contar mensajes no leídos donde el remitente NO sea el usuario actual
+            unread_count = ChatMessage.objects.filter(
+                room=room,
+                is_read=False
+            ).exclude(sender=user).count()
+            
+        contact_data = UserSerializer(contact).data
+        contact_data['unread_count'] = unread_count
+        data.append(contact_data)
+
+    return Response(data)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
