@@ -227,21 +227,8 @@ USE_X_FORWARDED_HOST = True
 USE_X_FORWARDED_PORT = True
 
 # CORS Configuration
+CORS_ALLOW_ALL_ORIGINS = True  # Comodín temporal para pruebas
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_ALL_ORIGINS = False  # Desactivamos el comodín para mayor seguridad con credenciales
-
-CORS_ALLOWED_ORIGINS = [
-    "https://www.lalenguacolombia.co",
-    "https://lalenguacolombia.co",
-    "https://api.lalenguacolombia.co",
-]
-
-# También permitimos estos para CSRF
-CSRF_TRUSTED_ORIGINS = [
-    "https://www.lalenguacolombia.co",
-    "https://lalenguacolombia.co",
-    "https://api.lalenguacolombia.co",
-]
 
 CORS_ALLOW_METHODS = [
     'DELETE',
