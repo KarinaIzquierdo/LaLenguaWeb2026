@@ -23,7 +23,7 @@ const ChatContainer: React.FC = () => {
     };
 
     fetchUnreadCount();
-    const interval = setInterval(fetchUnreadCount, 15000); // Cada 15 segundos
+    const interval = setInterval(fetchUnreadCount, 5000); // Cada 5 segundos
 
     return () => clearInterval(interval);
   }, [isOpen, selectedRoom]); // Recargar si se abre o se cambia de sala
@@ -59,7 +59,7 @@ const ChatContainer: React.FC = () => {
         
         {/* Badge de Notificación */}
         {unreadCount > 0 && !isOpen && (
-          <div className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-white animate-bounce">
+          <div className="chat-notification-badge">
             {unreadCount > 9 ? '9+' : unreadCount}
           </div>
         )}
