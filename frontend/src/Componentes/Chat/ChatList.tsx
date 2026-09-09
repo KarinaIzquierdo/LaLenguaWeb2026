@@ -11,6 +11,7 @@ const ChatList: React.FC<ChatListProps> = ({ onSelectRoom }) => {
   const [contacts, setContacts] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+  const [selectingId, setSelectingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -18,10 +19,11 @@ const ChatList: React.FC<ChatListProps> = ({ onSelectRoom }) => {
       try {
         setLoading(true);
         setError(null);
+        console.log("📥 Cargando contactos...");
         const data = await chatService.getContacts();
         setContacts(data);
       } catch (error: any) {
-        console.error("Error cargando contactos:", error);
+        console.error("❌ Error cargando contactos:", error);
         setError(error.message || "Error al conectar con el servidor");
       } finally {
         setLoading(false);
@@ -32,10 +34,16 @@ const ChatList: React.FC<ChatListProps> = ({ onSelectRoom }) => {
 
   const handleStartChat = async (userId: number, userName: string) => {
     try {
+      console.log(`🚀 Iniciando chat con ${userName} (ID: ${userId})...`);
+      setSelectingId(userId);
       const room = await chatService.getOrCreateRoom(userId);
+      console.log("✅ Sala obtenida/creada:", room);
       onSelectRoom(room.id, userName);
     } catch (error) {
-      console.error("Error iniciando chat:", error);
+      console.error("❌ Error iniciando chat:", error);
+      alert("No se pudo iniciar el chat. Por favor, intenta de nuevo.");
+    } finally {
+      setSelectingId(null);
     }
   };
 
@@ -80,10 +88,14 @@ const ChatList: React.FC<ChatListProps> = ({ onSelectRoom }) => {
             <div 
               key={contact.id}
               onClick={() => handleStartChat(contact.id, `${contact.first_name} ${contact.last_name}`)}
-              className="contact-item"
+              className={`contact-item ${selectingId === contact.id ? 'opacity-50 pointer-events-none bg-gray-100' : ''}`}
             >
               <div className="contact-avatar">
-                {contact.first_name?.charAt(0) || contact.username?.charAt(0)}
+                {selectingId === contact.id ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600"></div>
+                ) : (
+                  contact.first_name?.charAt(0) || contact.username?.charAt(0)
+                )}
               </div>
               <div className="contact-info">
                 <p className="contact-name truncate text-slate-900">

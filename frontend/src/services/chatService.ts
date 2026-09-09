@@ -1,7 +1,7 @@
 import axios from 'axios';
+import { API_BASE_URL } from '../config/api';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.lalenguacolombia.co/api';
-const WS_BASE_URL = API_BASE_URL.replace('http', 'ws').replace('/api', '');
+const WS_BASE_URL = API_BASE_URL.replace('https', 'wss').replace('http', 'ws').replace('/api', '');
 
 export interface ChatMessage {
   id: number;
