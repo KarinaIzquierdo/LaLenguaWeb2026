@@ -200,6 +200,7 @@ SIMPLE_JWT = {
 # CORS Configuration
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
+CORS_REPLACE_HTTPS_REFERER = True
 
 CSRF_TRUSTED_ORIGINS = [
     'http://lalenguacolombia.co',
@@ -211,7 +212,6 @@ CSRF_TRUSTED_ORIGINS = [
     'http://179.199.144.149',
     'http://179.199.144.149:8000',
     'http://179.199.144.149:8001',
-    'http://179.199.144.149:3000',
 ]
 
 # Allowed hosts for development and production
