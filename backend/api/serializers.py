@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import authenticate
-from .models import CustomUser, Clase, Evaluation, MediaItem, Club, ClubMaterial, Especializacion, Evaluacion, RespuestaEvaluacion, Notificacion, NotificacionEstudiante, NotificacionAdmin, Plan, Venta, MissionExternalLink, Suscripcion, DailyChallengeQuestion
+from .models import CustomUser, Clase, Evaluation, MediaItem, Club, ClubMaterial, Especializacion, Evaluacion, RespuestaEvaluacion, Notificacion, NotificacionEstudiante, NotificacionAdmin, Plan, Venta, MissionExternalLink, Suscripcion, DailyChallengeQuestion, ChatRoom, ChatMessage
 
 class UserSerializer(serializers.ModelSerializer):
     especializacion_nombre = serializers.SerializerMethodField()
