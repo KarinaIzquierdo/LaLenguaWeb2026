@@ -140,14 +140,15 @@ def favicon_view(request):
     </svg>'''
     return HttpResponse(svg_content, content_type="image/svg+xml")
 
-@api_view(['POST'])
-@permission_classes([AllowAny])
-@authentication_classes([])
 @api_view(['GET'])
 @permission_classes([AllowAny])
+@authentication_classes([])
 def health_check(request):
     return Response({"status": "ok", "message": "Servidor funcionando correctamente"}, status=200)
 
+@api_view(['POST'])
+@permission_classes([AllowAny])
+@authentication_classes([])
 def login_view(request):
     """
     Endpoint unificado para autenticar usuarios de todos los roles y generar tokens JWT
