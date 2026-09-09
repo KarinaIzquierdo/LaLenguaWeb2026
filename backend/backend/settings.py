@@ -224,25 +224,30 @@ SIMPLE_JWT = {
 # CORS Configuration
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
-CORS_REPLACE_HTTPS_REFERER = True
-
-CORS_ALLOWED_ORIGINS = [
-    "https://lalenguacolombia.co",
-    "https://www.lalenguacolombia.co",
-    "http://lalenguacolombia.co",
-    "http://www.lalenguacolombia.co",
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
 ]
 
 CSRF_TRUSTED_ORIGINS = [
-    'http://lalenguacolombia.co',
     'https://lalenguacolombia.co',
-    'http://www.lalenguacolombia.co',
     'https://www.lalenguacolombia.co',
-    'http://api.lalenguacolombia.co',
     'https://api.lalenguacolombia.co',
-    'http://179.199.144.149',
-    'http://179.199.144.149:8000',
-    'http://179.199.144.149:8001',
 ]
 
 # Allowed hosts for development and production
