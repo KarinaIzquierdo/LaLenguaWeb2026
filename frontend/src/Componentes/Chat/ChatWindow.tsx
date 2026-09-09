@@ -75,37 +75,62 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ roomId, onClose, otherUserName 
     };
   }, [roomId]);
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !socketRef.current || !isConnected) return;
+    const messageContent = newMessage.trim();
+    if (!messageContent) return;
 
     const messageData = {
-      message: newMessage,
-      sender_id: user?.id
+      message: messageContent,
+      sender_id: user?.id,
+      content: messageContent, // Para el fallback de API
+      room: roomId
     };
 
-    socketRef.current.send(JSON.stringify(messageData));
-    setNewMessage('');
+    try {
+      if (socketRef.current && isConnected) {
+        console.log("📤 Enviando vía WebSocket...");
+        socketRef.current.send(JSON.stringify(messageData));
+        setNewMessage('');
+      } else {
+        console.log("⚠️ WebSocket no conectado, usando respaldo API...");
+        // Fallback: Enviar por API normal si el socket falla
+        const response = await chatService.sendMessage(roomId, messageContent);
+        setMessages((prev) => [...prev, response]);
+        setNewMessage('');
+        setTimeout(scrollToBottom, 100);
+      }
+    } catch (error) {
+      console.error("❌ Error enviando mensaje:", error);
+      alert("No se pudo enviar el mensaje. Reintenta en un momento.");
+    }
   };
 
   return (
     <div className="flex flex-col h-full bg-gray-50">
       {/* Messages area */}
       <div className="messages-list">
-        {messages.map((msg, index) => {
-          const isMe = msg.sender === user?.id;
-          return (
-            <div 
-              key={index} 
-              className={`message-bubble ${isMe ? 'message-sent' : 'message-received'}`}
-            >
-              <p>{msg.content}</p>
-              <div className="message-time">
-                {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        {messages.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full opacity-30 text-gray-500">
+            <FiSend size={40} className="mb-2" />
+            <p className="text-sm">Escribe un mensaje para iniciar la conversación</p>
+          </div>
+        ) : (
+          messages.map((msg, index) => {
+            const isMe = msg.sender === user?.id;
+            return (
+              <div 
+                key={index} 
+                className={`message-bubble ${isMe ? 'message-sent' : 'message-received'}`}
+              >
+                <p>{msg.content}</p>
+                <div className="message-time">
+                  {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })
+        )}
         <div ref={messagesEndRef} />
       </div>
 
@@ -121,10 +146,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ roomId, onClose, otherUserName 
           />
           <button 
             type="submit" 
-            disabled={!newMessage.trim() || !isConnected}
-            className="send-btn"
+            disabled={!newMessage.trim()} // Ahora solo depende de si hay texto
+            className={`send-btn ${!newMessage.trim() ? 'opacity-30' : 'opacity-100 hover:scale-110'}`}
           >
-            <FiSend size={20} />
+            <FiSend size={24} />
           </button>
         </form>
       </div>

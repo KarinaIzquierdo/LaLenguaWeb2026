@@ -97,11 +97,12 @@ def chat_contacts_view(request):
     serializer = UserSerializer(contacts, many=True)
     return Response(serializer.data)
 
-@api_view(['GET'])
+@api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def chat_messages_view(request, room_id):
     """
-    Carga el historial de mensajes de una sala específica.
+    GET: Carga el historial de mensajes de una sala específica.
+    POST: Guarda un mensaje en la sala (usado como respaldo si falla el WebSocket).
     """
     try:
         room = ChatRoom.objects.get(id=room_id)
@@ -110,9 +111,26 @@ def chat_messages_view(request, room_id):
         if request.user != room.estudiante and request.user != room.profesor and not request.user.is_staff:
             return Response({'error': 'No tienes permiso para ver este chat'}, status=status.HTTP_403_FORBIDDEN)
         
-        messages = room.messages.all().order_by('created_at')
-        serializer = ChatMessageSerializer(messages, many=True)
-        return Response(serializer.data)
+        if request.method == 'GET':
+            messages = room.messages.all().order_by('created_at')
+            serializer = ChatMessageSerializer(messages, many=True)
+            return Response(serializer.data)
         
+        elif request.method == 'POST':
+            content = request.data.get('content')
+            if not content:
+                return Response({'error': 'Contenido vacío'}, status=status.HTTP_400_BAD_REQUEST)
+                
+            message = ChatMessage.objects.create(
+                room=room,
+                sender=request.user,
+                content=content
+            )
+            # Actualizar la fecha de la sala para que aparezca arriba en la lista
+            room.save() 
+            
+            serializer = ChatMessageSerializer(message)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            
     except ChatRoom.DoesNotExist:
         return Response({'error': 'Sala de chat no encontrada'}, status=status.HTTP_404_NOT_FOUND)

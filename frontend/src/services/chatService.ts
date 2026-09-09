@@ -61,6 +61,14 @@ export const chatService = {
     return response.data;
   },
 
+  // Enviar un mensaje vía API (Fallback para cuando el WebSocket falla)
+  sendMessage: async (roomId: number, content: string): Promise<ChatMessage> => {
+    const response = await axios.post(`${API_BASE_URL}/chat/rooms/${roomId}/messages/`, { content }, {
+      headers: getAuthHeader()
+    });
+    return response.data;
+  },
+
   // Obtener la URL del WebSocket para una sala
   getWebSocketUrl: (roomId: number): string => {
     const token = localStorage.getItem('token');
