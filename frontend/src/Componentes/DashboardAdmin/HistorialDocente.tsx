@@ -138,19 +138,21 @@ export default function HistorialDocente() {
           <h1><FaHistory /> Historial Docente</h1>
           <p>Seguimiento de eventos y actividades de los profesores</p>
         </div>
-        <div className="header-stats">
-          <div className="stat-mini">
-            <span className="stat-label">Clases Totales:</span>
-            <span className="stat-value">{estadisticas.total_clases}</span>
+        <div className="header-right">
+          <div className="header-stats">
+            <div className="stat-mini">
+              <span className="stat-label">Clases Totales</span>
+              <span className="stat-value">{estadisticas.total_clases}</span>
+            </div>
+            <div className="stat-mini">
+              <span className="stat-label">Horas Dictadas</span>
+              <span className="stat-value">{estadisticas.total_horas}h</span>
+            </div>
           </div>
-          <div className="stat-mini">
-            <span className="stat-label">Horas Dictadas:</span>
-            <span className="stat-value">{estadisticas.total_horas}h</span>
-          </div>
+          <button className="btn-add-historial" onClick={() => setShowModal(true)}>
+            <FaPlus /> Nuevo Registro
+          </button>
         </div>
-        <button className="btn-add-historial" onClick={() => setShowModal(true)}>
-          <FaPlus /> Nuevo Registro
-        </button>
       </div>
 
       <div className="filtros-container">

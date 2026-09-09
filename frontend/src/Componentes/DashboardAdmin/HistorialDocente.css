@@ -1,14 +1,17 @@
 .historial-docente-container {
-  padding: 2rem;
+  padding: 2.5rem;
   max-width: 1400px;
   margin: 0 auto;
+  background-color: #f8fafc;
+  min-height: 100vh;
 }
 
 .historial-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2rem;
+  align-items: flex-start;
+  margin-bottom: 3rem;
+  gap: 2rem;
 }
 
 .header-text h1 {
@@ -16,104 +19,139 @@
   align-items: center;
   gap: 12px;
   margin: 0;
-  color: #1e293b;
-  font-size: 1.8rem;
+  color: #0f172a;
+  font-size: 2.25rem;
+  font-weight: 800;
 }
 
 .header-text p {
-  margin: 4px 0 0 0;
+  margin: 8px 0 0 0;
   color: #64748b;
+  font-size: 1.1rem;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
 }
 
 .header-stats {
   display: flex;
-  gap: 1.5rem;
-  background: #fdf2f8;
-  padding: 0.75rem 1.5rem;
+  gap: 0;
+  background: white;
+  padding: 0;
   border-radius: 16px;
-  border: 1px solid #fbcfe8;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
 }
 
 .stat-mini {
   display: flex;
   flex-direction: column;
   align-items: center;
+  padding: 1rem 1.5rem;
+  min-width: 140px;
+}
+
+.stat-mini:first-child {
+  border-right: 1px solid #e2e8f0;
 }
 
 .stat-label {
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
-  color: #ec4899;
+  color: #64748b;
   font-weight: 700;
   letter-spacing: 0.05em;
+  margin-bottom: 4px;
 }
 
 .stat-value {
-  font-size: 1.25rem;
+  font-size: 1.5rem;
   font-weight: 800;
-  color: #9d174d;
+  color: #ec4899;
 }
 
 .btn-add-historial {
   display: flex;
   align-items: center;
-  gap: 8px;
-  background: #ec4899;
+  gap: 10px;
+  background: linear-gradient(135deg, #ec4899 0%, #be185d 100%);
   color: white;
-  padding: 0.75rem 1.25rem;
+  padding: 0.875rem 1.5rem;
   border-radius: 12px;
-  font-weight: 600;
+  font-weight: 700;
   border: none;
   cursor: pointer;
-  transition: all 0.2s;
-  box-shadow: 0 4px 6px -1px rgba(236, 72, 153, 0.2);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 10px 15px -3px rgba(236, 72, 153, 0.3);
+  font-size: 0.95rem;
 }
 
 .btn-add-historial:hover {
-  background: #db2777;
-  transform: translateY(-2px);
-  box-shadow: 0 10px 15px -3px rgba(236, 72, 153, 0.3);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 20px 25px -5px rgba(236, 72, 153, 0.4);
 }
 
 .filtros-container {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
   background: white;
-  padding: 1.5rem;
-  border-radius: 16px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-  margin-bottom: 2rem;
+  padding: 2rem;
+  border-radius: 20px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  margin-bottom: 2.5rem;
+  border: 1px solid #f1f5f9;
 }
 
 .filtro-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
+  flex: 1;
+  min-width: 300px;
 }
 
 .filtro-group label {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #475569;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #334155;
 }
 
 .filtro-group select {
-  padding: 0.6rem;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
+  padding: 0.875rem;
+  border: 2px solid #f1f5f9;
+  border-radius: 12px;
   outline: none;
   background: #f8fafc;
+  color: #1e293b;
+  font-size: 1rem;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.filtro-group select:hover {
+  border-color: #e2e8f0;
+}
+
+.filtro-group select:focus {
+  border-color: #ec4899;
+  background: white;
+  box-shadow: 0 0 0 4px rgba(236, 72, 153, 0.1);
 }
 
 .table-wrapper {
   background: white;
-  border-radius: 16px;
+  border-radius: 24px;
   overflow: hidden;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+  border: 1px solid #f1f5f9;
 }
 
 .historial-table {
@@ -124,16 +162,33 @@
 
 .historial-table th {
   background: #f8fafc;
-  padding: 1rem;
-  font-weight: 600;
+  padding: 1.25rem 1.5rem;
+  font-weight: 700;
   color: #475569;
-  border-bottom: 2px solid #e2e8f0;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 2px solid #f1f5f9;
 }
 
 .historial-table td {
-  padding: 1rem;
+  padding: 1.25rem 1.5rem;
   border-bottom: 1px solid #f1f5f9;
   color: #334155;
+  font-size: 0.95rem;
+}
+
+.historial-table tr:last-child td {
+  border-bottom: none;
+}
+
+.historial-table tr:hover td {
+  background-color: #f8fafc;
+}
+
+.font-bold {
+  font-weight: 700;
+  color: #0f172a;
 }
 
 .tipo-badge {
