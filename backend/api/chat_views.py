@@ -97,11 +97,24 @@ def chat_contacts_view(request):
     serializer = UserSerializer(contacts, many=True)
     return Response(serializer.data)
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def unread_messages_count_view(request):
+    """
+    Retorna el número total de mensajes no leídos para el usuario actual.
+    """
+    user = request.user
+    count = ChatMessage.objects.filter(
+        room__in=ChatRoom.objects.filter(Q(estudiante=user) | Q(profesor=user)),
+        is_read=False
+    ).exclude(sender=user).count()
+    return Response({'unread_count': count})
+
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def chat_messages_view(request, room_id):
     """
-    GET: Carga el historial de mensajes de una sala específica.
+    GET: Carga el historial de mensajes de una sala específica y los marca como leídos.
     POST: Guarda un mensaje en la sala (usado como respaldo si falla el WebSocket).
     """
     try:
@@ -113,6 +126,12 @@ def chat_messages_view(request, room_id):
         
         if request.method == 'GET':
             messages = room.messages.all().order_by('created_at')
+            
+            # Marcar como leídos los mensajes que no son del usuario actual
+            unread_messages = messages.filter(is_read=False).exclude(sender=request.user)
+            if unread_messages.exists():
+                unread_messages.update(is_read=True)
+            
             serializer = ChatMessageSerializer(messages, many=True)
             return Response(serializer.data)
         

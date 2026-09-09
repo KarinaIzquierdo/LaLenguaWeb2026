@@ -50,6 +50,7 @@ urlpatterns = [
     
     # Rutas para el Chat
     path('chat/rooms/', views.chat_rooms_view, name='chat_rooms'),
+    path('chat/unread-count/', views.unread_messages_count_view, name='unread_messages_count'),
     path('chat/contacts/', views.chat_contacts_view, name='chat_contacts'),
     path('chat/rooms/<int:room_id>/messages/', views.chat_messages_view, name='chat_messages'),
     path('auth/profesor/verify-token/', views.profesor_verify_token_view, name='profesor_verify_token'),

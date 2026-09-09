@@ -14,7 +14,7 @@ from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from datetime import date, timedelta
 from .models import CustomUser, Profesor, Clase, Evaluation, MediaItem, Club, ClubMaterial, Especializacion, Evaluacion, Notificacion, NotificacionEstudiante, RespuestaEvaluacion, DailyChallengeQuestion, RegistroEliminacion, Asistencia, Suscripcion, ChatRoom, ChatMessage
 from .profesor_views import *
-from .chat_views import chat_rooms_view, chat_messages_view, chat_contacts_view
+from .chat_views import chat_rooms_view, chat_messages_view, chat_contacts_view, unread_messages_count_view
 from .serializers import (
     UserSerializer, LoginSerializer, ChangePasswordSerializer, ClaseSerializer,
     UserRegisterSerializer, EvaluationSerializer, MediaItemSerializer,

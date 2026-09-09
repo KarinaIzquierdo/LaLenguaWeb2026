@@ -61,6 +61,14 @@ export const chatService = {
     return response.data;
   },
 
+  // Obtener el total de mensajes no leídos
+  getUnreadCount: async (): Promise<number> => {
+    const response = await axios.get(`${API_BASE_URL}/chat/unread-count/`, {
+      headers: getAuthHeader()
+    });
+    return response.data.unread_count || 0;
+  },
+
   // Enviar un mensaje vía API (Fallback para cuando el WebSocket falla)
   sendMessage: async (roomId: number, content: string): Promise<ChatMessage> => {
     const response = await axios.post(`${API_BASE_URL}/chat/rooms/${roomId}/messages/`, { content }, {
