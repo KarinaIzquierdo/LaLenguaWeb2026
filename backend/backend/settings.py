@@ -211,6 +211,10 @@ REST_FRAMEWORK = {
     ],
 }
 
+# Configuración de capacidad de subida de archivos (1GB)
+FILE_UPLOAD_MAX_MEMORY_SIZE = 1073741824  # 1GB en bytes
+DATA_UPLOAD_MAX_MEMORY_SIZE = 1073741824  # 1GB en bytes
+
 # JWT Configuration
 from datetime import timedelta
 

@@ -247,7 +247,7 @@ export default function GestionGaleria() {
                   <div className="file-upload-hint">
                     {formData.type === 'image' 
                       ? 'Selecciona una imagen (JPG, PNG, GIF, etc.)'
-                      : 'Selecciona un video (MP4, AVI, MOV, etc.)'
+                      : 'Selecciona un video (MP4, AVI, MOV, etc.) - Máx 1GB'
                     }
                   </div>
                 </div>
@@ -342,7 +342,8 @@ export default function GestionGaleria() {
 
         {loading ? (
           <div className="loading-state">
-            <p>Cargando galería...</p>
+            <div className="spinner"></div>
+            <p>Procesando contenido multimedia... Esto puede tardar varios minutos para archivos grandes.</p>
           </div>
         ) : mediaItems.length === 0 ? (
           <div className="empty-state">
