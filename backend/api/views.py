@@ -147,44 +147,52 @@ def login_view(request):
     """
     Endpoint unificado para autenticar usuarios de todos los roles y generar tokens JWT
     """
-    print("\n" + "!"*60)
-    print("🚀 ¡LLAMADA RECIBIDA EN EL SERVIDOR!")
-    print(f"Path: {request.path}")
-    print(f"Metodo: {request.method}")
-    print(f"Data recibida: {request.data}")
-    print("!"*60 + "\n")
-    
-    serializer = LoginSerializer(data=request.data)
-    if serializer.is_valid():
-        user = serializer.validated_data['user']
+    try:
+        print("\n" + "!"*60)
+        print("🚀 ¡LLAMADA RECIBIDA EN EL SERVIDOR!")
+        print(f"Path: {request.path}")
+        print(f"Metodo: {request.method}")
+        print(f"Data recibida: {request.data}")
+        print("!"*60 + "\n")
         
-        # Generar tokens JWT
-        refresh = RefreshToken.for_user(user)
-        access_token = refresh.access_token
+        serializer = LoginSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.validated_data['user']
+            
+            # Generar tokens JWT
+            refresh = RefreshToken.for_user(user)
+            access_token = refresh.access_token
+            
+            # Serializar datos del usuario con rol incluido
+            user_serializer = UserSerializer(user)
+            user_data = user_serializer.data
+            
+            # Asegurar que el rol esté correctamente asignado
+            if user.is_profesor and user.role == 'student':
+                user.role = 'profesor'
+                user.save()
+            
+            return Response({
+                'success': True,
+                'token': str(access_token),
+                'refresh': str(refresh),
+                'user': user_data,
+                'message': 'Login exitoso'
+            }, status=status.HTTP_200_OK)
         
-        # Serializar datos del usuario con rol incluido
-        user_serializer = UserSerializer(user)
-        user_data = user_serializer.data
-        
-        # Asegurar que el rol esté correctamente asignado
-        if user.is_profesor and user.role == 'student':
-            user.role = 'profesor'
-            user.save()
-        
+        print(f"Login validation errors: {serializer.errors}")  # Debug
         return Response({
-            'success': True,
-            'token': str(access_token),
-            'refresh': str(refresh),
-            'user': user_data,
-            'message': 'Login exitoso'
-        }, status=status.HTTP_200_OK)
-    
-    print(f"Login validation errors: {serializer.errors}")  # Debug
-    return Response({
-        'success': False,
-        'message': 'Credenciales inválidas',
-        'errors': serializer.errors
-    }, status=status.HTTP_400_BAD_REQUEST)
+            'success': False,
+            'message': 'Credenciales inválidas',
+            'errors': serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+        
+    except Exception as e:
+        print(f"❌ ERROR CRÍTICO EN LOGIN: {str(e)}")
+        return Response({
+            'success': False,
+            'message': f'Error interno del servidor: {str(e)}',
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['POST'])
 @permission_classes([AllowAny])

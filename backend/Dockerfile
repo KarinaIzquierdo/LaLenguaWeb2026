@@ -27,5 +27,5 @@ COPY . /app/
 # Exponer el puerto que usará Django
 EXPOSE 8000
 
-# Comando para iniciar la aplicación usando Gunicorn (servidor de producción)
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "backend.wsgi:application"]
+# Comando para iniciar la aplicación usando Daphne (necesario para Channels/WebSockets)
+CMD ["daphne", "-b", "0.0.0.0", "-p", "8000", "backend.asgi:application"]
