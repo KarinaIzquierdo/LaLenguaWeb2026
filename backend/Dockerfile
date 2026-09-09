@@ -27,5 +27,6 @@ COPY . /app/
 # Exponer el puerto que usará Django
 EXPOSE 8000
 
-# Comando para iniciar la aplicación usando Daphne (necesario para Channels/WebSockets)
-CMD ["daphne", "-b", "0.0.0.0", "-p", "8000", "backend.asgi:application"]
+# Comando para iniciar la aplicación usando Daphne
+# Usamos python -m daphne para asegurar que use el ejecutable del entorno
+CMD ["python", "-m", "daphne", "-b", "0.0.0.0", "-p", "8000", "backend.asgi:application"]
