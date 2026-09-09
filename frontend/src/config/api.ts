@@ -21,7 +21,8 @@ const getBaseUrl = () => {
 
   // 2. Si estamos accediendo por IP o localhost
   if (hostname.match(/\d+\.\d+\.\d+\.\d+/) || hostname === 'localhost') {
-    const port = hostname === 'localhost' ? '8000' : '8001';
+    // Probar primero el puerto 8000 (que es el que dice Coolify)
+    const port = hostname === 'localhost' ? '8000' : '8000';
     return `${protocol}//${hostname}:${port}/api`;
   }
   

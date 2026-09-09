@@ -106,17 +106,41 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-# Configuración para MySQL (desarrollo y producción)
-DATABASES = {
-    'default': dj_database_url.config(
-        default=config('DATABASE_URL', default=f"mysql://{config('DB_USER', default='root')}:{config('DB_PASSWORD', default='')}@{config('DB_HOST', default='127.0.0.1')}:{config('DB_PORT', default='3307')}/{config('DB_NAME', default='La_lengua_bd2')}"),
-        conn_max_age=600,
-        ssl_require=False
-    )
-}
+try:
+    db_url = config('DATABASE_URL', default=None)
+    if db_url:
+        print(f"📦 Usando DATABASE_URL para la conexión")
+        DATABASES = {
+            'default': dj_database_url.config(
+                default=db_url,
+                conn_max_age=600,
+                ssl_require=False
+            )
+        }
+    else:
+        print(f"⚠️ DATABASE_URL no encontrada, usando configuración por componentes")
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.mysql',
+                'NAME': config('DB_NAME', default='La_lengua_bd2'),
+                'USER': config('DB_USER', default='root'),
+                'PASSWORD': config('DB_PASSWORD', default=''),
+                'HOST': config('DB_HOST', default='127.0.0.1'),
+                'PORT': config('DB_PORT', default='3307'),
+            }
+        }
+except Exception as e:
+    print(f"❌ Error crítico configurando base de datos: {e}")
+    # Fallback mínimo para que el servidor no dé 500 al iniciar
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 # Add necessary options for MySQL
-if 'mysql' in DATABASES['default']['ENGINE']:
+if DATABASES['default'].get('ENGINE') == 'django.db.backends.mysql':
     DATABASES['default']['OPTIONS'] = {
         'charset': 'utf8mb4',
         'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
