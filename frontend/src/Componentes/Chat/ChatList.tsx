@@ -11,14 +11,18 @@ const ChatList: React.FC<ChatListProps> = ({ onSelectRoom }) => {
   const [contacts, setContacts] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadContacts = async () => {
       try {
+        setLoading(true);
+        setError(null);
         const data = await chatService.getContacts();
         setContacts(data);
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error cargando contactos:", error);
+        setError(error.message || "Error al conectar con el servidor");
       } finally {
         setLoading(false);
       }
@@ -59,6 +63,11 @@ const ChatList: React.FC<ChatListProps> = ({ onSelectRoom }) => {
           <div className="flex flex-col items-center justify-center p-8 text-gray-500">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mb-2"></div>
             <p className="text-sm">Cargando contactos...</p>
+          </div>
+        ) : error ? (
+          <div className="p-8 text-center text-red-500">
+            <p className="text-sm font-medium">Hubo un problema</p>
+            <p className="text-xs opacity-70">{error}</p>
           </div>
         ) : filteredContacts.length === 0 ? (
           <div className="p-8 text-center text-gray-500">
