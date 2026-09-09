@@ -39,9 +39,10 @@ const ChatList: React.FC<ChatListProps> = ({ onSelectRoom }) => {
       const room = await chatService.getOrCreateRoom(userId);
       console.log("✅ Sala obtenida/creada:", room);
       onSelectRoom(room.id, userName);
-    } catch (error) {
+    } catch (error: any) {
       console.error("❌ Error iniciando chat:", error);
-      alert("No se pudo iniciar el chat. Por favor, intenta de nuevo.");
+      const errorMsg = error.response?.data?.error || error.message || "Error desconocido";
+      alert(`No se pudo iniciar el chat: ${errorMsg}. Por favor, intenta de nuevo.`);
     } finally {
       setSelectingId(null);
     }

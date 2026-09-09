@@ -27,32 +27,44 @@ def chat_rooms_view(request):
         return Response(serializer.data)
 
     elif request.method == 'POST':
-        other_user_id = request.data.get('user_id')
-        if not other_user_id:
-            return Response({'error': 'user_id es requerido'}, status=status.HTTP_400_BAD_REQUEST)
-            
         try:
-            other_user = CustomUser.objects.get(id=other_user_id)
+            other_user_id = request.data.get('user_id')
+            print(f"DEBUG CHAT - Intentando crear sala con user_id: {other_user_id} desde usuario: {user.username} (Rol: {user.role})")
             
-            # Lógica para determinar quién es el estudiante y quién el profesor
-            if user.role == 'student' and other_user.role == 'profesor':
-                room, created = ChatRoom.objects.get_or_create(estudiante=user, profesor=other_user)
-            elif user.role == 'profesor' and other_user.role == 'student':
-                room, created = ChatRoom.objects.get_or_create(estudiante=other_user, profesor=user)
-            else:
-                # Si ambos son iguales o roles raros, permitir creación simple para evitar bloqueos
-                # pero idealmente el chat es entre Student-Profesor
-                if user.id < other_user.id:
-                    u1, u2 = user, other_user
+            if not other_user_id:
+                return Response({'error': 'user_id es requerido'}, status=status.HTTP_400_BAD_REQUEST)
+                
+            other_user = CustomUser.objects.get(id=other_user_id)
+            print(f"DEBUG CHAT - Otro usuario encontrado: {other_user.username} (Rol: {other_user.role})")
+            
+            # Lógica ultra-robusta: No importa el rol, si son dos usuarios diferentes, pueden chatear
+            # Intentamos buscar si ya existe la sala en cualquier combinación
+            room = ChatRoom.objects.filter(
+                (Q(estudiante=user) & Q(profesor=other_user)) | 
+                (Q(estudiante=other_user) & Q(profesor=user))
+            ).first()
+
+            if not room:
+                print("DEBUG CHAT - Creando nueva sala...")
+                # Por consistencia, si uno es estudiante y otro profesor, los asignamos bien
+                if user.role == 'student' or other_user.role == 'profesor':
+                    room = ChatRoom.objects.create(estudiante=user, profesor=other_user)
                 else:
-                    u1, u2 = other_user, user
-                room, created = ChatRoom.objects.get_or_create(estudiante=u1, profesor=u2)
+                    room = ChatRoom.objects.create(estudiante=other_user, profesor=user)
+                created = True
+            else:
+                print(f"DEBUG CHAT - Sala existente encontrada: ID {room.id}")
+                created = False
             
             serializer = ChatRoomSerializer(room)
             return Response(serializer.data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
             
         except CustomUser.DoesNotExist:
+            print("DEBUG CHAT - Error: Usuario no encontrado")
             return Response({'error': 'Usuario no encontrado'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            print(f"❌ ERROR CRÍTICO EN chat_rooms_view: {str(e)}")
+            return Response({'error': f'Error interno: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
