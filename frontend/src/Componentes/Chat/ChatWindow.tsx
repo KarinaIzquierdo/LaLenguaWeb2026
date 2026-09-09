@@ -15,8 +15,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ roomId, onClose, otherUserName 
   const [newMessage, setNewMessage] = useState('');
   const [isConnected, setIsConnected] = useState(false);
   
-  // Obtener usuario del localStorage ya que no hay AuthContext global
-  const user = JSON.parse(localStorage.getItem('userData') || '{}');
+  // Obtener usuario del localStorage usando la clave correcta 'user'
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const userId = user?.id || user?.user_id; // Soportar ambas variantes de ID
   
   const socketRef = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -51,17 +52,19 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ roomId, onClose, otherUserName 
 
     socket.onmessage = (event) => {
       const data = JSON.parse(event.data);
-      // Añadir el nuevo mensaje a la lista (si no es nuestro, ya que el backend lo retransmite)
-      // O simplemente actualizar la lista
-      setMessages((prev) => [...prev, {
-        id: Date.now(), // ID temporal
+      console.log("📥 Mensaje recibido:", data);
+      
+      const newMsg: ChatMessage = {
+        id: Date.now(),
         room: roomId,
         sender: data.sender_id,
-        sender_name: "", // Se podría obtener del contexto
-        content: data.message,
+        sender_name: "",
+        content: data.message || data.content,
         is_read: false,
         created_at: new Date().toISOString()
-      }]);
+      };
+      
+      setMessages((prev) => [...prev, newMsg]);
       setTimeout(scrollToBottom, 50);
     };
 
@@ -82,7 +85,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ roomId, onClose, otherUserName 
 
     const messageData = {
       message: messageContent,
-      sender_id: user?.id,
+      sender_id: userId,
       content: messageContent, // Para el fallback de API
       room: roomId
     };
@@ -117,11 +120,17 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ roomId, onClose, otherUserName 
           </div>
         ) : (
           messages.map((msg, index) => {
-            const isMe = msg.sender === user?.id;
+            const senderId = typeof msg.sender === 'object' ? (msg.sender as any).id : msg.sender;
+            const isMe = Number(senderId) === Number(userId);
             return (
               <div 
                 key={index} 
                 className={`message-bubble ${isMe ? 'message-sent' : 'message-received'}`}
+                style={{ 
+                  alignSelf: isMe ? 'flex-end' : 'flex-start',
+                  marginLeft: isMe ? 'auto' : '0',
+                  marginRight: isMe ? '0' : 'auto'
+                }}
               >
                 <p>{msg.content}</p>
                 <div className="message-time">
