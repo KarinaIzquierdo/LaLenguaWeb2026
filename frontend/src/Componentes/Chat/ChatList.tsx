@@ -64,7 +64,7 @@ const ChatList: React.FC<ChatListProps> = ({ onSelectRoom }) => {
           <input 
             type="text" 
             placeholder="Buscar contacto..." 
-            className="w-full pl-9 pr-3 py-2 bg-gray-100 rounded-full text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-pink-500 transition-all"
+            className="w-full pl-9 pr-3 py-2 bg-pink-50 rounded-full text-sm text-slate-900 border border-pink-100 focus:outline-none focus:ring-2 focus:ring-pink-500 transition-all"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
