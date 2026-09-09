@@ -3,8 +3,8 @@ from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from rest_framework import status
 from django.shortcuts import get_object_or_404
-from .models import HistorialDocente, CustomUser
-from django.db.models import Q
+from .models import HistorialDocente, CustomUser, Clase
+from django.db.models import Q, Sum
 import logging
 
 logger = logging.getLogger(__name__)
@@ -51,9 +51,41 @@ def historial_docente_list_create_view(request):
                 'updated_at': item.updated_at.isoformat(),
             })
             
+        # Obtener datos de clases dictadas para complementar el historial
+        clases_queryset = Clase.objects.filter(estado='completada')
+        if profesor_id:
+            # Filtrar por nombre de profesor ya que en Clase es CharField
+            profesor_obj = get_object_or_404(CustomUser, id=profesor_id)
+            nombre_completo = f"{profesor_obj.first_name} {profesor_obj.last_name}".strip()
+            clases_queryset = clases_queryset.filter(profesor__icontains=nombre_completo)
+            
+        clases_data = []
+        total_horas = 0
+        for clase in clases_queryset:
+            clases_data.append({
+                'id': f"clase-{clase.id}",
+                'profesor': {
+                    'nombre': clase.profesor,
+                },
+                'fecha': clase.fecha.isoformat() if clase.fecha else None,
+                'hora': clase.hora,
+                'duracion': clase.duracion,
+                'tipo_evento': 'clase',
+                'tipo_evento_display': 'Clase Completada',
+                'titulo': f"Clase: {clase.nombre}",
+                'descripcion': f"Tema: {clase.tema}. Modalidad: {clase.modalidad}",
+                'es_clase_automatica': True
+            })
+            total_horas += (clase.duracion / 60)
+
         return Response({
             'success': True,
-            'historial': historial
+            'historial': historial,
+            'clases_dictadas': clases_data,
+            'estadisticas': {
+                'total_clases': len(clases_data),
+                'total_horas': round(total_horas, 1)
+            }
         })
 
     elif request.method == 'POST':

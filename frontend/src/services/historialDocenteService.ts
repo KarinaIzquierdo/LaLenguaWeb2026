@@ -28,6 +28,11 @@ export const historialDocenteService = {
   async getHistorial(profesorId?: number, tipoEvento?: string): Promise<{
     success: boolean;
     historial: HistorialDocente[];
+    clases_dictadas?: any[];
+    estadisticas?: {
+      total_clases: number;
+      total_horas: number;
+    };
     message?: string;
   }> {
     const params = new URLSearchParams();

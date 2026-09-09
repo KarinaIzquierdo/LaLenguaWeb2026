@@ -9,6 +9,8 @@ const ITEMS_PER_PAGE = 20;
 
 export default function HistorialDocente() {
   const [historial, setHistorial] = useState<HistorialDocenteType[]>([]);
+  const [clasesDictadas, setClasesDictadas] = useState<any[]>([]);
+  const [estadisticas, setEstadisticas] = useState({ total_clases: 0, total_horas: 0 });
   const [profesores, setProfesores] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtroTipo, setFiltroTipo] = useState('');
@@ -37,7 +39,9 @@ export default function HistorialDocente() {
         filtroTipo || undefined
       );
       if (data.success) {
-        setHistorial(data.historial);
+        setHistorial(data.historial || []);
+        setClasesDictadas(data.clases_dictadas || []);
+        setEstadisticas(data.estadisticas || { total_clases: 0, total_horas: 0 });
         setPaginaActual(1);
       }
     } catch (error) {
@@ -90,10 +94,19 @@ export default function HistorialDocente() {
     }
   };
 
-  const totalRegistros = historial.length;
+  // Combinar ambos orígenes de datos
+  const todosLosEventos = [
+    ...historial,
+    ...clasesDictadas.map(c => ({
+      ...c,
+      profesor: { ...c.profesor, id: 0, username: 'clase_automatica' } // Ajuste de tipo
+    }))
+  ].sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+
+  const totalRegistros = todosLosEventos.length;
   const totalPaginas = Math.max(1, Math.ceil(totalRegistros / ITEMS_PER_PAGE));
   const indiceInicio = (paginaActual - 1) * ITEMS_PER_PAGE;
-  const registrosPagina = historial.slice(indiceInicio, indiceInicio + ITEMS_PER_PAGE);
+  const registrosPagina = todosLosEventos.slice(indiceInicio, indiceInicio + ITEMS_PER_PAGE);
 
   const getBadgeColor = (tipo: string) => {
     const colors: Record<string, string> = {
@@ -124,6 +137,16 @@ export default function HistorialDocente() {
         <div className="header-text">
           <h1><FaHistory /> Historial Docente</h1>
           <p>Seguimiento de eventos y actividades de los profesores</p>
+        </div>
+        <div className="header-stats">
+          <div className="stat-mini">
+            <span className="stat-label">Clases Totales:</span>
+            <span className="stat-value">{estadisticas.total_clases}</span>
+          </div>
+          <div className="stat-mini">
+            <span className="stat-label">Horas Dictadas:</span>
+            <span className="stat-value">{estadisticas.total_horas}h</span>
+          </div>
         </div>
         <button className="btn-add-historial" onClick={() => setShowModal(true)}>
           <FaPlus /> Nuevo Registro
@@ -173,6 +196,7 @@ export default function HistorialDocente() {
                 <th>Docente</th>
                 <th>Tipo</th>
                 <th>Título</th>
+                <th>Duración</th>
                 <th>Registrado por</th>
               </tr>
             </thead>
@@ -190,7 +214,8 @@ export default function HistorialDocente() {
                     </span>
                   </td>
                   <td>{item.titulo}</td>
-                  <td className="text-sm opacity-70">{item.registrado_por?.nombre || 'Sistema'}</td>
+                  <td>{item.duracion ? `${item.duracion} min` : '—'}</td>
+                  <td className="text-sm opacity-70">{item.registrado_por?.nombre || (item.es_clase_automatica ? 'Sistema (Auto)' : 'Sistema')}</td>
                 </tr>
               ))}
             </tbody>
