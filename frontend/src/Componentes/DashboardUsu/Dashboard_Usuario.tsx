@@ -10,6 +10,7 @@ import OnboardingTour from '../Onboarding/OnboardingTour';
 import ProfileModal from '../Profile/ProfileModal';
 import ChallengeModal from './ChallengeModal';
 import Toast from './Toast';
+import ChatContainer from '../Chat/ChatContainer';
 import { useDashboardEvents } from './DashboardEvents';
 import { EvaluationService } from '../../services/evaluationService';
 import { authService } from '../../services/authService';
@@ -870,10 +871,13 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
         experience={experience}
         onOpenAchievements={() => setShowAchievementsModal(true)}
       >
-        {renderModule()}
+        <div className="flex-1 overflow-auto p-4 md:p-8">
+          {renderModule()}
+        </div>
+        <ChatContainer />
       </StudentLayout>
 
-      {/* Prize Modal */}
+      {/* Modals */}
       {showPrizeModal && currentPrize && (
         <div className="prize-modal-backdrop" onClick={() => setShowPrizeModal(false)}>
           <div className="prize-modal" onClick={(e) => e.stopPropagation()}>
@@ -888,90 +892,48 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
                 <span className="candy-icon">🍬</span>
                 <span>Has acumulado {candies} dulces</span>
               </div>
-            </div>
-            <div className="prize-modal-footer">
-              <button className="prize-close-btn" onClick={() => setShowPrizeModal(false)}>
-                ¡Continuar aventura!
+              <button className="prize-modal-button" onClick={() => setShowPrizeModal(false)}>
+                ¡Genial!
               </button>
             </div>
           </div>
         </div>
       )}
 
-      <OnboardingTour isNewUser={showOnboarding} onComplete={handleOnboardingComplete} />
-
-      <button className="help-floating-btn" onClick={forceOnboarding} title="¿Necesitas ayuda? Haz clic para ver el tour guiado">
-        ?
-      </button>
-
-      <EvaluationModal
-        isVisible={showEvaluationModal}
-        evaluationType={currentEvaluation || ''}
-        onClose={() => setShowEvaluationModal(false)}
-        onComplete={async (results) => {
-          setEvaluationResults(results);
-          setShowEvaluationModal(false);
-          setShowResultsModal(true);
-          await cargarEstadoGamificacion(userId);
-        }}
-      />
-
-      <ResultsModal isVisible={showResultsModal} results={evaluationResults} onClose={() => setShowResultsModal(false)} />
-
-      <NotesModal isVisible={showNotesModal} onClose={() => setShowNotesModal(false)} />
-
-      <AchievementsModal
-        isOpen={showAchievementsModal}
-        onClose={() => setShowAchievementsModal(false)}
-        achievements={achievements}
-      />
-
-      <AvatarModal
-        isOpen={showAvatarModal}
-        onClose={() => setShowAvatarModal(false)}
-        onSelect={(src: string) => {
-          setAvatarSrc(src);
-          if (userId) localStorage.setItem(`avatar_${userId}`, src);
-        }}
-      />
+      {showOnboarding && (
+        <OnboardingTour
+          onComplete={handleOnboardingComplete}
+          userName={userFirstName}
+          isNewUser={isNewUser}
+        />
+      )}
 
       {showChallengeModal && currentChallenge && (
         <ChallengeModal
           isOpen={showChallengeModal}
-          challenge={currentChallenge}
           onClose={closeChallengeModal}
-          onAnswerSubmit={checkChallengeAnswer}
+          challenge={currentChallenge}
+          onAnswer={checkChallengeAnswer}
         />
       )}
 
-      <Toast
-        isVisible={showToast}
-        type={toastData.type}
-        title={toastData.title}
-        message={toastData.message}
-        rewards={toastData.rewards}
-        onClose={() => setShowToast(false)}
-      />
+      {showAchievementsModal && (
+        <AchievementsModal
+          isOpen={showAchievementsModal}
+          onClose={() => setShowAchievementsModal(false)}
+          achievements={achievements}
+        />
+      )}
 
-      <ProfileModal
-        isOpen={showProfileModal}
-        onClose={() => {
-          setShowProfileModal(false);
-          setIsNewUser(false);
-          const loadUpdatedProfile = async () => {
-            try {
-              const updatedProfile = await authService.getUserProfile();
-              if (updatedProfile.profile_completed) setIsNewUser(false);
-            } catch (error) {
-              console.error('Error recargando perfil:', error);
-            }
-          };
-          loadUpdatedProfile();
-        }}
-      />
-
-      <AdventureModal isOpen={showAdventureModal} onClose={() => setShowAdventureModal(false)} />
-
+      {showToast && (
+        <Toast
+          type={toastData.type}
+          title={toastData.title}
+          message={toastData.message}
+          rewards={toastData.rewards}
+          onClose={() => setShowToast(false)}
+        />
+      )}
     </>
   );
 }

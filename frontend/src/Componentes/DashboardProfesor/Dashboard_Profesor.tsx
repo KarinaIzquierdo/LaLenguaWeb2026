@@ -16,6 +16,7 @@ import EstudiantesView from './EstudiantesView';
 import HistorialAsistencias from './HistorialAsistencias';
 import CalificarEvaluaciones from './CalificarEvaluaciones';
 import MisionesAdmin from '../DashboardAdmin/MisionesAdmin';
+import ChatContainer from '../Chat/ChatContainer';
 
 interface DashboardProfesorProps {
   onLogout?: () => void;
@@ -204,6 +205,7 @@ export default function DashboardProfesor({ onLogout }: DashboardProfesorProps =
           {activeView === 'notificaciones' && <NotificacionesProfesor />}
         </div>
       </div>
+      <ChatContainer />
     </div>
   );
 }

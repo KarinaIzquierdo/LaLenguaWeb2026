@@ -12,7 +12,9 @@ from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from datetime import date, timedelta
-from .models import CustomUser, Profesor, Clase, Evaluation, MediaItem, Club, ClubMaterial, Especializacion, Evaluacion, Notificacion, NotificacionEstudiante, RespuestaEvaluacion, DailyChallengeQuestion, RegistroEliminacion, Asistencia, Suscripcion
+from .models import CustomUser, Profesor, Clase, Evaluation, MediaItem, Club, ClubMaterial, Especializacion, Evaluacion, Notificacion, NotificacionEstudiante, RespuestaEvaluacion, DailyChallengeQuestion, RegistroEliminacion, Asistencia, Suscripcion, ChatRoom, ChatMessage
+from .profesor_views import *
+from .chat_views import chat_rooms_view, chat_messages_view, chat_contacts_view
 from .serializers import (
     UserSerializer, LoginSerializer, ChangePasswordSerializer, ClaseSerializer,
     UserRegisterSerializer, EvaluationSerializer, MediaItemSerializer,

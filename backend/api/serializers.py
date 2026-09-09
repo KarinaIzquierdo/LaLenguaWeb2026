@@ -220,6 +220,28 @@ class ClaseSerializer(serializers.ModelSerializer):
         
         return instance
 
+class ChatMessageSerializer(serializers.ModelSerializer):
+    sender_name = serializers.CharField(source='sender.get_full_name', read_only=True)
+    
+    class Meta:
+        model = ChatMessage
+        fields = ['id', 'room', 'sender', 'sender_name', 'content', 'is_read', 'created_at']
+
+class ChatRoomSerializer(serializers.ModelSerializer):
+    estudiante_name = serializers.CharField(source='estudiante.get_full_name', read_only=True)
+    profesor_name = serializers.CharField(source='profesor.get_full_name', read_only=True)
+    last_message = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ChatRoom
+        fields = ['id', 'estudiante', 'estudiante_name', 'profesor', 'profesor_name', 'last_message', 'updated_at']
+
+    def get_last_message(self, obj):
+        last = obj.messages.order_by('-created_at').first()
+        if last:
+            return ChatMessageSerializer(last).data
+        return None
+
 class UserRegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8)
     role = serializers.ChoiceField(choices=CustomUser.ROLE_CHOICES)

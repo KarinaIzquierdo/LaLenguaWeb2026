@@ -44,6 +44,11 @@ urlpatterns = [
     
     # Endpoints para profesores
     path('auth/profesor/login/', views.profesor_login_view, name='profesor_login'),
+    
+    # Rutas para el Chat
+    path('chat/rooms/', views.chat_rooms_view, name='chat_rooms'),
+    path('chat/contacts/', views.chat_contacts_view, name='chat_contacts'),
+    path('chat/rooms/<int:room_id>/messages/', views.chat_messages_view, name='chat_messages'),
     path('auth/profesor/verify-token/', views.profesor_verify_token_view, name='profesor_verify_token'),
     path('auth/profesor/profile/', views.profesor_profile_view, name='profesor_profile'),
     path('auth/profesor/change-password/', views.profesor_change_password_view, name='profesor_change_password'),

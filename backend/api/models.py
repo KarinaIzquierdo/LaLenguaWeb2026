@@ -836,4 +836,41 @@ class DailyChallengeQuestion(models.Model):
         ordering = ['-created_at']
 
     def __str__(self):
-        return self.pregunta[:60]
+        return f"{self.pregunta[:50]}..."
+
+
+class ChatRoom(models.Model):
+    """
+    Sala de chat entre un estudiante y un profesor
+    """
+    estudiante = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='chat_rooms_estudiante')
+    profesor = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='chat_rooms_profesor')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('estudiante', 'profesor')
+        verbose_name = 'Sala de Chat'
+        verbose_name_plural = 'Salas de Chat'
+
+    def __str__(self):
+        return f"Chat: {self.estudiante.username} - {self.profesor.username}"
+
+
+class ChatMessage(models.Model):
+    """
+    Mensaje individual dentro de una sala de chat
+    """
+    room = models.ForeignKey(ChatRoom, on_delete=models.CASCADE, related_name='messages')
+    sender = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='sent_messages')
+    content = models.TextField()
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+        verbose_name = 'Mensaje de Chat'
+        verbose_name_plural = 'Mensajes de Chat'
+
+    def __str__(self):
+        return f"De {self.sender.username} en {self.created_at.strftime('%Y-%m-%d %H:%M')}"
