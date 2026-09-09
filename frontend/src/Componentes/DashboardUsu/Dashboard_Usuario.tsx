@@ -902,9 +902,8 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
 
       {showOnboarding && (
         <OnboardingTour
+          isNewUser={showOnboarding}
           onComplete={handleOnboardingComplete}
-          userName={userFirstName}
-          isNewUser={isNewUser}
         />
       )}
 
@@ -913,20 +912,13 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
           isOpen={showChallengeModal}
           onClose={closeChallengeModal}
           challenge={currentChallenge}
-          onAnswer={checkChallengeAnswer}
-        />
-      )}
-
-      {showAchievementsModal && (
-        <AchievementsModal
-          isOpen={showAchievementsModal}
-          onClose={() => setShowAchievementsModal(false)}
-          achievements={achievements}
+          onAnswerSubmit={checkChallengeAnswer}
         />
       )}
 
       {showToast && (
         <Toast
+          isVisible={showToast}
           type={toastData.type}
           title={toastData.title}
           message={toastData.message}
