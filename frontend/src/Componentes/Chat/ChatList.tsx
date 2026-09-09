@@ -17,10 +17,10 @@ const ChatList: React.FC<ChatListProps> = ({ onSelectRoom }) => {
   useEffect(() => {
     const loadContacts = async () => {
       try {
-        setLoading(true);
         setError(null);
-        console.log("📥 Cargando contactos...");
+        console.log("📥 Actualizando lista de contactos...");
         const data = await chatService.getContacts();
+        console.log("📊 Datos de contactos recibidos:", data);
         setContacts(data);
       } catch (error: any) {
         console.error("❌ Error cargando contactos:", error);
@@ -29,7 +29,11 @@ const ChatList: React.FC<ChatListProps> = ({ onSelectRoom }) => {
         setLoading(false);
       }
     };
+    
     loadContacts();
+    const interval = setInterval(loadContacts, 10000); // Actualizar cada 10 segundos
+
+    return () => clearInterval(interval);
   }, []);
 
   const handleStartChat = async (userId: number, userName: string) => {
@@ -109,9 +113,9 @@ const ChatList: React.FC<ChatListProps> = ({ onSelectRoom }) => {
               
               {/* Indicador de Mensajes No Leídos (Estilo WhatsApp) */}
               {contact.unread_count > 0 && (
-                <div className="flex flex-col items-end gap-1">
-                  <span className="text-[10px] text-purple-600 font-medium">Ahora</span>
-                  <div className="bg-green-500 text-white text-[11px] font-bold min-w-[20px] h-[20px] rounded-full flex items-center justify-center px-1 shadow-sm">
+                <div className="flex flex-col items-end gap-1 ml-2">
+                  <span className="text-[10px] text-emerald-600 font-bold">NUEVO</span>
+                  <div className="bg-emerald-500 text-white text-[11px] font-bold min-w-[22px] h-[22px] rounded-full flex items-center justify-center px-1.5 shadow-md border border-white">
                     {contact.unread_count}
                   </div>
                 </div>

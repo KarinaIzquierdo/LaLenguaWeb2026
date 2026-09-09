@@ -103,6 +103,8 @@ def chat_contacts_view(request):
                 room=room,
                 is_read=False
             ).exclude(sender=user).count()
+            if unread_count > 0:
+                print(f"DEBUG CHAT - Contacto {contact.username} tiene {unread_count} mensajes no leídos para {user.username}")
             
         contact_data = UserSerializer(contact).data
         contact_data['unread_count'] = unread_count
