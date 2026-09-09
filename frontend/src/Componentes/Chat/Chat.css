@@ -11,7 +11,8 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  background-color: #ec4899 !important; /* Rosa/Magenta vibrante */
+  box-shadow: 0 4px 15px rgba(236, 72, 153, 0.3);
   transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
@@ -73,7 +74,7 @@
 
 /* Header del Widget */
 .chat-header {
-  background: #7c3aed;
+  background: #f472b6; /* Rosa suave/claro */
   color: white;
   padding: 1rem 1.2rem;
   display: flex;
@@ -152,8 +153,8 @@
 .contact-avatar {
   width: 45px;
   height: 45px;
-  background: #ede9fe;
-  color: #7c3aed;
+  background: #fce7f3; /* Rosa muy claro */
+  color: #ec4899; /* Rosa fuerte */
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -203,7 +204,7 @@
 
 .message-sent {
   align-self: flex-end !important;
-  background: #7c3aed !important; /* Morado para mis mensajes */
+  background: #f472b6 !important; /* Rosa para mis mensajes */
   color: white !important;
   border-bottom-right-radius: 2px !important;
   margin-left: auto;
@@ -261,7 +262,7 @@
 }
 
 .send-btn {
-  color: #7c3aed;
+  color: #ec4899;
   cursor: pointer;
   display: flex;
   align-items: center;

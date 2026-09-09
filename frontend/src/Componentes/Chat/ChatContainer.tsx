@@ -52,7 +52,7 @@ const ChatContainer: React.FC = () => {
       {/* Botón Flotante Principal */}
       <button 
         onClick={toggleChat}
-        className="chat-float bg-purple-600 text-white shadow-2xl hover:bg-purple-700 transition-all transform hover:scale-110 active:scale-95 flex items-center justify-center border-2 border-white relative"
+        className="chat-float bg-pink-500 text-white shadow-2xl hover:bg-pink-600 transition-all transform hover:scale-110 active:scale-95 flex items-center justify-center border-2 border-white relative"
         title="Mensajes"
       >
         {isOpen && !isMinimized ? <FiX size={28} /> : <FiMessageCircle size={28} />}
