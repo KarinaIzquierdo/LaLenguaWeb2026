@@ -40,46 +40,47 @@ const ChatList: React.FC<ChatListProps> = ({ onSelectRoom }) => {
   );
 
   return (
-    <div className="chat-list-container bg-white border rounded-lg shadow-xl overflow-hidden flex flex-col w-[300px] h-[400px] fixed bottom-20 right-20 z-[1000]">
-      <div className="p-4 bg-purple-600 text-white flex items-center justify-between">
-        <h3 className="font-bold flex items-center gap-2">
-          <FiMessageSquare /> Mis Mensajes
-        </h3>
-      </div>
-      
-      <div className="p-2 border-b">
+    <div className="flex flex-col h-full">
+      <div className="p-3 border-b bg-white">
         <div className="relative">
           <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input 
             type="text" 
             placeholder="Buscar contacto..." 
-            className="w-full pl-9 pr-3 py-2 bg-gray-100 rounded-full text-sm focus:outline-none"
+            className="w-full pl-9 pr-3 py-2 bg-gray-100 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
       </div>
-
+      
       <div className="flex-1 overflow-y-auto">
         {loading ? (
-          <div className="p-4 text-center text-gray-500 text-sm">Cargando...</div>
+          <div className="flex flex-col items-center justify-center p-8 text-gray-500">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mb-2"></div>
+            <p className="text-sm">Cargando contactos...</p>
+          </div>
         ) : filteredContacts.length === 0 ? (
-          <div className="p-4 text-center text-gray-500 text-sm">No se encontraron contactos</div>
+          <div className="p-8 text-center text-gray-500">
+            <FiUser size={40} className="mx-auto mb-3 opacity-20" />
+            <p className="text-sm font-medium">No se encontraron contactos</p>
+            <p className="text-xs opacity-60">Intenta con otro nombre</p>
+          </div>
         ) : (
           filteredContacts.map((contact) => (
             <div 
               key={contact.id}
               onClick={() => handleStartChat(contact.id, `${contact.first_name} ${contact.last_name}`)}
-              className="flex items-center gap-3 p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 transition-colors"
+              className="contact-item"
             >
-              <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center text-purple-600">
-                <FiUser size={20} />
+              <div className="contact-avatar">
+                {contact.first_name?.charAt(0) || contact.username?.charAt(0)}
               </div>
-              <div className="flex-1 overflow-hidden">
-                <p className="font-medium text-sm text-gray-800 truncate">
+              <div className="contact-info">
+                <p className="contact-name truncate">
                   {contact.first_name} {contact.last_name}
                 </p>
-                <p className="text-[10px] text-gray-500 truncate capitalize">
+                <p className="contact-role">
                   {contact.role === 'profesor' ? 'Profesor' : 'Estudiante'}
                 </p>
               </div>

@@ -66,17 +66,20 @@ def chat_contacts_view(request):
     contacts = []
 
     if user.role == 'student':
-        # Profesores de sus clubes
-        profesores_ids = user.clubs.values_list('profesor_id', flat=True)
-        # Profesores de sus clases (basado en el campo profesor que es string, necesitamos ID)
-        # Por ahora usamos los de clubes que son relaciones directas seguras
-        profesores = CustomUser.objects.filter(id__in=profesores_ids, role='profesor').distinct()
+        # Estudiantes ven a todos los profesores activos por defecto
+        # para asegurar que siempre tengan a alguien con quien hablar
+        profesores = CustomUser.objects.filter(role='profesor', is_active=True).distinct()
         contacts = profesores
     elif user.role == 'profesor':
-        # Estudiantes de sus clubes
+        # Profesores ven a los estudiantes de sus clubes
         from .models import Club
         estudiantes_ids = CustomUser.objects.filter(clubs__profesor=user).values_list('id', flat=True)
-        contacts = CustomUser.objects.filter(id__in=estudiantes_ids, role='student').distinct()
+        # Si no tiene clubes, quizás mostrar todos los estudiantes para facilitar soporte
+        if not estudiantes_ids:
+            estudiantes = CustomUser.objects.filter(role='student', is_active=True).distinct()
+        else:
+            estudiantes = CustomUser.objects.filter(id__in=estudiantes_ids, role='student', is_active=True).distinct()
+        contacts = estudiantes
 
     from .serializers import UserSerializer
     serializer = UserSerializer(contacts, many=True)

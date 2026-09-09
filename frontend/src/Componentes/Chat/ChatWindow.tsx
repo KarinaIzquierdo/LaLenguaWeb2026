@@ -89,43 +89,19 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ roomId, onClose, otherUserName 
   };
 
   return (
-    <div className="chat-window shadow-lg border rounded-lg flex flex-col bg-white overflow-hidden">
-      {/* Header */}
-      <div className="chat-header p-3 bg-purple-600 text-white flex justify-between items-center">
-        <div className="flex items-center gap-2">
-          <div className="bg-purple-400 p-1.5 rounded-full">
-            <FiUser size={18} />
-          </div>
-          <span className="font-medium text-sm">{otherUserName}</span>
-          {isConnected ? (
-            <span className="w-2 h-2 bg-green-400 rounded-full" title="Conectado"></span>
-          ) : (
-            <span className="w-2 h-2 bg-red-400 rounded-full" title="Desconectado"></span>
-          )}
-        </div>
-        <button onClick={onClose} className="hover:bg-purple-700 p-1 rounded">
-          <FiX size={20} />
-        </button>
-      </div>
-
+    <div className="flex flex-col h-full bg-gray-50">
       {/* Messages area */}
-      <div className="chat-messages flex-1 p-4 overflow-y-auto bg-gray-50 flex flex-col gap-3">
+      <div className="messages-list">
         {messages.map((msg, index) => {
           const isMe = msg.sender === user?.id;
           return (
             <div 
               key={index} 
-              className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
+              className={`message-bubble ${isMe ? 'message-sent' : 'message-received'}`}
             >
-              <div className={`max-w-[80%] p-3 rounded-2xl ${
-                isMe 
-                  ? 'bg-purple-600 text-white rounded-tr-none' 
-                  : 'bg-white border text-gray-800 rounded-tl-none'
-              }`}>
-                <p className="text-sm">{msg.content}</p>
-                <span className={`text-[10px] mt-1 block ${isMe ? 'text-purple-200' : 'text-gray-400'}`}>
-                  {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </span>
+              <p>{msg.content}</p>
+              <div className="message-time">
+                {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </div>
             </div>
           );
@@ -134,22 +110,24 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ roomId, onClose, otherUserName 
       </div>
 
       {/* Input area */}
-      <form onSubmit={handleSendMessage} className="p-3 border-t bg-white flex gap-2">
-        <input
-          type="text"
-          value={newMessage}
-          onChange={(e) => setNewMessage(e.target.value)}
-          placeholder="Escribe un mensaje..."
-          className="flex-1 border rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
-        />
-        <button 
-          type="submit" 
-          disabled={!newMessage.trim() || !isConnected}
-          className="bg-purple-600 text-white p-2 rounded-full hover:bg-purple-700 disabled:bg-gray-300 transition-colors"
-        >
-          <FiSend size={18} />
-        </button>
-      </form>
+      <div className="chat-footer">
+        <form onSubmit={handleSendMessage} className="input-container">
+          <input
+            type="text"
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            placeholder="Escribe un mensaje..."
+            className="chat-input"
+          />
+          <button 
+            type="submit" 
+            disabled={!newMessage.trim() || !isConnected}
+            className="send-btn"
+          >
+            <FiSend size={20} />
+          </button>
+        </form>
+      </div>
     </div>
   );
 };
