@@ -15,6 +15,7 @@ from . import mobile_views
 from . import registro_eliminacion_views
 from . import contact_views
 from . import asistencia_views
+from . import historial_docente_views
 from .plan_views import (
     planes_list_view, plan_create_view, plan_update_view, plan_delete_view, plan_toggle_view,
     ventas_list_view, venta_create_view, venta_update_view, estadisticas_financieras_view
@@ -187,6 +188,10 @@ urlpatterns = [
     path('asistencias/', asistencia_views.asistencias_list_create, name='asistencias_list_create'),
     path('asistencias/<int:pk>/', asistencia_views.asistencia_detail, name='asistencia_detail'),
     path('asistencias/estadisticas/<int:estudiante_id>/', asistencia_views.estadisticas_asistencia, name='estadisticas_asistencia'),
+    
+    # Endpoints para Historial Docente
+    path('historial-docente/', historial_docente_views.historial_docente_list_create_view, name='historial_docente_list_create'),
+    path('historial-docente/<int:pk>/', historial_docente_views.historial_docente_detail_view, name='historial_docente_detail'),
     
     # Endpoints para notificaciones de estudiantes
     path('notificaciones/estudiante/', notificacion_estudiante_views.notificaciones_estudiante_view, name='notificaciones_estudiante'),

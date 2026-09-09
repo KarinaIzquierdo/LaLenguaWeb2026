@@ -32,6 +32,11 @@ export const Sidebar = ({ onLogout, isOpen, onClose }: SidebarProps) => {
             </NavLink>
           </li>
           <li>
+            <NavLink to="/admin/historial-docente" className={({ isActive }) => isActive ? 'active' : ''}>
+              📜 Historial Docente
+            </NavLink>
+          </li>
+          <li>
             <NavLink to="/admin/programar-clases" className={({ isActive }) => isActive ? 'active' : ''}>
               Programar Clases
             </NavLink>

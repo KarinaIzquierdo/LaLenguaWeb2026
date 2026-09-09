@@ -6,7 +6,8 @@ import { AdminLayout } from "../layout/AdminLayout";
 // Pages
 import AdminDashboardHome from '../AdminDashboardHome';
 import FormularioUsuarios from "../FormularioUsuarios";
-import GestionEstudiantes from "../GestionEstudiantes";
+import HistorialDocente from '../HistorialDocente';
+import GestionEstudiantes from '../GestionEstudiantes';
 import ProgramarClases from "../ProgramarClases";
 import GestionCursos from '../GestionCursos';
 import Dashboard_Admin from '../Dashboard_Admin';
@@ -35,6 +36,7 @@ export const Rutas = () => {
                 <Route index element={<Navigate to="dashboard" />} /> 
                 <Route path="dashboard" element={<Dashboard_Admin />} />
                 <Route path="usuarios" element={<FormularioUsuarios />} />
+                <Route path="historial-docente" element={<HistorialDocente />} />
                 <Route path="gestion-estudiantes" element={<GestionEstudiantes />} />
                 <Route path="registros-eliminacion" element={<RegistrosEliminacion />} />
                 <Route path="programar-clases" element={<ProgramarClases />} />
