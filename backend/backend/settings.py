@@ -202,6 +202,13 @@ CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 CORS_REPLACE_HTTPS_REFERER = True
 
+CORS_ALLOWED_ORIGINS = [
+    "https://lalenguacolombia.co",
+    "https://www.lalenguacolombia.co",
+    "http://lalenguacolombia.co",
+    "http://www.lalenguacolombia.co",
+]
+
 CSRF_TRUSTED_ORIGINS = [
     'http://lalenguacolombia.co',
     'https://lalenguacolombia.co',

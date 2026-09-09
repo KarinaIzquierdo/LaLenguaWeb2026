@@ -11,14 +11,18 @@ const getBaseUrl = () => {
   // En producción, si no hay variable de entorno, usar el mismo host del navegador
   const { protocol, hostname } = window.location;
   
-  // 1. Si estamos en el dominio principal, usar el subdominio api
+  console.log('🔍 Detectando host:', hostname);
+
+  // 1. Si estamos en el dominio principal
   if (hostname.includes('lalenguacolombia.co')) {
+    // Intentar usar el subdominio api por defecto
     return `https://api.lalenguacolombia.co/api`;
   }
 
-  // 2. Si estamos accediendo por IP, el backend suele estar en el puerto 8001 (según pruebas)
-  if (hostname.match(/\d+\.\d+\.\d+\.\d+/)) {
-    return `${protocol}//${hostname}:8001/api`;
+  // 2. Si estamos accediendo por IP o localhost
+  if (hostname.match(/\d+\.\d+\.\d+\.\d+/) || hostname === 'localhost') {
+    const port = hostname === 'localhost' ? '8000' : '8001';
+    return `${protocol}//${hostname}:${port}/api`;
   }
   
   return 'https://api.lalenguacolombia.co/api';
