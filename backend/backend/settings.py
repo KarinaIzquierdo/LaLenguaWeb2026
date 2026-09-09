@@ -205,6 +205,9 @@ CSRF_TRUSTED_ORIGINS = [
     'http://179.199.144.149:3000',
 ]
 
+# Allowed hosts for development and production
+ALLOWED_HOSTS = ['*']
+
 # Email Configuration
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
