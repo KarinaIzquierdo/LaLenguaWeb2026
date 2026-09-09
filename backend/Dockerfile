@@ -27,5 +27,5 @@ COPY . /app/
 # Exponer el puerto
 EXPOSE 8000
 
-# Comando simplificado
-CMD ["daphne", "-b", "0.0.0.0", "-p", "8000", "backend.asgi:application"]
+# Comando de arranque robusto usando el módulo de python
+CMD ["python", "-m", "daphne", "-b", "0.0.0.0", "-p", "8000", "backend.asgi:application"]

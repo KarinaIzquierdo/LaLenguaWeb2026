@@ -226,9 +226,23 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 USE_X_FORWARDED_HOST = True
 USE_X_FORWARDED_PORT = True
 
-# CORS Configuration - Simplified for testing
-CORS_ALLOW_ALL_ORIGINS = True
+# CORS Configuration
 CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_ALL_ORIGINS = False  # Desactivamos el comodín para mayor seguridad con credenciales
+
+CORS_ALLOWED_ORIGINS = [
+    "https://www.lalenguacolombia.co",
+    "https://lalenguacolombia.co",
+    "https://api.lalenguacolombia.co",
+]
+
+# También permitimos estos para CSRF
+CSRF_TRUSTED_ORIGINS = [
+    "https://www.lalenguacolombia.co",
+    "https://lalenguacolombia.co",
+    "https://api.lalenguacolombia.co",
+]
+
 CORS_ALLOW_METHODS = [
     'DELETE',
     'GET',
@@ -237,6 +251,7 @@ CORS_ALLOW_METHODS = [
     'POST',
     'PUT',
 ]
+
 CORS_ALLOW_HEADERS = [
     'accept',
     'accept-encoding',
@@ -247,12 +262,6 @@ CORS_ALLOW_HEADERS = [
     'user-agent',
     'x-csrftoken',
     'x-requested-with',
-]
-
-CSRF_TRUSTED_ORIGINS = [
-    'https://lalenguacolombia.co',
-    'https://www.lalenguacolombia.co',
-    'https://api.lalenguacolombia.co',
 ]
 
 # Allowed hosts for development and production
