@@ -8,25 +8,23 @@ const getBaseUrl = () => {
   
   if (isDevelopment) return 'http://127.0.0.1:8000/api';
   
-  // En producción, si no hay variable de entorno, usar el mismo host del navegador
+  // En producción
   const { protocol, hostname } = window.location;
   
-  console.log('🔍 Detectando host:', hostname);
+  console.log('🌐 DOMINIO ACTUAL:', hostname);
+  console.log('🔒 PROTOCOLO:', protocol);
 
-  // 1. Si estamos en el dominio principal
+  // 1. Si estamos en el dominio de producción, usar la ruta oficial
   if (hostname.includes('lalenguacolombia.co')) {
-    // Intentar usar el subdominio api por defecto
-    return `https://api.lalenguacolombia.co/api`;
+    const apiUrl = `https://api.lalenguacolombia.co/api`;
+    console.log('🚀 CONFIGURANDO API PRODUCCIÓN:', apiUrl);
+    return apiUrl;
   }
 
-  // 2. Si estamos accediendo por IP o localhost
-  if (hostname.match(/\d+\.\d+\.\d+\.\d+/) || hostname === 'localhost') {
-    // Probar primero el puerto 8000 (que es el que dice Coolify)
-    const port = hostname === 'localhost' ? '8000' : '8000';
-    return `${protocol}//${hostname}:${port}/api`;
-  }
-  
-  return 'https://api.lalenguacolombia.co/api';
+  // 2. Plan B: Si estamos por IP o local
+  const fallbackUrl = `${protocol}//${hostname}:8000/api`;
+  console.log('⚠️ USANDO API FALLBACK:', fallbackUrl);
+  return fallbackUrl;
 };
 
 export const API_CONFIG = {
