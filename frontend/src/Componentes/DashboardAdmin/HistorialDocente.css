@@ -6,44 +6,40 @@
   min-height: 100vh;
 }
 
-.historial-header {
+.historial-header-centered {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 3rem;
-  gap: 2rem;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 3.5rem;
+  gap: 1.5rem;
+  position: relative;
 }
 
-.header-text h1 {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+.header-text-main h1 {
   margin: 0;
   color: #0f172a;
-  font-size: 2.25rem;
+  font-size: 2.5rem;
   font-weight: 800;
+  letter-spacing: -0.025em;
 }
 
-.header-text p {
-  margin: 8px 0 0 0;
+.header-text-main p {
+  margin: 10px 0 0 0;
   color: #64748b;
-  font-size: 1.1rem;
+  font-size: 1.15rem;
 }
 
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
+.header-stats-wrapper {
+  margin-top: 0.5rem;
 }
 
 .header-stats {
   display: flex;
-  gap: 0;
   background: white;
-  padding: 0;
-  border-radius: 16px;
+  border-radius: 20px;
   border: 1px solid #e2e8f0;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
   overflow: hidden;
 }
 
@@ -51,8 +47,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 1rem 1.5rem;
-  min-width: 140px;
+  padding: 1.25rem 2.5rem;
+  min-width: 160px;
 }
 
 .stat-mini:first-child {
@@ -60,38 +56,39 @@
 }
 
 .stat-label {
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   text-transform: uppercase;
   color: #64748b;
   font-weight: 700;
-  letter-spacing: 0.05em;
-  margin-bottom: 4px;
+  letter-spacing: 0.075em;
+  margin-bottom: 6px;
 }
 
 .stat-value {
-  font-size: 1.5rem;
+  font-size: 1.75rem;
   font-weight: 800;
   color: #ec4899;
 }
 
-.btn-add-historial {
+.btn-add-historial-centered {
   display: flex;
   align-items: center;
   gap: 10px;
   background: linear-gradient(135deg, #ec4899 0%, #be185d 100%);
   color: white;
-  padding: 0.875rem 1.5rem;
-  border-radius: 12px;
+  padding: 0.875rem 1.75rem;
+  border-radius: 14px;
   font-weight: 700;
   border: none;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 10px 15px -3px rgba(236, 72, 153, 0.3);
-  font-size: 0.95rem;
+  font-size: 1rem;
+  margin-top: 0.5rem;
 }
 
-.btn-add-historial:hover {
-  transform: translateY(-2px) scale(1.02);
+.btn-add-historial-centered:hover {
+  transform: translateY(-3px);
   box-shadow: 0 20px 25px -5px rgba(236, 72, 153, 0.4);
 }
 

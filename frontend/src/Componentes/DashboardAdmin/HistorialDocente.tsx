@@ -133,12 +133,13 @@ export default function HistorialDocente() {
 
   return (
     <div className="historial-docente-container">
-      <div className="historial-header">
-        <div className="header-text">
-          <h1><FaHistory /> Historial Docente</h1>
+      <div className="historial-header-centered">
+        <div className="header-text-main">
+          <h1>Historial de Clase</h1>
           <p>Seguimiento de eventos y actividades de los profesores</p>
         </div>
-        <div className="header-right">
+        
+        <div className="header-stats-wrapper">
           <div className="header-stats">
             <div className="stat-mini">
               <span className="stat-label">Clases Totales</span>
@@ -149,10 +150,11 @@ export default function HistorialDocente() {
               <span className="stat-value">{estadisticas.total_horas}h</span>
             </div>
           </div>
-          <button className="btn-add-historial" onClick={() => setShowModal(true)}>
-            <FaPlus /> Nuevo Registro
-          </button>
         </div>
+
+        <button className="btn-add-historial-centered" onClick={() => setShowModal(true)}>
+          <FaPlus /> Nuevo Registro
+        </button>
       </div>
 
       <div className="filtros-container">
