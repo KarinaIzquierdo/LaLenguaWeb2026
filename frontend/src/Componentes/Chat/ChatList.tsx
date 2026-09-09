@@ -51,7 +51,7 @@ const ChatList: React.FC<ChatListProps> = ({ onSelectRoom }) => {
           <input 
             type="text" 
             placeholder="Buscar contacto..." 
-            className="w-full pl-9 pr-3 py-2 bg-gray-100 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
+            className="w-full pl-9 pr-3 py-2 bg-gray-100 rounded-full text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -86,10 +86,10 @@ const ChatList: React.FC<ChatListProps> = ({ onSelectRoom }) => {
                 {contact.first_name?.charAt(0) || contact.username?.charAt(0)}
               </div>
               <div className="contact-info">
-                <p className="contact-name truncate">
+                <p className="contact-name truncate text-slate-900">
                   {contact.first_name} {contact.last_name}
                 </p>
-                <p className="contact-role">
+                <p className="contact-role text-slate-600">
                   {contact.role === 'profesor' ? 'Profesor' : 'Estudiante'}
                 </p>
               </div>

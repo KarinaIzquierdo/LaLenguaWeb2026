@@ -28,7 +28,8 @@
   width: 380px;
   height: 600px;
   max-height: calc(100vh - 120px);
-  background: white;
+  background: white !important;
+  color: #1e293b !important;
   border-radius: 20px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
   z-index: 9998;
@@ -141,13 +142,13 @@
 .contact-name {
   font-weight: 600;
   font-size: 0.95rem;
-  color: #1e293b;
+  color: #1e293b !important;
   margin-bottom: 2px;
 }
 
 .contact-role {
   font-size: 0.75rem;
-  color: #64748b;
+  color: #4b5563 !important;
   text-transform: capitalize;
 }
 
@@ -180,7 +181,7 @@
 .message-received {
   align-self: flex-start;
   background: white;
-  color: #1e293b;
+  color: #1e293b !important;
   border-bottom-left-radius: 2px;
   box-shadow: 0 2px 5px rgba(0,0,0,0.05);
 }
@@ -215,6 +216,7 @@
   outline: none;
   font-size: 0.9rem;
   padding: 0.4rem 0;
+  color: #1e293b !important;
 }
 
 .send-btn {
