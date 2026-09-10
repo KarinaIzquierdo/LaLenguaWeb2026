@@ -40,22 +40,30 @@ export const ClaseService = {
   },
 
   // Obtener clases por profesor
-  getClasesPorProfesor: async (profesorId: number) => {
-    // Intentar obtener el nombre completo del profesor desde localStorage
+  getClasesPorProfesor: async (profesorId?: number) => {
+    // Intentar obtener datos del usuario autenticado
+    let pid: number | undefined = profesorId;
     let nombreCompleto = '';
     const userStr = localStorage.getItem('user');
     if (userStr) {
       try {
         const user = JSON.parse(userStr);
-        nombreCompleto = `${user.first_name || ''} ${user.last_name || ''}`.trim();
+        if (!pid && user.id) {
+          pid = user.id;
+        }
+        nombreCompleto = (`${user.first_name || ''} ${user.last_name || ''}`.trim())
+                         || (user.username || '')
+                         || (user.email || '');
       } catch (e) {
         console.error('Error parseando usuario en getClasesPorProfesor:', e);
       }
     }
 
-    const url = nombreCompleto
-      ? `${API_URL}/clases/?profesor=${encodeURIComponent(nombreCompleto)}`
-      : `${API_URL}/clases/`;
+    const params = new URLSearchParams();
+    if (pid) params.append('profesor_id', String(pid));
+    if (nombreCompleto) params.append('profesor', nombreCompleto);
+    const query = params.toString();
+    const url = query ? `${API_URL}/clases/?${query}` : `${API_URL}/clases/`;
 
     const res = await axios.get(url, { headers: getAuthHeaders() });
     const todasLasClases: any[] = Array.isArray(res.data) ? res.data : (res.data.data || []);

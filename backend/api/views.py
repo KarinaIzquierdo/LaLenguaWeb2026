@@ -1616,13 +1616,31 @@ class ClaseViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         usuario_id = self.request.query_params.get('usuario')
         profesor = self.request.query_params.get('profesor')
+        profesor_id = self.request.query_params.get('profesor_id')
 
         queryset = super().get_queryset()
 
         if usuario_id:
             queryset = queryset.filter(estudiantes__id=usuario_id)
 
-        if profesor:
+        if profesor_id:
+            from django.db.models import Q
+            try:
+                usuario = CustomUser.objects.get(id=profesor_id)
+                nombres = [
+                    f"{usuario.first_name or ''} {usuario.last_name or ''}".strip(),
+                    usuario.username or '',
+                    usuario.email or ''
+                ]
+                nombres = [n for n in nombres if n]
+                if nombres:
+                    filtro = Q()
+                    for n in nombres:
+                        filtro |= Q(profesor__iexact=n)
+                    queryset = queryset.filter(filtro)
+            except (CustomUser.DoesNotExist, ValueError):
+                pass
+        elif profesor:
             from django.db.models import Q
             queryset = queryset.filter(
                 Q(profesor__iexact=profesor) | Q(profesor='') | Q(profesor__isnull=True)
@@ -1645,6 +1663,17 @@ class ClaseViewSet(viewsets.ModelViewSet):
         # mapearlo al campo que usa el serializer para poblar el ManyToMany
         if 'estudiantesSeleccionados' not in data and data.get('estudiantes'):
             data['estudiantesSeleccionados'] = data.get('estudiantes')
+
+        # Asegurar que el profesor quede asociado correctamente
+        profesor_id = data.pop('profesor_id', None)
+        if not data.get('profesor') and profesor_id:
+            try:
+                usuario = CustomUser.objects.get(id=profesor_id)
+                data['profesor'] = f"{usuario.first_name or ''} {usuario.last_name or ''}".strip() or usuario.username or usuario.email
+            except CustomUser.DoesNotExist:
+                pass
+        if not data.get('profesor') and request.user.is_authenticated and getattr(request.user, 'role', '') == 'profesor':
+            data['profesor'] = f"{request.user.first_name or ''} {request.user.last_name or ''}".strip() or request.user.username or request.user.email
 
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
@@ -1695,7 +1724,18 @@ class ClaseViewSet(viewsets.ModelViewSet):
             # Limpiar 'estudiantes' para evitar que el PrimaryKeyRelatedField falle
             # al validar strings como claves primarias
             data.pop('estudiantes', None)
-        
+
+        # Asegurar que el profesor quede asociado correctamente al actualizar
+        profesor_id = data.pop('profesor_id', None)
+        if not data.get('profesor') and profesor_id:
+            try:
+                usuario = CustomUser.objects.get(id=profesor_id)
+                data['profesor'] = f"{usuario.first_name or ''} {usuario.last_name or ''}".strip() or usuario.username or usuario.email
+            except CustomUser.DoesNotExist:
+                pass
+        if not data.get('profesor') and request.user.is_authenticated and getattr(request.user, 'role', '') == 'profesor':
+            data['profesor'] = f"{request.user.first_name or ''} {request.user.last_name or ''}".strip() or request.user.username or request.user.email
+
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
         

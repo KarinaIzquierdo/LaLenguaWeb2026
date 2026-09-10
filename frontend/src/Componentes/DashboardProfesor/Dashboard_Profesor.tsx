@@ -81,7 +81,8 @@ export default function DashboardProfesor({ onLogout }: DashboardProfesorProps =
         }
 
         try {
-          const clasesProfesor: any[] = await ClaseService.getClasesPorProfesor(0);
+          const currentUser = authService.getUser?.();
+          const clasesProfesor: any[] = await ClaseService.getClasesPorProfesor(currentUser?.id);
           const clasesArray = Array.isArray(clasesProfesor) ? clasesProfesor : [];
 
           // Filtrar clases del mes actual para restablecer estadísticas mensualmente

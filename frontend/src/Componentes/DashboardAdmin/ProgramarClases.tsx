@@ -301,11 +301,16 @@ export default function ProgramarClases() {
     setSubmitError('');
     try {
       // Generar enlace de Meet automáticamente si no existe
-      const dataToSend = {
+      const profesorSeleccionado = profesoresDisponibles.find(p => p.nombre === formData.profesor);
+      const dataToSend: any = {
         ...formData,
         meet_link: generateMeetLink(),
         estado: 'programada' // Asegurar que las clases nuevas se creen como programadas
       };
+
+      if (profesorSeleccionado && profesorSeleccionado.id) {
+        dataToSend.profesor_id = parseInt(profesorSeleccionado.id, 10);
+      }
       
       if (editingClass) {
         await ClaseService.updateClase(editingClass.id, dataToSend);

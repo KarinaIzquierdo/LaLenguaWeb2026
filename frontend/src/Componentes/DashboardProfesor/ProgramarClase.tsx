@@ -246,11 +246,16 @@ export default function ProgramarClase() {
       // Obtener el nombre del profesor desde localStorage
       const userStr = localStorage.getItem('user');
       let nombreProfesor = 'Profesor';
+      let profesorId: number | null = null;
       
       if (userStr) {
         try {
           const user = JSON.parse(userStr);
-          nombreProfesor = `${user.first_name || ''} ${user.last_name || ''}`.trim();
+          nombreProfesor = (`${user.first_name || ''} ${user.last_name || ''}`.trim())
+                            || user.username
+                            || user.email
+                            || 'Profesor';
+          profesorId = user.id || null;
         } catch (e) {
           console.error('Error parseando usuario:', e);
         }
@@ -260,6 +265,7 @@ export default function ProgramarClase() {
       const claseData = {
         nombre: formulario.tema,
         profesor: nombreProfesor,
+        profesor_id: profesorId,
         fecha: formulario.fecha,
         hora: formulario.hora,
         duracion: formulario.duracion,

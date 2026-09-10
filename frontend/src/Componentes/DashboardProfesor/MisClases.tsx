@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ClaseService } from '../../services/claseService';
 import { userService } from '../../services/userService';
+import { authService } from '../../services/authService';
 import TomarAsistencia from './TomarAsistencia';
 import HistorialAsistencias from './HistorialAsistencias';
 import './MisClases.css';
@@ -70,7 +71,8 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
         });
         
         // Cargar solo las clases del profesor autenticado desde el backend
-        const clasesDelProfesor: any[] = await ClaseService.getClasesPorProfesor(profesorId ?? 0);
+        const currentUser = authService.getUser?.();
+        const clasesDelProfesor: any[] = await ClaseService.getClasesPorProfesor(currentUser?.id);
 
         // NO cargar clases del bloque
         setClasesDelBloque([]);
