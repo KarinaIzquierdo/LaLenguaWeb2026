@@ -71,6 +71,7 @@ def historial_docente_list_create_view(request):
             duracion = clase.duracion_real if clase.duracion_real else clase.duracion
             clases_data.append({
                 'id': f"clase-{clase.id}",
+                'clase_id': clase.id,
                 'profesor': {
                     'nombre': clase.profesor,
                 },

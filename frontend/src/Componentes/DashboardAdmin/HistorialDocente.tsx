@@ -156,9 +156,9 @@ export default function HistorialDocente() {
                     <td>
                       <button 
                         className="btn-ver-asistencia"
-                        onClick={() => verAsistencia(item.id)}
+                        onClick={() => verAsistencia(item.clase_id)}
                       >
-                        {claseAsistenciaSeleccionada === item.id ? 'Ocultar' : 'Ver asistencia'}
+                        {claseAsistenciaSeleccionada === item.clase_id ? 'Ocultar' : 'Ver asistencia'}
                       </button>
                     </td>
                   </tr>
