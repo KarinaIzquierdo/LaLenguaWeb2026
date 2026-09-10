@@ -325,11 +325,12 @@ export default function EstudiantesView() {
     setEstudianteSeleccionado(null);
   };
 
-  // Manejar cambio de asistencia: guarda inmediatamente en el backend
+  // Manejar cambio de asistencia: guarda inmediatamente en el backend vinculado a la clase
   const handleAsistenciaChange = async (estudianteId: string, estado: 'presente' | 'ausente') => {
-    // Si no hay clase seleccionada, usar la fecha de hoy sin clase asociada
-    const fechaAsistencia = claseSeleccionada?.fecha || new Date().toISOString().split('T')[0];
-    const claseId = claseSeleccionada?.id || null;
+    if (!claseSeleccionada?.id) {
+      alert('Selecciona una clase antes de marcar asistencia');
+      return;
+    }
 
     // Actualizar estado temporal de inmediato para reflejar el clic
     setAsistenciasTemporal(prev => ({
@@ -342,12 +343,9 @@ export default function EstudiantesView() {
     setGuardandoAsistencia(prev => ({ ...prev, [estudianteId]: true }));
 
     try {
-      await asistenciaService.registrarAsistencia({
-        estudiante_id: Number(estudianteId),
-        clase_id: claseId ?? undefined,
-        fecha: fechaAsistencia,
-        estado
-      });
+      await asistenciaService.guardarAsistenciaClase(claseSeleccionada.id, [
+        { estudiante_id: Number(estudianteId), estado }
+      ]);
 
       // Marcar como guardada en el mapa de asistencias de la clase
       setAsistenciasClaseActual(prev => ({
@@ -374,29 +372,26 @@ export default function EstudiantesView() {
   // Guardar todas las asistencias de la clase
   const guardarTodasAsistencias = async () => {
     try {
+      if (!claseSeleccionada?.id) {
+        alert('Selecciona una clase antes de guardar las asistencias');
+        return;
+      }
+
       // Validar que haya al menos una asistencia marcada
       if (Object.keys(asistenciasTemporal).length === 0) {
         alert('Por favor marca al menos una asistencia antes de guardar');
         return;
       }
 
-      // Si no hay clase seleccionada, usar la fecha de hoy sin clase asociada
-      const fechaAsistencia = claseSeleccionada?.fecha || new Date().toISOString().split('T')[0];
-      const claseId = claseSeleccionada?.id || null;
-
       setGuardandoTodasAsistencias(true);
 
-      // Guardar cada asistencia
-      const promesas = Object.entries(asistenciasTemporal).map(([estudianteId, estado]) => 
-        asistenciaService.registrarAsistencia({
-          estudiante_id: Number(estudianteId),
-          clase_id: claseId ?? undefined,
-          fecha: fechaAsistencia,
-          estado: estado as 'presente' | 'ausente'
-        })
-      );
+      // Guardar todas las asistencias vinculadas a la clase
+      const asistenciasParaEnviar = Object.entries(asistenciasTemporal).map(([estudianteId, estado]) => ({
+        estudiante_id: Number(estudianteId),
+        estado: estado as 'presente' | 'ausente' | 'tardanza' | 'justificado'
+      }));
 
-      await Promise.all(promesas);
+      await asistenciaService.guardarAsistenciaClase(claseSeleccionada.id, asistenciasParaEnviar);
 
       // Actualizar asistencias guardadas
       setAsistenciasClaseActual(asistenciasTemporal);
@@ -416,7 +411,7 @@ export default function EstudiantesView() {
       })));
 
       alert('✅ Asistencia guardada correctamente');
-      console.log(`Asistencias guardadas: ${claseSeleccionada?.nombre || 'sin clase'} (${fechaAsistencia})`);
+      console.log(`Asistencias guardadas: ${claseSeleccionada?.nombre || 'sin clase'} (${claseSeleccionada?.fecha || 'sin fecha'})`);
     } catch (error) {
       console.error('Error guardando asistencias:', error);
       alert('❌ Error al guardar las asistencias. Por favor intenta de nuevo.');
