@@ -1798,6 +1798,20 @@ class ClaseViewSet(viewsets.ModelViewSet):
             except Exception:
                 continue
 
+    def _es_profesor_de_clase(self, usuario, clase):
+        """Verifica si el usuario es el profesor asignado a la clase."""
+        if getattr(usuario, 'role', '') != 'profesor':
+            return False
+        if not clase.profesor:
+            return False
+        profesor_clase = str(clase.profesor).strip().lower()
+        nombres = [
+            f"{usuario.first_name or ''} {usuario.last_name or ''}".strip(),
+            usuario.username or '',
+            usuario.email or ''
+        ]
+        return any((n or '').strip().lower() == profesor_clase for n in nombres)
+
     @action(detail=False, methods=['post'], url_path='registrar-asistencia')
     def registrar_asistencia(self, request):
         """
@@ -1867,9 +1881,8 @@ class ClaseViewSet(viewsets.ModelViewSet):
             return Response({'error': 'No autenticado.'}, status=status.HTTP_401_UNAUTHORIZED)
 
         rol = getattr(usuario, 'role', '')
-        nombre_profesor = f"{usuario.first_name or ''} {usuario.last_name or ''}".strip()
         es_admin = rol == 'admin'
-        es_profesor = rol == 'profesor' and clase.profesor and nombre_profesor.lower() == clase.profesor.lower()
+        es_profesor = self._es_profesor_de_clase(usuario, clase)
 
         if not (es_admin or es_profesor):
             return Response({'error': 'No tienes permiso para ver estas asistencias.'}, status=status.HTTP_403_FORBIDDEN)
@@ -1900,9 +1913,8 @@ class ClaseViewSet(viewsets.ModelViewSet):
         clase = self.get_object()
         usuario = request.user
         rol = getattr(usuario, 'role', '')
-        nombre_profesor = f"{usuario.first_name or ''} {usuario.last_name or ''}".strip()
         es_admin = rol == 'admin'
-        es_profesor = rol == 'profesor' and clase.profesor and nombre_profesor.lower() == clase.profesor.lower()
+        es_profesor = self._es_profesor_de_clase(usuario, clase)
 
         if not (es_admin or es_profesor):
             return Response({'error': 'No tienes permiso para aprobar asistencias.'}, status=status.HTTP_403_FORBIDDEN)
@@ -1919,7 +1931,7 @@ class ClaseViewSet(viewsets.ModelViewSet):
             asistencia = Asistencia.objects.get(clase=clase, estudiante_id=estudiante_id)
         except Asistencia.DoesNotExist:
             # Crear asistencia si el profesor la marca manualmente
-            estudiante = get_object_or_404(CustomUser, id=estudiante_id, role='student')
+            estudiante = get_object_or_404(CustomUser, id=estudiante_id)
             fecha = clase.fecha if clase.fecha else timezone.now().date()
             asistencia = Asistencia.objects.create(
                 estudiante=estudiante,

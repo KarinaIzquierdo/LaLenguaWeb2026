@@ -794,12 +794,6 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
 
                 <div className="clase-acciones-row">
                   <button 
-                    className="btn-ver-detalles"
-                    onClick={() => verDetallesClase(clase)}
-                  >
-                    👁️ Ver
-                  </button>
-                  <button 
                     className="btn-editar"
                     onClick={() => editarClase(clase)}
                   >
@@ -860,12 +854,6 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
                       </span>
                     </div>
                     <div className="historial-acciones">
-                      <button 
-                        className="btn-ver-historial"
-                        onClick={() => verDetallesClase(clase)}
-                      >
-                        👁️ Ver
-                      </button>
                       <button 
                         className="btn-asistencia"
                         onClick={() => abrirAsistencia(clase)}
