@@ -1803,13 +1803,28 @@ class ClaseViewSet(viewsets.ModelViewSet):
             clase.codigo_expiracion = ahora + timedelta(minutes=minutos_validez)
         elif nuevo_estado == 'completada':
             # Registrar hora real de fin y calcular duración real
+            if not clase.hora_inicio_real:
+                # Si no hay inicio registrado, intentar usar la fecha/hora programada
+                if clase.fecha and clase.hora:
+                    from datetime import datetime as dt
+                    from django.utils.dateparse import parse_time
+                    try:
+                        t = parse_time(clase.hora)
+                        inicio_naive = dt.combine(clase.fecha, t)
+                        inicio = timezone.make_aware(inicio_naive, timezone.get_current_timezone())
+                        if inicio > ahora:
+                            inicio = ahora
+                        clase.hora_inicio_real = inicio
+                    except Exception:
+                        clase.hora_inicio_real = ahora
+                else:
+                    clase.hora_inicio_real = ahora
             clase.hora_fin_real = ahora
-            if clase.hora_inicio_real:
-                diferencia = ahora - clase.hora_inicio_real
-                clase.duracion_real = max(1, int(diferencia.total_seconds() / 60))
+            diferencia = clase.hora_fin_real - clase.hora_inicio_real
+            if diferencia.total_seconds() > 0:
+                clase.duracion_real = int(diferencia.total_seconds() / 60)
             else:
-                # Si no hay inicio registrado, usar la duración programada
-                clase.duracion_real = clase.duracion
+                clase.duracion_real = clase.duracion or 60
             # Expirar el código de asistencia
             clase.codigo_expiracion = ahora
         elif nuevo_estado == 'programada':
@@ -2058,6 +2073,35 @@ class ClaseViewSet(viewsets.ModelViewSet):
                 'estado': asistencia.estado,
                 'estado_display': asistencia.get_estado_display()
             })
+
+        # Al guardar asistencias, marcar la clase como completada para que aparezca en Historial Docente
+        if guardados and clase.estado != 'completada':
+            from datetime import datetime as dt
+            from django.utils.dateparse import parse_time
+            ahora = timezone.now()
+            if not clase.hora_inicio_real:
+                if clase.fecha and clase.hora:
+                    try:
+                        t = parse_time(clase.hora)
+                        inicio_naive = dt.combine(clase.fecha, t)
+                        inicio = timezone.make_aware(inicio_naive, timezone.get_current_timezone())
+                        if inicio > ahora:
+                            inicio = ahora
+                        clase.hora_inicio_real = inicio
+                    except Exception:
+                        clase.hora_inicio_real = ahora
+                else:
+                    clase.hora_inicio_real = ahora
+            if not clase.hora_fin_real:
+                clase.hora_fin_real = ahora
+            delta = clase.hora_fin_real - clase.hora_inicio_real
+            if delta.total_seconds() > 0:
+                clase.duracion_real = int(delta.total_seconds() / 60)
+            else:
+                clase.duracion_real = clase.duracion or 60
+            clase.estado = 'completada'
+            clase.codigo_expiracion = ahora
+            clase.save()
 
         return Response({
             'success': True,
