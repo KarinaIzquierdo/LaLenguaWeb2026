@@ -89,23 +89,6 @@
   color: #742a2a;
 }
 
-.estudiante-item.tardanza .estado-select {
-  background: #fffaf0;
-  border-color: #ed8936;
-  color: #7c2d12;
-}
-
-.estudiante-item.justificado .estado-select {
-  background: #ebf8ff;
-  border-color: #4299e1;
-  color: #2a4365;
-}
-
-.estudiante-item.pendiente .estado-select {
-  background: #fffaf0;
-  border-color: #ed8936;
-  color: #7c2d12;
-}
 
 .lista-estudiantes {
   flex: 1;
@@ -142,17 +125,6 @@
   background: #fff5f5;
 }
 
-.estudiante-item.tardanza {
-  background: #fffaf0;
-}
-
-.estudiante-item.justificado {
-  background: #ebf8ff;
-}
-
-.estudiante-item.pendiente {
-  background: #fffaf0;
-}
 
 .estudiante-info {
   flex: 1;

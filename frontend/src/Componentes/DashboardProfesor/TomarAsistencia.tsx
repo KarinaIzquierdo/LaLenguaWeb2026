@@ -174,12 +174,9 @@ export default function TomarAsistencia({
                   value={estudiante.estado || ''}
                   onChange={(e) => marcarEstado(estudiante.id, e.target.value || null)}
                 >
-                  <option value="">Sin marcar</option>
+                  <option value="" hidden disabled>—</option>
                   <option value="presente">✅ Presente</option>
-                  <option value="ausente">❌ Ausente</option>
-                  <option value="tardanza">⏰ Tardanza</option>
-                  <option value="justificado">📄 Justificado</option>
-                  <option value="pendiente">⏳ Pendiente</option>
+                  <option value="ausente">❌ Rechazado</option>
                 </select>
               </div>
             ))
