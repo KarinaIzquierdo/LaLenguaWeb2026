@@ -1732,7 +1732,7 @@ class ClaseViewSet(viewsets.ModelViewSet):
             'message': 'Clase actualizada exitosamente'
         })
     
-    @action(detail=True, methods=['patch'])
+    @action(detail=True, methods=['put', 'patch'])
     def cambiar_estado(self, request, pk=None):
         """
         Endpoint para cambiar el estado de una clase (programada -> activa -> completada)
