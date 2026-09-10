@@ -138,17 +138,6 @@ export default function HistorialAsistencias() {
     }
   };
 
-  const calcularEstadisticas = () => {
-    const total = asistencias.length;
-    const presentes = asistencias.filter(a => a.estado === 'presente').length;
-    const ausentes = asistencias.filter(a => a.estado === 'ausente').length;
-    const porcentaje = total > 0 ? Math.round((presentes / total) * 100) : 0;
-
-    return { total, presentes, ausentes, porcentaje };
-  };
-
-  const stats = calcularEstadisticas();
-
   return (
     <div className="historial-asistencias">
       <div className="historial-header">
@@ -212,28 +201,6 @@ export default function HistorialAsistencias() {
                   </span>
                 </div>
               </div>
-
-              {/* Estadísticas */}
-              {asistencias.length > 0 && (
-                <div className="stats-cards">
-                  <div className="stat-card">
-                    <div className="stat-value">{stats.total}</div>
-                    <div className="stat-label">Total Estudiantes</div>
-                  </div>
-                  <div className="stat-card presente">
-                    <div className="stat-value">{stats.presentes}</div>
-                    <div className="stat-label">Presentes</div>
-                  </div>
-                  <div className="stat-card ausente">
-                    <div className="stat-value">{stats.ausentes}</div>
-                    <div className="stat-label">Ausentes</div>
-                  </div>
-                  <div className="stat-card porcentaje">
-                    <div className="stat-value">{stats.porcentaje}%</div>
-                    <div className="stat-label">Asistencia</div>
-                  </div>
-                </div>
-              )}
 
               {/* Tabla de Asistencias */}
               {asistencias.length === 0 ? (
