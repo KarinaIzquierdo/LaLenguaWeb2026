@@ -90,10 +90,6 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
   };
 
   const guardarAsistencia = (asistencias: { [key: string]: string | null }) => {
-    const presentes = Object.values(asistencias).filter(a => a === 'presente').length;
-    const ausentes = Object.values(asistencias).filter(a => a === 'ausente').length;
-    const pendientes = Object.values(asistencias).filter(a => a === 'pendiente').length;
-    alert(`✅ Asistencia guardada:\n${presentes} presentes, ${ausentes} ausentes, ${pendientes} pendientes`);
     setMostrarAsistencia(false);
     setClaseAsistencia(null);
   };
