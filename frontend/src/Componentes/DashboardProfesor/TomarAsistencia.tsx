@@ -95,40 +95,29 @@ export default function TomarAsistencia({
   const handleGuardar = async () => {
     setGuardando(true);
     const asistencias: { [key: string]: string | null } = {};
-    const resultados: Array<{ id: number; exito: boolean; estado: string; error?: string }> = [];
+    estudiantes.forEach(est => { asistencias[est.id] = est.estado; });
+
+    const asistenciasParaEnviar = estudiantes
+      .filter(est => est.estado && est.estado !== 'pendiente')
+      .map(est => ({
+        estudiante_id: est.id,
+        estado: est.estado as 'presente' | 'ausente' | 'tardanza' | 'justificado'
+      }));
+
+    if (asistenciasParaEnviar.length === 0) {
+      alert('Por favor marca al menos una asistencia antes de guardar');
+      setGuardando(false);
+      return;
+    }
 
     try {
-      for (const est of estudiantes) {
-        asistencias[est.id] = est.estado;
-        if (!est.estado || est.estado === 'pendiente') {
-          continue;
-        }
-
-        try {
-          await asistenciaService.aprobarAsistenciaClase(claseId, {
-            estudiante_id: est.id,
-            estado: est.estado as 'presente' | 'ausente' | 'tardanza' | 'justificado'
-          });
-          resultados.push({ id: est.id, exito: true, estado: est.estado });
-        } catch (error: any) {
-          const msg = error?.response?.data?.error || error?.response?.data?.message || error.message || 'Error desconocido';
-          console.error(`Error guardando asistencia para estudiante ${est.id}:`, error);
-          resultados.push({ id: est.id, exito: false, estado: est.estado, error: msg });
-        }
-      }
-
-      const exitosos = resultados.filter(r => r.exito);
-      const fallidos = resultados.filter(r => !r.exito);
-      if (fallidos.length > 0) {
-        const detalle = fallidos.map(f => `- ${estudiantes.find(e => e.id === f.id)?.nombre || `ID ${f.id}`}: ${f.error}`).join('\n');
-        alert(`⚠️ Se guardaron ${exitosos.length} asistencias. ${fallidos.length} fallaron:\n\n${detalle}`);
-      } else {
-        alert('✅ Asistencias guardadas correctamente');
-      }
-
+      const resultado = await asistenciaService.guardarAsistenciaClase(claseId, asistenciasParaEnviar);
+      alert(`✅ ${resultado.message || 'Asistencias guardadas correctamente'}`);
       onGuardar(asistencias);
-    } catch (error) {
+    } catch (error: any) {
+      const msg = error?.response?.data?.error || error?.response?.data?.message || error.message || 'Error guardando asistencias';
       console.error('Error guardando asistencias:', error);
+      alert(`❌ ${msg}`);
     } finally {
       setGuardando(false);
     }

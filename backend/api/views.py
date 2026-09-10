@@ -1996,6 +1996,76 @@ class ClaseViewSet(viewsets.ModelViewSet):
             'message': 'Asistencia actualizada correctamente.'
         }, status=status.HTTP_200_OK)
 
+    @action(detail=True, methods=['post'], url_path='guardar-asistencia')
+    def guardar_asistencia(self, request, pk=None):
+        """
+        Guarda / actualiza las asistencias de una clase de forma masiva.
+        Recibe: { "asistencias": [{ "estudiante_id": 1, "estado": "presente" }, ...] }
+        """
+        from django.utils import timezone
+        from django.shortcuts import get_object_or_404
+
+        clase = self.get_object()
+        usuario = request.user
+        rol = getattr(usuario, 'role', '')
+        es_admin = rol == 'admin'
+        es_profesor = self._es_profesor_de_clase(usuario, clase)
+
+        if not (es_admin or es_profesor):
+            return Response({'error': 'No tienes permiso para guardar asistencias.'}, status=status.HTTP_403_FORBIDDEN)
+
+        asistencias_data = request.data.get('asistencias', [])
+        if not isinstance(asistencias_data, list):
+            return Response({'error': '"asistencias" debe ser una lista.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        guardados = []
+        errores = []
+        fecha = clase.fecha if clase.fecha else timezone.now().date()
+        estados_validos = {'presente', 'ausente', 'tardanza', 'justificado', 'pendiente'}
+
+        for idx, item in enumerate(asistencias_data):
+            estudiante_id = item.get('estudiante_id')
+            estado = item.get('estado')
+            observaciones = item.get('observaciones', '')
+
+            if not estudiante_id or not estado:
+                errores.append({'index': idx, 'error': 'estudiante_id y estado son requeridos'})
+                continue
+
+            if estado not in estados_validos:
+                errores.append({'index': idx, 'error': f'Estado inválido: {estado}'})
+                continue
+
+            estudiante = get_object_or_404(CustomUser, id=estudiante_id)
+            asistencia, _ = Asistencia.objects.update_or_create(
+                estudiante=estudiante,
+                clase=clase,
+                defaults={
+                    'fecha': fecha,
+                    'estado': estado,
+                    'observaciones': observaciones
+                }
+            )
+
+            # Asegurar que el estudiante está en la lista de la clase
+            if not clase.estudiantes.filter(id=estudiante.id).exists():
+                clase.estudiantes.add(estudiante)
+
+            guardados.append({
+                'id': asistencia.id,
+                'estudiante_id': estudiante.id,
+                'estudiante_nombre': f"{estudiante.first_name} {estudiante.last_name}".strip() or estudiante.username,
+                'estado': asistencia.estado,
+                'estado_display': asistencia.get_estado_display()
+            })
+
+        return Response({
+            'success': True,
+            'message': f'{len(guardados)} asistencia(s) guardada(s)',
+            'guardados': guardados,
+            'errores': errores
+        }, status=status.HTTP_200_OK)
+
 
 @api_view(['POST'])
 @permission_classes([AllowAny])

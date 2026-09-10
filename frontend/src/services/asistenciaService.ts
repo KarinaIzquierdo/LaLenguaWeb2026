@@ -133,5 +133,20 @@ export const asistenciaService = {
       console.error('Error aprobando asistencia:', error);
       throw error;
     }
+  },
+
+  // Guardar asistencias de una clase de forma masiva (profesor/admin)
+  guardarAsistenciaClase: async (claseId: number, asistencias: AprobarAsistenciaData[]) => {
+    try {
+      const response = await axios.post(
+        `${API_URL}/clases/${claseId}/guardar-asistencia/`,
+        { asistencias },
+        { headers: getAuthHeaders() }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error guardando asistencias:', error);
+      throw error;
+    }
   }
 };
