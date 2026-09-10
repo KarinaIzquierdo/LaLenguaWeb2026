@@ -45,25 +45,38 @@ export default function TomarAsistencia({
         asistenciaService.getAsistenciasPorClase(claseId).catch(() => [] as any[])
       ]);
 
-      // Filtrar solo los estudiantes asignados a esta clase
-      const estudiantesClase = todosUsuarios
-        .filter((u: any) => estudiantesIds.includes(u.id.toString()))
-        .map((u: any) => ({
-          id: Number(u.id),
-          nombre: `${u.nombres || u.first_name || ''} ${u.apellidos || u.last_name || ''}`.trim() || u.username || u.correo || `ID ${u.id}`,
-          email: u.correo || u.email || '',
-          estado: null as string | null
-        }));
-
-      // Precargar asistencias registradas en el servidor
-      asistenciasBackend.forEach((a: any) => {
-        const estudiante = estudiantesClase.find((est: Estudiante) => est.id === Number(a.estudiante_id));
-        if (estudiante && a.estado) {
-          estudiante.estado = a.estado;
-        }
+      // Mapa de usuarios por ID para acceder rápido
+      const usuariosPorId: { [key: string]: any } = {};
+      (todosUsuarios || []).forEach((u: any) => {
+        if (u?.id != null) usuariosPorId[u.id.toString()] = u;
       });
 
-      setEstudiantes(estudiantesClase);
+      // Reunir todos los IDs: asignados a la clase + los que ya marcaron asistencia
+      const idsSet = new Set<string>();
+      (estudiantesIds || []).forEach((id: any) => {
+        if (id != null) idsSet.add(id.toString());
+      });
+      (asistenciasBackend || []).forEach((a: any) => {
+        if (a?.estudiante_id != null) idsSet.add(a.estudiante_id.toString());
+      });
+
+      const estudiantesList: Estudiante[] = [];
+      idsSet.forEach((idStr) => {
+        const u = usuariosPorId[idStr];
+        const asistencia = asistenciasBackend.find((a: any) => a?.estudiante_id?.toString() === idStr);
+        const nombre = asistencia?.estudiante_nombre ||
+          (u ? `${u.nombres || u.first_name || ''} ${u.apellidos || u.last_name || ''}`.trim() || u.username || u.correo : `ID ${idStr}`);
+        const email = u ? (u.correo || u.email || '') : '';
+
+        estudiantesList.push({
+          id: Number(idStr),
+          nombre,
+          email,
+          estado: asistencia?.estado ?? null
+        });
+      });
+
+      setEstudiantes(estudiantesList);
     } catch (error) {
       console.error('Error cargando estudiantes:', error);
     } finally {
@@ -71,17 +84,11 @@ export default function TomarAsistencia({
     }
   };
 
-  const marcarEstado = (estudianteId: number, estado: string) => {
+  const marcarEstado = (estudianteId: number, estado: string | null) => {
     setEstudiantes(prev => 
       prev.map(est => 
         est.id === estudianteId ? { ...est, estado } : est
       )
-    );
-  };
-
-  const marcarTodos = (estado: string) => {
-    setEstudiantes(prev => 
-      prev.map(est => ({ ...est, estado }))
     );
   };
 
@@ -124,19 +131,7 @@ export default function TomarAsistencia({
     }
   };
 
-  const estadosValidos: { key: string; label: string; icon: string; clase: string }[] = [
-    { key: 'presente', label: 'Presente', icon: '✅', clase: 'presente' },
-    { key: 'ausente', label: 'Ausente', icon: '❌', clase: 'ausente' },
-    { key: 'tardanza', label: 'Tardanza', icon: '⏰', clase: 'tardanza' },
-    { key: 'justificado', label: 'Justificado', icon: '📄', clase: 'justificado' },
-  ];
-
   const sinMarcar = estudiantes.filter(e => !e.estado).length;
-  const pendientes = estudiantes.filter(e => e.estado === 'pendiente').length;
-  const presentes = estudiantes.filter(e => e.estado === 'presente').length;
-  const ausentes = estudiantes.filter(e => e.estado === 'ausente').length;
-  const tardanzas = estudiantes.filter(e => e.estado === 'tardanza').length;
-  const justificados = estudiantes.filter(e => e.estado === 'justificado').length;
 
   return (
     <div className="modal-overlay" onClick={onCerrar}>
@@ -156,58 +151,6 @@ export default function TomarAsistencia({
           <button className="btn-cerrar" onClick={onCerrar}>✕</button>
         </div>
 
-        <div className="asistencia-stats">
-          <div className="stat-card presente">
-            <span className="stat-icon">✅</span>
-            <div>
-              <div className="stat-numero">{presentes}</div>
-              <div className="stat-label">Presentes</div>
-            </div>
-          </div>
-          <div className="stat-card ausente">
-            <span className="stat-icon">❌</span>
-            <div>
-              <div className="stat-numero">{ausentes}</div>
-              <div className="stat-label">Ausentes</div>
-            </div>
-          </div>
-          <div className="stat-card pendiente">
-            <span className="stat-icon">⏳</span>
-            <div>
-              <div className="stat-numero">{pendientes}</div>
-              <div className="stat-label">Pendientes</div>
-            </div>
-          </div>
-          <div className="stat-card tardanza">
-            <span className="stat-icon">⏰</span>
-            <div>
-              <div className="stat-numero">{tardanzas}</div>
-              <div className="stat-label">Tardanzas</div>
-            </div>
-          </div>
-          <div className="stat-card justificado">
-            <span className="stat-icon">📄</span>
-            <div>
-              <div className="stat-numero">{justificados}</div>
-              <div className="stat-label">Justificados</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="acciones-rapidas">
-          <button 
-            className="btn-accion btn-todos-presentes"
-            onClick={() => marcarTodos('presente')}
-          >
-            ✅ Marcar todos presentes
-          </button>
-          <button 
-            className="btn-accion btn-todos-ausentes"
-            onClick={() => marcarTodos('ausente')}
-          >
-            ❌ Marcar todos ausentes
-          </button>
-        </div>
 
         <div className="lista-estudiantes">
           {cargando ? (
@@ -224,34 +167,20 @@ export default function TomarAsistencia({
               >
                 <div className="estudiante-info">
                   <div className="estudiante-nombre">{estudiante.nombre}</div>
-                  <div className="estudiante-email">{estudiante.email}</div>
-                  {estudiante.estado && (
-                    <span className={`estado-badge ${estudiante.estado}`}>
-                      {estudiante.estado === 'pendiente' && '⏳ Pendiente de aprobación'}
-                      {estudiante.estado === 'presente' && '✅ Presente'}
-                      {estudiante.estado === 'ausente' && '❌ Ausente'}
-                      {estudiante.estado === 'tardanza' && '⏰ Tardanza'}
-                      {estudiante.estado === 'justificado' && '📄 Justificado'}
-                    </span>
-                  )}
+                  <div className="estudiante-email">{estudiante.email || 'Sin correo'}</div>
                 </div>
-                <div className="estudiante-acciones">
-                  {estadosValidos.map(opcion => (
-                    <button
-                      key={opcion.key}
-                      className={`btn-asistencia ${estudiante.estado === opcion.key ? 'activo' : ''}`}
-                      onClick={() => marcarEstado(estudiante.id, opcion.key)}
-                    >
-                      {opcion.icon} {opcion.label}
-                    </button>
-                  ))}
-                  <button
-                    className={`btn-asistencia pendiente-btn ${estudiante.estado === 'pendiente' ? 'activo' : ''}`}
-                    onClick={() => marcarEstado(estudiante.id, 'pendiente')}
-                  >
-                    ⏳ Pendiente
-                  </button>
-                </div>
+                <select
+                  className="estado-select"
+                  value={estudiante.estado || ''}
+                  onChange={(e) => marcarEstado(estudiante.id, e.target.value || null)}
+                >
+                  <option value="">Sin marcar</option>
+                  <option value="presente">✅ Presente</option>
+                  <option value="ausente">❌ Ausente</option>
+                  <option value="tardanza">⏰ Tardanza</option>
+                  <option value="justificado">📄 Justificado</option>
+                  <option value="pendiente">⏳ Pendiente</option>
+                </select>
               </div>
             ))
           )}
