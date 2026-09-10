@@ -74,13 +74,13 @@ def asistencias_list_create(request):
             if isinstance(fecha, str):
                 fecha = datetime.strptime(fecha, '%Y-%m-%d').date()
             
-            # Crear o actualizar asistencia
+            # Crear o actualizar asistencia usando (estudiante, clase) como clave única
             asistencia, created = Asistencia.objects.update_or_create(
                 estudiante=estudiante,
-                fecha=fecha,
+                clase=clase,
                 defaults={
                     'estado': estado_asistencia,
-                    'clase': clase,
+                    'fecha': fecha,
                     'observaciones': observaciones
                 }
             )
