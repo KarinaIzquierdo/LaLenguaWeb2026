@@ -348,6 +348,76 @@
   animation: spin 1s linear infinite;
 }
 
+.btn-ver-asistencia {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: none;
+  background: #ec4899;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+}
+
+.btn-ver-asistencia:hover {
+  background: #be185d;
+}
+
+.asistencia-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+
+.asistencia-table th,
+.asistencia-table td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.asistencia-table th {
+  background: #f8fafc;
+  font-weight: 700;
+  color: #475569;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+}
+
+.estado-asistencia {
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.estado-asistencia.presente {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.estado-asistencia.ausente {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.estado-asistencia.tardanza {
+  background: #ffedd5;
+  color: #7c2d12;
+}
+
+.estado-asistencia.justificado {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.estado-asistencia.pendiente {
+  background: #ffedd5;
+  color: #7c2d12;
+}
+
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }

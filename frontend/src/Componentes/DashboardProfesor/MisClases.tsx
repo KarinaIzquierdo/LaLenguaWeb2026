@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ClaseService } from '../../services/claseService';
 import { userService } from '../../services/userService';
 import TomarAsistencia from './TomarAsistencia';
+import HistorialAsistencias from './HistorialAsistencias';
 import './MisClases.css';
 
 interface Clase {
@@ -29,7 +30,7 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
   const [clases, setClases] = useState<Clase[]>([]);
   const [clasesDelBloque, setClasesDelBloque] = useState<Clase[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [activeTab, setActiveTab] = useState<'activas' | 'historial'>('activas');
+  const [activeTab, setActiveTab] = useState<'activas' | 'historial' | 'asistencias'>('activas');
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedClase, setSelectedClase] = useState<any>(null);
   const [historialPage, setHistorialPage] = useState(1);
@@ -558,6 +559,12 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
           onClick={() => setActiveTab('historial')}
         >
           📚 Historial ({clasesCompletadas.length})
+        </button>
+        <button 
+          className={`tab-button ${activeTab === 'asistencias' ? 'active' : ''}`}
+          onClick={() => setActiveTab('asistencias')}
+        >
+          📋 Asistencias
         </button>
       </div>
 
@@ -1237,6 +1244,13 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Contenido de asistencias */}
+      {activeTab === 'asistencias' && (
+        <div className="tab-content">
+          <HistorialAsistencias />
         </div>
       )}
 

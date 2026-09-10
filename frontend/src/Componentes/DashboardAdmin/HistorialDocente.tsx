@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import './HistorialDocente.css';
 import { historialDocenteService } from '../../services/historialDocenteService';
+import { asistenciaService } from '../../services/asistenciaService';
 import { userService } from '../../services/userService';
 import { FaUserTie, FaChalkboardTeacher } from 'react-icons/fa';
 
@@ -13,6 +14,9 @@ export default function HistorialDocente() {
   const [loading, setLoading] = useState(true);
   const [filtroProfesor, setFiltroProfesor] = useState('');
   const [paginaActual, setPaginaActual] = useState(1);
+  const [claseAsistenciaSeleccionada, setClaseAsistenciaSeleccionada] = useState<number | null>(null);
+  const [asistenciasClase, setAsistenciasClase] = useState<any[]>([]);
+  const [cargandoAsistencia, setCargandoAsistencia] = useState(false);
 
   useEffect(() => {
     cargarDatos();
@@ -50,6 +54,25 @@ export default function HistorialDocente() {
   const totalPaginas = Math.max(1, Math.ceil(totalRegistros / ITEMS_PER_PAGE));
   const indiceInicio = (paginaActual - 1) * ITEMS_PER_PAGE;
   const registrosPagina = clasesDictadas.slice(indiceInicio, indiceInicio + ITEMS_PER_PAGE);
+
+  const verAsistencia = async (claseId: number) => {
+    if (claseAsistenciaSeleccionada === claseId) {
+      setClaseAsistenciaSeleccionada(null);
+      setAsistenciasClase([]);
+      return;
+    }
+    try {
+      setCargandoAsistencia(true);
+      setClaseAsistenciaSeleccionada(claseId);
+      const data = await asistenciaService.getAsistenciasPorClase(claseId);
+      setAsistenciasClase(Array.isArray(data) ? data : (data?.data || []));
+    } catch (error) {
+      console.error('Error cargando asistencias:', error);
+      setAsistenciasClase([]);
+    } finally {
+      setCargandoAsistencia(false);
+    }
+  };
 
   const formatearFecha = (fechaStr: string) => {
     const fecha = new Date(fechaStr);
@@ -116,6 +139,7 @@ export default function HistorialDocente() {
                   <th>Clase</th>
                   <th>Duración</th>
                   <th>Modalidad</th>
+                  <th>Asistencia</th>
                 </tr>
               </thead>
               <tbody>
@@ -128,6 +152,14 @@ export default function HistorialDocente() {
                     <td>{item.descripcion?.includes('Modalidad:') 
                       ? item.descripcion.split('Modalidad:')[1]?.trim() 
                       : '—'}
+                    </td>
+                    <td>
+                      <button 
+                        className="btn-ver-asistencia"
+                        onClick={() => verAsistencia(item.id)}
+                      >
+                        {claseAsistenciaSeleccionada === item.id ? 'Ocultar' : 'Ver asistencia'}
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -154,6 +186,41 @@ export default function HistorialDocente() {
           </>
         )}
       </div>
+
+      {claseAsistenciaSeleccionada && (
+        <div className="modal-overlay" onClick={() => setClaseAsistenciaSeleccionada(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Asistencia de la clase</h3>
+              <button className="close-btn" onClick={() => setClaseAsistenciaSeleccionada(null)}>✕</button>
+            </div>
+            {cargandoAsistencia ? (
+              <div className="loading-state"><div className="spinner"></div><p>Cargando asistencias...</p></div>
+            ) : asistenciasClase.length === 0 ? (
+              <div className="empty-state"><p>No hay asistencias registradas</p></div>
+            ) : (
+              <table className="asistencia-table">
+                <thead>
+                  <tr>
+                    <th>Estudiante</th>
+                    <th>Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {asistenciasClase.map((a) => (
+                    <tr key={a.id}>
+                      <td>{a.estudiante_nombre}</td>
+                      <td>
+                        <span className={`estado-asistencia ${a.estado}`}>{a.estado_display || a.estado}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
