@@ -144,7 +144,7 @@ export default function ClassesView({
                   ) : clase.estado === 'programada' ? (
                     <span className="status-badge programada">Programada</span>
                   ) : clase.estado === 'completada' ? (
-                    <span className="status-badge completada">Completada</span>
+                    <span className="status-badge completada">Finalizada</span>
                   ) : (
                     <span className="status-badge pendiente">Pendiente</span>
                   )}

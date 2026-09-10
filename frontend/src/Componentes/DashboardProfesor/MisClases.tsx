@@ -208,71 +208,32 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
 
   const finalizarClase = async (claseId: number) => {
     try {
-      let claseActualizada: any = null;
+      const claseActualizada = await ClaseService.cambiarEstadoClase(claseId, 'completada');
 
-      // Intentar marcar la clase como completada en el backend
-      try {
-        claseActualizada = await ClaseService.cambiarEstadoClase(claseId, 'completada');
-      } catch (error: any) {
-        console.error('Error actualizando estado a completada en backend:', error);
-        console.error('Detalles del error:', error?.response?.data);
-        // Continuar con la actualización local aunque falle el backend
-      }
-
-      // Buscar la clase en ambos arrays para obtener información
-      let clase = clases.find(c => c.id === claseId);
-      if (!clase) {
-        clase = clasesDelBloque.find(c => c.id === claseId);
-      }
-      
       // Actualizar estado local en ambos arrays
-      setClases(prev => prev.map(c => {
-        if (c.id === claseId) {
-          // Para clases del profesor, también guardar en localStorage
-          const claseKey = `clase_${c.tema.replace(/\s+/g, '_')}_estado`;
-          localStorage.setItem(claseKey, 'completada');
-          
-          // Disparar evento para sincronización
-          window.dispatchEvent(new CustomEvent('claseEstadoChanged', {
-            detail: { claseId, estado: 'completada', tema: c.tema }
-          }));
-          
-          const cambios = {
-            estado: 'completada' as const,
-            hora_fin_real: claseActualizada?.hora_fin_real ?? null,
-            duracion_real: claseActualizada?.duracion_real ?? null,
-            codigo_expiracion: claseActualizada?.codigo_expiracion ?? null,
-          };
-          return { ...c, ...cambios };
-        }
-        return c;
-      }));
-      
-      setClasesDelBloque(prev => prev.map(c => {
-        if (c.id === claseId) {
-          // Guardar estado completada en localStorage
-          const claseKey = `clase_${c.tema.replace(/\s+/g, '_')}_estado`;
-          localStorage.setItem(claseKey, 'completada');
-          
-          // Disparar evento para sincronización
-          window.dispatchEvent(new CustomEvent('claseEstadoChanged', {
-            detail: { claseId, estado: 'completada', tema: c.tema }
-          }));
-          
-          const cambios = {
-            estado: 'completada' as const,
-            hora_fin_real: claseActualizada?.hora_fin_real ?? null,
-            duracion_real: claseActualizada?.duracion_real ?? null,
-            codigo_expiracion: claseActualizada?.codigo_expiracion ?? null,
-          };
-          return { ...c, ...cambios };
-        }
-        return c;
-      }));
+      const actualizar = (c: Clase) => {
+        if (c.id !== claseId) return c;
+        const claseKey = `clase_${c.tema.replace(/\s+/g, '_')}_estado`;
+        localStorage.setItem(claseKey, 'completada');
+        window.dispatchEvent(new CustomEvent('claseEstadoChanged', {
+          detail: { claseId, estado: 'completada', tema: c.tema }
+        }));
+        return {
+          ...c,
+          estado: 'completada' as const,
+          hora_fin_real: claseActualizada?.hora_fin_real ?? null,
+          duracion_real: claseActualizada?.duracion_real ?? null,
+          codigo_expiracion: claseActualizada?.codigo_expiracion ?? null,
+        };
+      };
+
+      setClases(prev => prev.map(actualizar));
+      setClasesDelBloque(prev => prev.map(actualizar));
 
       alert('¡Clase finalizada exitosamente! Ahora puedes aprobar o rechazar las asistencias pendientes.');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error al finalizar clase:', error);
+      console.error('Detalles del error:', error?.response?.data);
       alert('Error al finalizar la clase. Intenta nuevamente.');
     }
   };

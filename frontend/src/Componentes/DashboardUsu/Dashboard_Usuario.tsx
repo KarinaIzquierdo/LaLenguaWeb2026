@@ -642,11 +642,11 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
 
     const handleClaseEstadoChanged = (event: any) => {
       console.log('Evento de cambio de estado recibido en estudiante:', event.detail);
-      setTimeout(() => loadUserData(), 500);
+      setTimeout(() => refreshClases(), 500);
     };
 
     window.addEventListener('claseEstadoChanged', handleClaseEstadoChanged);
-    const intervalId = setInterval(() => refreshClases(), 30000);
+    const intervalId = setInterval(() => refreshClases(), 10000);
 
     return () => {
       window.removeEventListener('claseEstadoChanged', handleClaseEstadoChanged);
