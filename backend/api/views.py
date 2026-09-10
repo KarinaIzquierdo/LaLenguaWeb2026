@@ -1877,9 +1877,9 @@ class ClaseViewSet(viewsets.ModelViewSet):
         if not estudiante.is_authenticated:
             return Response({'error': 'No autenticado.'}, status=status.HTTP_401_UNAUTHORIZED)
 
-        # Validar que el estudiante esté asignado a la clase
+        # Si el estudiante no está asignado a la clase, lo agregamos automáticamente
         if not clase.estudiantes.filter(id=estudiante.id).exists():
-            return Response({'error': 'No estás asignado a esta clase.'}, status=status.HTTP_403_FORBIDDEN)
+            clase.estudiantes.add(estudiante)
 
         fecha = clase.fecha if clase.fecha else timezone.now().date()
 
