@@ -153,6 +153,8 @@ class Clase(models.Model):
     hora_inicio_real = models.DateTimeField(null=True, blank=True, help_text="Hora real en la que el profesor inició la clase")
     hora_fin_real = models.DateTimeField(null=True, blank=True, help_text="Hora real en la que el profesor finalizó la clase")
     duracion_real = models.IntegerField(null=True, blank=True, help_text="Duración real en minutos calculada al finalizar")
+    codigo_asistencia = models.CharField(max_length=20, blank=True, null=True, unique=True, help_text="Código único generado al iniciar la clase para marcar asistencia")
+    codigo_expiracion = models.DateTimeField(null=True, blank=True, help_text="Fecha/hora de expiración del código de asistencia")
     tema = models.CharField(max_length=200, blank=True)
     descripcion = models.TextField(blank=True)
     tipo_clase = models.CharField(max_length=20, choices=[('individual', 'Individual'), ('grupal', 'Grupal')], default='individual')
@@ -749,6 +751,7 @@ class Asistencia(models.Model):
         ('ausente', 'Ausente'),
         ('tardanza', 'Tardanza'),
         ('justificado', 'Justificado'),
+        ('pendiente', 'Pendiente'),
     ]
     
     estudiante = models.ForeignKey(
@@ -778,8 +781,8 @@ class Asistencia(models.Model):
         ordering = ['-fecha', 'estudiante']
         verbose_name = 'Asistencia'
         verbose_name_plural = 'Asistencias'
-        # Un estudiante solo puede tener una asistencia por fecha
-        unique_together = ['estudiante', 'fecha']
+        # Un estudiante solo puede tener una asistencia por clase
+        unique_together = ['estudiante', 'clase']
     
     def __str__(self):
         return f"{self.estudiante.username} - {self.fecha} - {self.estado}"

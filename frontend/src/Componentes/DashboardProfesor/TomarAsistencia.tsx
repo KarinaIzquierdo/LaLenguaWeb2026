@@ -4,10 +4,10 @@ import { asistenciaService } from '../../services/asistenciaService';
 import './TomarAsistencia.css';
 
 interface Estudiante {
-  id: string;
+  id: number;
   nombre: string;
   email: string;
-  asistio: boolean | null; // null = no marcado, true = presente, false = ausente
+  estado: string | null; // null = sin marcar, 'pendiente' = registrado por código, otros = aprobado
 }
 
 interface TomarAsistenciaProps {
@@ -15,7 +15,8 @@ interface TomarAsistenciaProps {
   estudiantesIds: string[];
   fecha: string;
   tema: string;
-  onGuardar: (asistencias: { [key: string]: boolean }) => void;
+  codigoAsistencia?: string | null;
+  onGuardar: (asistencias: { [key: string]: string | null }) => void;
   onCerrar: () => void;
 }
 
@@ -24,15 +25,17 @@ export default function TomarAsistencia({
   estudiantesIds, 
   fecha, 
   tema,
+  codigoAsistencia,
   onGuardar, 
   onCerrar 
 }: TomarAsistenciaProps) {
   const [estudiantes, setEstudiantes] = useState<Estudiante[]>([]);
   const [cargando, setCargando] = useState(true);
+  const [guardando, setGuardando] = useState(false);
 
   useEffect(() => {
     cargarEstudiantes();
-  }, [estudiantesIds]);
+  }, [estudiantesIds, claseId]);
 
   const cargarEstudiantes = async () => {
     try {
@@ -44,33 +47,21 @@ export default function TomarAsistencia({
 
       // Filtrar solo los estudiantes asignados a esta clase
       const estudiantesClase = todosUsuarios
-        .filter(u => estudiantesIds.includes(u.id.toString()))
-        .map(u => ({
-          id: u.id.toString(),
-          nombre: `${u.nombres} ${u.apellidos}`,
-          email: u.correo,
-          asistio: null as boolean | null
+        .filter((u: any) => estudiantesIds.includes(u.id.toString()))
+        .map((u: any) => ({
+          id: Number(u.id),
+          nombre: `${u.nombres || u.first_name || ''} ${u.apellidos || u.last_name || ''}`.trim() || u.username || u.correo || `ID ${u.id}`,
+          email: u.correo || u.email || '',
+          estado: null as string | null
         }));
 
       // Precargar asistencias registradas en el servidor
       asistenciasBackend.forEach((a: any) => {
-        const estudiante = estudiantesClase.find(est => est.id === a.estudiante_id?.toString());
-        if (estudiante) {
-          if (a.estado === 'presente') estudiante.asistio = true;
-          else if (a.estado === 'ausente') estudiante.asistio = false;
+        const estudiante = estudiantesClase.find((est: Estudiante) => est.id === Number(a.estudiante_id));
+        if (estudiante && a.estado) {
+          estudiante.estado = a.estado;
         }
       });
-
-      // Fallback: asistencia guardada localmente
-      const asistenciaGuardada = localStorage.getItem(`asistencia_clase_${claseId}`);
-      if (asistenciaGuardada) {
-        const asistencias = JSON.parse(asistenciaGuardada);
-        estudiantesClase.forEach(est => {
-          if (asistencias[est.id] !== undefined && est.asistio === null) {
-            est.asistio = asistencias[est.id];
-          }
-        });
-      }
 
       setEstudiantes(estudiantesClase);
     } catch (error) {
@@ -80,59 +71,72 @@ export default function TomarAsistencia({
     }
   };
 
-  const marcarAsistencia = (estudianteId: string, asistio: boolean) => {
+  const marcarEstado = (estudianteId: number, estado: string) => {
     setEstudiantes(prev => 
       prev.map(est => 
-        est.id === estudianteId ? { ...est, asistio } : est
+        est.id === estudianteId ? { ...est, estado } : est
       )
     );
   };
 
-  const marcarTodos = (asistio: boolean) => {
+  const marcarTodos = (estado: string) => {
     setEstudiantes(prev => 
-      prev.map(est => ({ ...est, asistio }))
+      prev.map(est => ({ ...est, estado }))
     );
   };
 
   const handleGuardar = async () => {
-    const asistencias: { [key: string]: boolean } = {};
-    const resultados: Array<{ id: string; exito: boolean }> = [];
-    const fechaFormateada = fecha && /^\d{4}-\d{2}-\d{2}$/.test(fecha)
-      ? fecha
-      : new Date(fecha || Date.now()).toLocaleDateString('en-CA');
+    setGuardando(true);
+    const asistencias: { [key: string]: string | null } = {};
+    const resultados: Array<{ id: number; exito: boolean; estado: string }> = [];
 
-    for (const est of estudiantes) {
-      if (est.asistio !== null) {
-        asistencias[est.id] = est.asistio;
+    try {
+      for (const est of estudiantes) {
+        asistencias[est.id] = est.estado;
+        if (!est.estado || est.estado === 'pendiente') {
+          continue;
+        }
+
         try {
-          await asistenciaService.registrarAsistencia({
-            estudiante_id: Number(est.id),
-            clase_id: claseId,
-            fecha: fechaFormateada,
-            estado: est.asistio ? 'presente' : 'ausente',
+          await asistenciaService.aprobarAsistenciaClase(claseId, {
+            estudiante_id: est.id,
+            estado: est.estado as 'presente' | 'ausente' | 'tardanza' | 'justificado'
           });
-          resultados.push({ id: est.id, exito: true });
+          resultados.push({ id: est.id, exito: true, estado: est.estado });
         } catch (error) {
           console.error(`Error guardando asistencia para estudiante ${est.id}:`, error);
-          resultados.push({ id: est.id, exito: false });
+          resultados.push({ id: est.id, exito: false, estado: est.estado });
         }
       }
+
+      const fallidos = resultados.filter(r => !r.exito).length;
+      if (fallidos > 0) {
+        alert(`⚠️ Se sincronizaron ${resultados.length - fallidos} asistencias, pero ${fallidos} fallaron.`);
+      } else {
+        alert('✅ Asistencias guardadas correctamente');
+      }
+
+      onGuardar(asistencias);
+    } catch (error) {
+      console.error('Error guardando asistencias:', error);
+    } finally {
+      setGuardando(false);
     }
-
-    // Mantener copia local como respaldo
-    localStorage.setItem(`asistencia_clase_${claseId}`, JSON.stringify(asistencias));
-
-    const fallidos = resultados.filter(r => !r.exito).length;
-    if (fallidos > 0) {
-      alert(`⚠️ Se sincronizaron ${resultados.length - fallidos} asistencias, pero ${fallidos} fallaron. Se mantuvo una copia local.`);
-    }
-
-    onGuardar(asistencias);
   };
 
-  const presentes = estudiantes.filter(e => e.asistio === true).length;
-  const ausentes = estudiantes.filter(e => e.asistio === false).length;
-  const sinMarcar = estudiantes.filter(e => e.asistio === null).length;
+  const estadosValidos: { key: string; label: string; icon: string; clase: string }[] = [
+    { key: 'presente', label: 'Presente', icon: '✅', clase: 'presente' },
+    { key: 'ausente', label: 'Ausente', icon: '❌', clase: 'ausente' },
+    { key: 'tardanza', label: 'Tardanza', icon: '⏰', clase: 'tardanza' },
+    { key: 'justificado', label: 'Justificado', icon: '📄', clase: 'justificado' },
+  ];
+
+  const sinMarcar = estudiantes.filter(e => !e.estado).length;
+  const pendientes = estudiantes.filter(e => e.estado === 'pendiente').length;
+  const presentes = estudiantes.filter(e => e.estado === 'presente').length;
+  const ausentes = estudiantes.filter(e => e.estado === 'ausente').length;
+  const tardanzas = estudiantes.filter(e => e.estado === 'tardanza').length;
+  const justificados = estudiantes.filter(e => e.estado === 'justificado').length;
 
   return (
     <div className="modal-overlay" onClick={onCerrar}>
@@ -143,6 +147,11 @@ export default function TomarAsistencia({
             <p className="asistencia-info">
               <strong>{tema}</strong> • {fecha}
             </p>
+            {codigoAsistencia && (
+              <p className="asistencia-codigo">
+                🎫 Código de asistencia: <strong>{codigoAsistencia}</strong>
+              </p>
+            )}
           </div>
           <button className="btn-cerrar" onClick={onCerrar}>✕</button>
         </div>
@@ -165,8 +174,22 @@ export default function TomarAsistencia({
           <div className="stat-card pendiente">
             <span className="stat-icon">⏳</span>
             <div>
-              <div className="stat-numero">{sinMarcar}</div>
-              <div className="stat-label">Sin marcar</div>
+              <div className="stat-numero">{pendientes}</div>
+              <div className="stat-label">Pendientes</div>
+            </div>
+          </div>
+          <div className="stat-card tardanza">
+            <span className="stat-icon">⏰</span>
+            <div>
+              <div className="stat-numero">{tardanzas}</div>
+              <div className="stat-label">Tardanzas</div>
+            </div>
+          </div>
+          <div className="stat-card justificado">
+            <span className="stat-icon">📄</span>
+            <div>
+              <div className="stat-numero">{justificados}</div>
+              <div className="stat-label">Justificados</div>
             </div>
           </div>
         </div>
@@ -174,13 +197,13 @@ export default function TomarAsistencia({
         <div className="acciones-rapidas">
           <button 
             className="btn-accion btn-todos-presentes"
-            onClick={() => marcarTodos(true)}
+            onClick={() => marcarTodos('presente')}
           >
             ✅ Marcar todos presentes
           </button>
           <button 
             className="btn-accion btn-todos-ausentes"
-            onClick={() => marcarTodos(false)}
+            onClick={() => marcarTodos('ausente')}
           >
             ❌ Marcar todos ausentes
           </button>
@@ -197,27 +220,36 @@ export default function TomarAsistencia({
             estudiantes.map(estudiante => (
               <div 
                 key={estudiante.id} 
-                className={`estudiante-item ${
-                  estudiante.asistio === true ? 'presente' : 
-                  estudiante.asistio === false ? 'ausente' : ''
-                }`}
+                className={`estudiante-item ${estudiante.estado || ''}`}
               >
                 <div className="estudiante-info">
                   <div className="estudiante-nombre">{estudiante.nombre}</div>
                   <div className="estudiante-email">{estudiante.email}</div>
+                  {estudiante.estado && (
+                    <span className={`estado-badge ${estudiante.estado}`}>
+                      {estudiante.estado === 'pendiente' && '⏳ Pendiente de aprobación'}
+                      {estudiante.estado === 'presente' && '✅ Presente'}
+                      {estudiante.estado === 'ausente' && '❌ Ausente'}
+                      {estudiante.estado === 'tardanza' && '⏰ Tardanza'}
+                      {estudiante.estado === 'justificado' && '📄 Justificado'}
+                    </span>
+                  )}
                 </div>
                 <div className="estudiante-acciones">
+                  {estadosValidos.map(opcion => (
+                    <button
+                      key={opcion.key}
+                      className={`btn-asistencia ${estudiante.estado === opcion.key ? 'activo' : ''}`}
+                      onClick={() => marcarEstado(estudiante.id, opcion.key)}
+                    >
+                      {opcion.icon} {opcion.label}
+                    </button>
+                  ))}
                   <button
-                    className={`btn-asistencia ${estudiante.asistio === true ? 'activo' : ''}`}
-                    onClick={() => marcarAsistencia(estudiante.id, true)}
+                    className={`btn-asistencia pendiente-btn ${estudiante.estado === 'pendiente' ? 'activo' : ''}`}
+                    onClick={() => marcarEstado(estudiante.id, 'pendiente')}
                   >
-                    ✅ Presente
-                  </button>
-                  <button
-                    className={`btn-asistencia ${estudiante.asistio === false ? 'activo' : ''}`}
-                    onClick={() => marcarAsistencia(estudiante.id, false)}
-                  >
-                    ❌ Ausente
+                    ⏳ Pendiente
                   </button>
                 </div>
               </div>
@@ -226,15 +258,15 @@ export default function TomarAsistencia({
         </div>
 
         <div className="asistencia-footer">
-          <button className="btn-cancelar" onClick={onCerrar}>
+          <button className="btn-cancelar" onClick={onCerrar} disabled={guardando}>
             Cancelar
           </button>
           <button 
             className="btn-guardar" 
             onClick={handleGuardar}
-            disabled={sinMarcar === estudiantes.length}
+            disabled={guardando || sinMarcar === estudiantes.length}
           >
-            💾 Guardar Asistencia
+            {guardando ? '💾 Guardando...' : '💾 Guardar Asistencia'}
           </button>
         </div>
       </div>

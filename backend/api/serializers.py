@@ -159,8 +159,10 @@ class ClaseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Clase
         fields = ['id', 'nombre', 'profesor', 'fecha', 'hora', 'duracion', 'hora_inicio_real', 'hora_fin_real', 'duracion_real',
+                  'codigo_asistencia', 'codigo_expiracion',
                   'tema', 'descripcion', 'tipo_clase', 'modalidad', 'meet_link', 'estado', 'estudiantes', 'estudiantesSeleccionados', 
                   'created_at', 'updated_at']
+        read_only_fields = ['id', 'codigo_asistencia', 'codigo_expiracion']
     
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -169,6 +171,20 @@ class ClaseSerializer(serializers.ModelSerializer):
             data['fecha'] = ''
         if data.get('profesor') is None:
             data['profesor'] = ''
+
+        # Solo profesores o admin pueden ver el código de asistencia
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            nombre_profesor = f"{request.user.first_name or ''} {request.user.last_name or ''}".strip()
+            rol = getattr(request.user, 'role', '')
+            es_admin = rol == 'admin'
+            es_profesor_clase = rol == 'profesor' and nombre_profesor and instance.profesor and nombre_profesor.lower() == instance.profesor.lower()
+            if not (es_admin or es_profesor_clase):
+                data['codigo_asistencia'] = None
+                data['codigo_expiracion'] = None
+        else:
+            data['codigo_asistencia'] = None
+            data['codigo_expiracion'] = None
         return data
 
     def create(self, validated_data):

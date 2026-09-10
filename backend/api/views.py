@@ -12,6 +12,8 @@ from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from datetime import date, timedelta
+import secrets
+import string
 from .models import CustomUser, Profesor, Clase, Evaluation, MediaItem, Club, ClubMaterial, Especializacion, Evaluacion, Notificacion, NotificacionEstudiante, RespuestaEvaluacion, DailyChallengeQuestion, RegistroEliminacion, Asistencia, Suscripcion, ChatRoom, ChatMessage
 from .profesor_views import *
 from .chat_views import chat_rooms_view, chat_messages_view, chat_contacts_view, unread_messages_count_view
@@ -1753,6 +1755,12 @@ class ClaseViewSet(viewsets.ModelViewSet):
             clase.hora_inicio_real = ahora
             clase.hora_fin_real = None
             clase.duracion_real = None
+            # Generar código de asistencia único para esta clase
+            clase.codigo_asistencia = self._generar_codigo_asistencia()
+            # El código expira unos minutos después de la duración programada
+            buffer_minutos = 15
+            minutos_validez = max(clase.duracion or 60, 30) + buffer_minutos
+            clase.codigo_expiracion = ahora + timedelta(minutes=minutos_validez)
         elif nuevo_estado == 'completada':
             # Registrar hora real de fin y calcular duración real
             clase.hora_fin_real = ahora
@@ -1762,17 +1770,178 @@ class ClaseViewSet(viewsets.ModelViewSet):
             else:
                 # Si no hay inicio registrado, usar la duración programada
                 clase.duracion_real = clase.duracion
+            # Expirar el código de asistencia
+            clase.codigo_expiracion = ahora
         elif nuevo_estado == 'programada':
             # Reiniciar registro si se reprograma
             clase.hora_inicio_real = None
             clase.hora_fin_real = None
             clase.duracion_real = None
+            clase.codigo_asistencia = None
+            clase.codigo_expiracion = None
 
         clase.estado = nuevo_estado
         clase.save()
         
         serializer = self.get_serializer(clase)
         return Response(serializer.data)
+
+    def _generar_codigo_asistencia(self):
+        """Genera un código alfanumérico de 8 caracteres único para asistencia."""
+        from django.db import IntegrityError
+        caracteres = string.ascii_uppercase + string.digits
+        while True:
+            codigo = ''.join(secrets.choice(caracteres) for _ in range(8))
+            try:
+                if not Clase.objects.filter(codigo_asistencia=codigo).exists():
+                    return codigo
+            except Exception:
+                continue
+
+    @action(detail=False, methods=['post'], url_path='registrar-asistencia')
+    def registrar_asistencia(self, request):
+        """
+        Endpoint para que un estudiante marque asistencia con el código generado por el profesor.
+        Crea un registro de Asistencia en estado 'pendiente' hasta que el profesor lo apruebe.
+        """
+        from django.utils import timezone
+        codigo = request.data.get('codigo', '').strip().upper()
+        if not codigo:
+            return Response({'error': 'El código de asistencia es requerido.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            clase = Clase.objects.get(
+                codigo_asistencia=codigo,
+                estado='activa',
+                codigo_expiracion__gte=timezone.now()
+            )
+        except Clase.DoesNotExist:
+            return Response({'error': 'Código inválido o clase finalizada/expirada.'}, status=status.HTTP_404_NOT_FOUND)
+
+        estudiante = request.user
+        if not estudiante.is_authenticated:
+            return Response({'error': 'No autenticado.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        # Validar que el estudiante esté asignado a la clase
+        if not clase.estudiantes.filter(id=estudiante.id).exists():
+            return Response({'error': 'No estás asignado a esta clase.'}, status=status.HTTP_403_FORBIDDEN)
+
+        fecha = clase.fecha if clase.fecha else timezone.now().date()
+
+        asistencia, created = Asistencia.objects.get_or_create(
+            estudiante=estudiante,
+            clase=clase,
+            defaults={
+                'fecha': fecha,
+                'estado': 'pendiente',
+                'observaciones': 'Registrado por código'
+            }
+        )
+
+        if not created and asistencia.estado != 'pendiente':
+            return Response({
+                'success': True,
+                'estado': asistencia.estado,
+                'message': 'Tu asistencia ya fue aprobada/rechazada previamente.'
+            }, status=status.HTTP_200_OK)
+
+        asistencia.estado = 'pendiente'
+        asistencia.observaciones = 'Registrado por código'
+        asistencia.save()
+
+        return Response({
+            'success': True,
+            'asistencia_id': asistencia.id,
+            'estado': asistencia.estado,
+            'message': 'Asistencia registrada. Queda pendiente de aprobación por el profesor.'
+        }, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['get'], url_path='asistencias')
+    def asistencias_clase(self, request, pk=None):
+        """
+        Lista las asistencias de una clase. Solo el profesor de la clase o un admin pueden verlas.
+        """
+        clase = self.get_object()
+        usuario = request.user
+        if not usuario.is_authenticated:
+            return Response({'error': 'No autenticado.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        rol = getattr(usuario, 'role', '')
+        nombre_profesor = f"{usuario.first_name or ''} {usuario.last_name or ''}".strip()
+        es_admin = rol == 'admin'
+        es_profesor = rol == 'profesor' and clase.profesor and nombre_profesor.lower() == clase.profesor.lower()
+
+        if not (es_admin or es_profesor):
+            return Response({'error': 'No tienes permiso para ver estas asistencias.'}, status=status.HTTP_403_FORBIDDEN)
+
+        asistencias = Asistencia.objects.filter(clase=clase).order_by('estudiante__first_name', 'estudiante__last_name')
+        data = []
+        for a in asistencias:
+            data.append({
+                'id': a.id,
+                'estudiante_id': a.estudiante.id,
+                'estudiante_nombre': f"{a.estudiante.first_name} {a.estudiante.last_name}".strip(),
+                'estado': a.estado,
+                'estado_display': a.get_estado_display(),
+                'fecha': a.fecha.isoformat() if a.fecha else None,
+                'observaciones': a.observaciones or '',
+            })
+        return Response(data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['patch'], url_path='aprobar-asistencia')
+    def aprobar_asistencia(self, request, pk=None):
+        """
+        Permite al profesor aprobar/rechazar una asistencia de un estudiante en una clase.
+        Espera: { "estudiante_id": <id>, "estado": "presente"|"ausente"|"tardanza"|"justificado" }
+        """
+        from django.utils import timezone
+        from django.shortcuts import get_object_or_404
+
+        clase = self.get_object()
+        usuario = request.user
+        rol = getattr(usuario, 'role', '')
+        nombre_profesor = f"{usuario.first_name or ''} {usuario.last_name or ''}".strip()
+        es_admin = rol == 'admin'
+        es_profesor = rol == 'profesor' and clase.profesor and nombre_profesor.lower() == clase.profesor.lower()
+
+        if not (es_admin or es_profesor):
+            return Response({'error': 'No tienes permiso para aprobar asistencias.'}, status=status.HTTP_403_FORBIDDEN)
+
+        estudiante_id = request.data.get('estudiante_id')
+        nuevo_estado = request.data.get('estado')
+        if not estudiante_id or not nuevo_estado:
+            return Response({'error': 'estudiante_id y estado son requeridos.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if nuevo_estado not in ['presente', 'ausente', 'tardanza', 'justificado']:
+            return Response({'error': 'Estado inválido.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            asistencia = Asistencia.objects.get(clase=clase, estudiante_id=estudiante_id)
+        except Asistencia.DoesNotExist:
+            # Crear asistencia si el profesor la marca manualmente
+            estudiante = get_object_or_404(CustomUser, id=estudiante_id, role='student')
+            fecha = clase.fecha if clase.fecha else timezone.now().date()
+            asistencia = Asistencia.objects.create(
+                estudiante=estudiante,
+                clase=clase,
+                fecha=fecha,
+                estado='pendiente',
+                observaciones=''
+            )
+
+        asistencia.estado = nuevo_estado
+        observaciones = request.data.get('observaciones', asistencia.observaciones or '')
+        if not observaciones:
+            observaciones = f'Aprobado como {asistencia.get_estado_display()}'
+        asistencia.observaciones = observaciones
+        asistencia.save()
+
+        return Response({
+            'success': True,
+            'estado': asistencia.estado,
+            'estado_display': asistencia.get_estado_display(),
+            'message': 'Asistencia actualizada correctamente.'
+        }, status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])

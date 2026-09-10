@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { asistenciaService } from '../../../services/asistenciaService';
 import '../DashboardStudent.css';
 
 interface ClassesViewProps {
@@ -25,9 +26,76 @@ export default function ClassesView({
   const indexOfFirst = indexOfLast - clasesPerPage;
   const currentClasses = classes.slice(indexOfFirst, indexOfLast);
 
+  const [codigo, setCodigo] = useState('');
+  const [mensaje, setMensaje] = useState<{ texto: string; tipo: 'success' | 'error' } | null>(null);
+  const [registrando, setRegistrando] = useState(false);
+
+  const handleRegistrarAsistencia = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!codigo.trim()) return;
+    setRegistrando(true);
+    setMensaje(null);
+    try {
+      const res = await asistenciaService.registrarAsistenciaPorCodigo(codigo.trim());
+      setMensaje({
+        texto: res.message || 'Asistencia registrada correctamente. Queda pendiente de aprobación.',
+        tipo: 'success'
+      });
+      setCodigo('');
+      onRefreshClases();
+    } catch (error: any) {
+      const texto = error?.response?.data?.error || error?.message || 'Error al registrar la asistencia.';
+      setMensaje({ texto, tipo: 'error' });
+    } finally {
+      setRegistrando(false);
+    }
+  };
+
   return (
     <div className="module-view">
       <h2 className="module-title">Clases programadas</h2>
+
+      <div className="panel" style={{ marginBottom: '1rem' }}>
+        <div className="panel-header">
+          <h3>🎫 Marcar asistencia</h3>
+        </div>
+        <form
+          onSubmit={handleRegistrarAsistencia}
+          style={{ display: 'flex', gap: '0.5rem', padding: '1rem', flexWrap: 'wrap' }}
+        >
+          <input
+            type="text"
+            value={codigo}
+            onChange={(e) => setCodigo(e.target.value.toUpperCase())}
+            placeholder="Ingresa el código de asistencia"
+            className="search-input"
+            style={{ flex: '1 1 200px' }}
+            maxLength={20}
+            disabled={registrando}
+          />
+          <button
+            type="submit"
+            className="btn-action btn-access"
+            disabled={registrando || !codigo.trim()}
+          >
+            {registrando ? 'Registrando...' : 'Marcar asistencia'}
+          </button>
+        </form>
+        {mensaje && (
+          <div style={{ padding: '0 1rem 1rem' }}>
+            <span
+              className="status-badge"
+              style={{
+                backgroundColor: mensaje.tipo === 'success' ? '#dcfce7' : '#fee2e2',
+                color: mensaje.tipo === 'success' ? '#166534' : '#991b1b',
+                border: `1px solid ${mensaje.tipo === 'success' ? '#86efac' : '#fca5a5'}`
+              }}
+            >
+              {mensaje.texto}
+            </span>
+          </div>
+        )}
+      </div>
 
       <div className="panel">
         <div className="panel-header">

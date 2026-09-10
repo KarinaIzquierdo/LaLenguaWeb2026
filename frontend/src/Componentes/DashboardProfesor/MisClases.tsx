@@ -14,6 +14,8 @@ interface Clase {
   hora_inicio_real: string | null;
   hora_fin_real: string | null;
   duracion_real: number | null;
+  codigo_asistencia: string | null;
+  codigo_expiracion: string | null;
   tema: string;
   descripcion: string;
   estudiantes: string[];
@@ -87,10 +89,11 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
     setMostrarAsistencia(true);
   };
 
-  const guardarAsistencia = (asistencias: { [key: string]: boolean }) => {
-    const presentes = Object.values(asistencias).filter(a => a).length;
-    const ausentes = Object.values(asistencias).filter(a => !a).length;
-    alert(`✅ Asistencia guardada:\n${presentes} presentes, ${ausentes} ausentes`);
+  const guardarAsistencia = (asistencias: { [key: string]: string | null }) => {
+    const presentes = Object.values(asistencias).filter(a => a === 'presente').length;
+    const ausentes = Object.values(asistencias).filter(a => a === 'ausente').length;
+    const pendientes = Object.values(asistencias).filter(a => a === 'pendiente').length;
+    alert(`✅ Asistencia guardada:\n${presentes} presentes, ${ausentes} ausentes, ${pendientes} pendientes`);
     setMostrarAsistencia(false);
     setClaseAsistencia(null);
   };
@@ -113,11 +116,12 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
     }
 
     try {
+      let claseActualizada: any = null;
 
       // Si es una clase del profesor (no del bloque), actualizar en el backend
       if (!esClaseDelBloque) {
         try {
-          const response = await ClaseService.cambiarEstadoClase(claseId, 'activa');
+          claseActualizada = await ClaseService.cambiarEstadoClase(claseId, 'activa');
         } catch (error: any) {
           console.error('Error actualizando estado en backend:', error);
           console.error('Detalles del error:', error.response?.data);
@@ -137,7 +141,13 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
             detail: { claseId, estado: 'activa', tema: c.tema }
           }));
           
-          return { ...c, estado: 'activa' };
+          const cambios = {
+            estado: 'activa' as const,
+            hora_inicio_real: claseActualizada?.hora_inicio_real ?? null,
+            codigo_asistencia: claseActualizada?.codigo_asistencia ?? null,
+            codigo_expiracion: claseActualizada?.codigo_expiracion ?? null,
+          };
+          return { ...c, ...cambios };
         }
         return c;
       }));
@@ -154,7 +164,13 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
             detail: { tema: c.tema, estado: 'activa' }
           }));
           
-          return { ...c, estado: 'activa' };
+          const cambios = {
+            estado: 'activa' as const,
+            hora_inicio_real: claseActualizada?.hora_inicio_real ?? null,
+            codigo_asistencia: claseActualizada?.codigo_asistencia ?? null,
+            codigo_expiracion: claseActualizada?.codigo_expiracion ?? null,
+          };
+          return { ...c, ...cambios };
         }
         return c;
       }));
@@ -181,8 +197,12 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
 
       window.open(enlaceCompleto, '_blank');
 
+      const codigoMsg = claseActualizada?.codigo_asistencia
+        ? `\n\n🎫 Código de asistencia: ${claseActualizada.codigo_asistencia}`
+        : '';
+
       // Mostrar notificación
-      alert(`¡Clase "${clase.nombre || clase.tema}" iniciada! Los estudiantes pueden acceder ahora.`);
+      alert(`¡Clase "${clase.nombre || clase.tema}" iniciada! Los estudiantes pueden acceder ahora.${codigoMsg}`);
     } catch (error) {
       console.error('Error al iniciar clase:', error);
       alert('Error al iniciar la clase. Intenta nuevamente.');
@@ -191,9 +211,11 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
 
   const finalizarClase = async (claseId: number) => {
     try {
+      let claseActualizada: any = null;
+
       // Intentar marcar la clase como completada en el backend
       try {
-        await ClaseService.cambiarEstadoClase(claseId, 'completada');
+        claseActualizada = await ClaseService.cambiarEstadoClase(claseId, 'completada');
       } catch (error: any) {
         console.error('Error actualizando estado a completada en backend:', error);
         console.error('Detalles del error:', error?.response?.data);
@@ -218,7 +240,13 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
             detail: { claseId, estado: 'completada', tema: c.tema }
           }));
           
-          return { ...c, estado: 'completada' };
+          const cambios = {
+            estado: 'completada' as const,
+            hora_fin_real: claseActualizada?.hora_fin_real ?? null,
+            duracion_real: claseActualizada?.duracion_real ?? null,
+            codigo_expiracion: claseActualizada?.codigo_expiracion ?? null,
+          };
+          return { ...c, ...cambios };
         }
         return c;
       }));
@@ -234,12 +262,18 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
             detail: { claseId, estado: 'completada', tema: c.tema }
           }));
           
-          return { ...c, estado: 'completada' };
+          const cambios = {
+            estado: 'completada' as const,
+            hora_fin_real: claseActualizada?.hora_fin_real ?? null,
+            duracion_real: claseActualizada?.duracion_real ?? null,
+            codigo_expiracion: claseActualizada?.codigo_expiracion ?? null,
+          };
+          return { ...c, ...cambios };
         }
         return c;
       }));
 
-      alert('¡Clase finalizada exitosamente!');
+      alert('¡Clase finalizada exitosamente! Ahora puedes aprobar o rechazar las asistencias pendientes.');
     } catch (error) {
       console.error('Error al finalizar clase:', error);
       alert('Error al finalizar la clase. Intenta nuevamente.');
@@ -640,6 +674,12 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
                         <span className="detalle-icon">🕐</span>
                         <span>{clase.hora} - {clase.duracion} min</span>
                       </div>
+                      {clase.estado === 'activa' && clase.codigo_asistencia && (
+                        <div className="detalle-item codigo-asistencia">
+                          <span className="detalle-icon">🎫</span>
+                          <span>Código: <strong>{clase.codigo_asistencia}</strong></span>
+                        </div>
+                      )}
                       <div className="detalle-item">
                         <span className="detalle-icon">👥</span>
                         <span>{(clase.estudiantes ? clase.estudiantes.length : 0)} estudiante(s)</span>
@@ -726,6 +766,12 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
                     <span className="detalle-icon">🕐</span>
                     <span>{clase.hora} - {clase.duracion} min</span>
                   </div>
+                  {clase.estado === 'activa' && clase.codigo_asistencia && (
+                    <div className="detalle-item codigo-asistencia">
+                      <span className="detalle-icon">🎫</span>
+                      <span>Código: <strong>{clase.codigo_asistencia}</strong></span>
+                    </div>
+                  )}
                   <div className="detalle-item">
                     <span className="detalle-icon">👥</span>
                     <span>{(clase.estudiantes ? clase.estudiantes.length : 0)} estudiante(s)</span>
@@ -756,6 +802,13 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
                   )}
                   {clase.estado === 'activa' && (
                     <>
+                      <button 
+                        className="btn-asistencia"
+                        onClick={() => abrirAsistencia(clase)}
+                        title="Tomar asistencia"
+                      >
+                        📋 Asistencia
+                      </button>
                       <button 
                         className="btn-unirse-clase"
                         onClick={() => {
@@ -891,6 +944,13 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
                         onClick={() => verDetallesClase(clase)}
                       >
                         👁️ Ver
+                      </button>
+                      <button 
+                        className="btn-asistencia"
+                        onClick={() => abrirAsistencia(clase)}
+                        title="Tomar asistencia"
+                      >
+                        📋 Asistencia
                       </button>
                     </div>
                     <div className="historial-estado">✅ Completada</div>
@@ -1191,6 +1251,7 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
           estudiantesIds={claseAsistencia.estudiantes || []}
           fecha={claseAsistencia.fecha}
           tema={claseAsistencia.tema}
+          codigoAsistencia={claseAsistencia.codigo_asistencia}
           onGuardar={guardarAsistencia}
           onCerrar={() => {
             setMostrarAsistencia(false);

@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.utils.html import format_html
-from .models import MissionExternalLink, RegistroEliminacion, Asistencia, Clase, Suscripcion, DailyChallengeQuestion, NotificacionAdmin
+from .models import MissionExternalLink, RegistroEliminacion, Asistencia, Clase, Suscripcion, DailyChallengeQuestion, NotificacionAdmin, HistorialDocente
 
 
 @admin.register(MissionExternalLink)
@@ -251,3 +251,62 @@ class NotificacionAdminAdmin(admin.ModelAdmin):
     list_filter = ('tipo', 'prioridad', 'leida', 'created_at')
     search_fields = ('titulo', 'mensaje', 'admin__username', 'admin__first_name', 'admin__last_name')
     ordering = ('-created_at',)
+
+
+@admin.register(HistorialDocente)
+class HistorialDocenteAdmin(admin.ModelAdmin):
+    list_display = ('profesor_nombre', 'tipo_evento_badge', 'titulo', 'fecha_formateada', 'registrado_por')
+    list_filter = ('tipo_evento', 'fecha', 'profesor')
+    search_fields = ('profesor__first_name', 'profesor__last_name', 'profesor__username', 'titulo', 'descripcion')
+    date_hierarchy = 'fecha'
+    list_per_page = 20
+    
+    fieldsets = (
+        ('Información del Docente', {
+            'fields': ('profesor',),
+            'description': 'Selecciona el profesor al que pertenece este registro.'
+        }),
+        ('Detalles del Evento', {
+            'fields': ('tipo_evento', 'fecha', 'titulo', 'descripcion', 'archivo_adjunto')
+        }),
+        ('Metadata', {
+            'fields': ('registrado_por', 'created_at', 'updated_at'),
+            'classes': ('collapse',),
+            'description': 'Información de auditoría generada automáticamente.'
+        }),
+    )
+    
+    readonly_fields = ('created_at', 'updated_at')
+
+    def profesor_nombre(self, obj):
+        return obj.profesor.get_full_name() or obj.profesor.username
+    profesor_nombre.short_description = 'Docente'
+    profesor_nombre.admin_order_field = 'profesor'
+
+    def fecha_formateada(self, obj):
+        return obj.fecha.strftime('%d/%m/%Y %H:%M')
+    fecha_formateada.short_description = 'Fecha y Hora'
+    fecha_formateada.admin_order_field = 'fecha'
+
+    def tipo_evento_badge(self, obj):
+        colors = {
+            'clase': '#3b82f6',        # Azul
+            'evaluacion': '#10b981',   # Esmeralda
+            'observacion': '#f59e0b',  # Ámbar
+            'capacitacion': '#8b5cf6', # Violeta
+            'reunion': '#6b7280',      # Gris
+            'otro': '#ec4899'          # Rosa
+        }
+        color = colors.get(obj.tipo_evento, '#6b7280')
+        return format_html(
+            '<span style="background-color: {}; color: white; padding: 4px 10px; border-radius: 8px; font-weight: 500; font-size: 11px; text-transform: uppercase;">{}</span>',
+            color,
+            obj.get_tipo_evento_display()
+        )
+    tipo_evento_badge.short_description = 'Tipo de Evento'
+    tipo_evento_badge.admin_order_field = 'tipo_evento'
+
+    def save_model(self, request, obj, form, change):
+        if not obj.registrado_por:
+            obj.registrado_por = request.user
+        super().save_model(request, obj, form, change)

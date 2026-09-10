@@ -12,7 +12,12 @@ export interface AsistenciaData {
   estudiante_id: number;
   clase_id?: number;
   fecha: string;
-  estado: 'presente' | 'ausente';
+  estado: 'presente' | 'ausente' | 'tardanza' | 'justificado' | 'pendiente';
+}
+
+export interface AprobarAsistenciaData {
+  estudiante_id: number;
+  estado: 'presente' | 'ausente' | 'tardanza' | 'justificado';
 }
 
 export const asistenciaService = {
@@ -31,6 +36,21 @@ export const asistenciaService = {
     }
   },
 
+  // Registrar asistencia por código (estudiante)
+  registrarAsistenciaPorCodigo: async (codigo: string) => {
+    try {
+      const response = await axios.post(
+        `${API_URL}/clases/registrar-asistencia/`,
+        { codigo },
+        { headers: getAuthHeaders() }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error registrando asistencia por código:', error);
+      throw error;
+    }
+  },
+
   // Obtener asistencias de un estudiante
   getAsistenciasPorEstudiante: async (estudianteId: number) => {
     try {
@@ -45,11 +65,11 @@ export const asistenciaService = {
     }
   },
 
-  // Obtener asistencias de una clase
+  // Obtener asistencias de una clase (usa endpoint seguro del profesor)
   getAsistenciasPorClase: async (claseId: number) => {
     try {
       const response = await axios.get(
-        `${API_URL}/asistencias/?clase=${claseId}`,
+        `${API_URL}/clases/${claseId}/asistencias/`,
         { headers: getAuthHeaders() }
       );
       return response.data;
@@ -100,17 +120,17 @@ export const asistenciaService = {
     }
   },
 
-  // Actualizar asistencia existente
-  actualizarAsistencia: async (asistenciaId: number, estado: 'presente' | 'ausente') => {
+  // Aprobar/rechazar asistencia de un estudiante en una clase (profesor)
+  aprobarAsistenciaClase: async (claseId: number, data: AprobarAsistenciaData) => {
     try {
       const response = await axios.patch(
-        `${API_URL}/asistencias/${asistenciaId}/`,
-        { estado },
+        `${API_URL}/clases/${claseId}/aprobar-asistencia/`,
+        data,
         { headers: getAuthHeaders() }
       );
       return response.data;
     } catch (error) {
-      console.error('Error actualizando asistencia:', error);
+      console.error('Error aprobando asistencia:', error);
       throw error;
     }
   }
