@@ -2074,35 +2074,6 @@ class ClaseViewSet(viewsets.ModelViewSet):
                 'estado_display': asistencia.get_estado_display()
             })
 
-        # Al guardar asistencias, marcar la clase como completada para que aparezca en Historial Docente
-        if guardados and clase.estado != 'completada':
-            from datetime import datetime as dt
-            from django.utils.dateparse import parse_time
-            ahora = timezone.now()
-            if not clase.hora_inicio_real:
-                if clase.fecha and clase.hora:
-                    try:
-                        t = parse_time(clase.hora)
-                        inicio_naive = dt.combine(clase.fecha, t)
-                        inicio = timezone.make_aware(inicio_naive, timezone.get_current_timezone())
-                        if inicio > ahora:
-                            inicio = ahora
-                        clase.hora_inicio_real = inicio
-                    except Exception:
-                        clase.hora_inicio_real = ahora
-                else:
-                    clase.hora_inicio_real = ahora
-            if not clase.hora_fin_real:
-                clase.hora_fin_real = ahora
-            delta = clase.hora_fin_real - clase.hora_inicio_real
-            if delta.total_seconds() > 0:
-                clase.duracion_real = int(delta.total_seconds() / 60)
-            else:
-                clase.duracion_real = clase.duracion or 60
-            clase.estado = 'completada'
-            clase.codigo_expiracion = ahora
-            clase.save()
-
         return Response({
             'success': True,
             'message': f'{len(guardados)} asistencia(s) guardada(s)',
