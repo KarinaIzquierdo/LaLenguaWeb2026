@@ -96,97 +96,54 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
   };
 
   const iniciarClase = async (claseId: number) => {
-    
-    // Buscar la clase en ambos arrays
-    let clase = clases.find(c => c.id === claseId);
-    let esClaseDelBloque = false;
-    if (!clase) {
-      clase = clasesDelBloque.find(c => c.id === claseId);
-      esClaseDelBloque = true;
-    } else {
-    }
-    
+    const clase = clases.find(c => c.id === claseId) || clasesDelBloque.find(c => c.id === claseId);
+    const esClaseDelBloque = clasesDelBloque.some(c => c.id === claseId);
+
     if (!clase) {
       console.error('Clase no encontrada con ID:', claseId);
       alert('Error: No se pudo encontrar la clase.');
       return;
     }
 
+    const meetLink = clase.meet_link || clase.meetLink;
+    const esLinkInvalido =
+      !meetLink ||
+      meetLink.trim() === '' ||
+      meetLink === 'undefined' ||
+      meetLink.includes('meet.google.com/new');
+
+    if (esLinkInvalido) {
+      alert('Esta clase no tiene aún un enlace de videoconferencia válido. Edita la clase y agrega el enlace (Zoom, Meet, Teams, etc.) antes de iniciarla.');
+      return;
+    }
+
     try {
       let claseActualizada: any = null;
 
-      // Si es una clase del profesor (no del bloque), actualizar en el backend
       if (!esClaseDelBloque) {
-        try {
-          claseActualizada = await ClaseService.cambiarEstadoClase(claseId, 'activa');
-        } catch (error: any) {
-          console.error('Error actualizando estado en backend:', error);
-          console.error('Detalles del error:', error.response?.data);
-          // Continuar con la actualización local aunque falle el backend
-        }
+        claseActualizada = await ClaseService.cambiarEstadoClase(claseId, 'activa');
       }
 
-      // Actualizar estado local en ambos arrays
-      setClases(prev => prev.map(c => {
-        if (c.id === claseId) {
-          // Para clases del profesor, también guardar en localStorage
-          const claseKey = `clase_${c.tema.replace(/\s+/g, '_')}_estado`;
-          localStorage.setItem(claseKey, 'activa');
-          
-          // Disparar evento para sincronización
-          window.dispatchEvent(new CustomEvent('claseEstadoChanged', {
-            detail: { claseId, estado: 'activa', tema: c.tema }
-          }));
-          
-          const cambios = {
-            estado: 'activa' as const,
-            hora_inicio_real: claseActualizada?.hora_inicio_real ?? null,
-            codigo_asistencia: claseActualizada?.codigo_asistencia ?? null,
-            codigo_expiracion: claseActualizada?.codigo_expiracion ?? null,
-          };
-          return { ...c, ...cambios };
-        }
-        return c;
-      }));
-      
-      setClasesDelBloque(prev => prev.map(c => {
-        if (c.id === claseId) {
-          // Guardar estado en localStorage para sincronización con estudiantes
-          // Usar el tema de la clase para crear una clave única
-          const claseKey = `clase_${c.tema.replace(/\s+/g, '_')}_estado`;
-          localStorage.setItem(claseKey, 'activa');
-          
-          // También disparar evento personalizado para notificar cambios
-          window.dispatchEvent(new CustomEvent('claseEstadoChanged', {
-            detail: { tema: c.tema, estado: 'activa' }
-          }));
-          
-          const cambios = {
-            estado: 'activa' as const,
-            hora_inicio_real: claseActualizada?.hora_inicio_real ?? null,
-            codigo_asistencia: claseActualizada?.codigo_asistencia ?? null,
-            codigo_expiracion: claseActualizada?.codigo_expiracion ?? null,
-          };
-          return { ...c, ...cambios };
-        }
-        return c;
-      }));
+      const cambios = {
+        estado: 'activa' as const,
+        hora_inicio_real: claseActualizada?.hora_inicio_real ?? null,
+        codigo_asistencia: claseActualizada?.codigo_asistencia ?? null,
+        codigo_expiracion: claseActualizada?.codigo_expiracion ?? null,
+      };
 
-      // Abrir videoconferencia usando el enlace configurado en la clase
-      const meetLink = clase.meet_link || clase.meetLink;
+      const actualizar = (c: Clase) => {
+        if (c.id !== claseId) return c;
+        const claseKey = `clase_${c.tema.replace(/\s+/g, '_')}_estado`;
+        localStorage.setItem(claseKey, 'activa');
+        window.dispatchEvent(new CustomEvent('claseEstadoChanged', {
+          detail: { claseId, estado: 'activa', tema: c.tema }
+        }));
+        return { ...c, ...cambios };
+      };
 
-      const esLinkInvalido =
-        !meetLink ||
-        meetLink.trim() === '' ||
-        meetLink === 'undefined' ||
-        meetLink.includes('meet.google.com/new');
+      setClases(prev => prev.map(actualizar));
+      setClasesDelBloque(prev => prev.map(actualizar));
 
-      if (esLinkInvalido) {
-        alert('Esta clase no tiene aún un enlace de videoconferencia válido. Edita la clase y agrega el enlace (Zoom, Meet, Teams, etc.) antes de iniciarla.');
-        return;
-      }
-
-      // Asegurar que el enlace tenga protocolo
       let enlaceCompleto = meetLink;
       if (!enlaceCompleto.startsWith('http://') && !enlaceCompleto.startsWith('https://')) {
         enlaceCompleto = 'https://' + enlaceCompleto;
@@ -198,10 +155,10 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
         ? `\n\n🎫 Código de asistencia: ${claseActualizada.codigo_asistencia}`
         : '';
 
-      // Mostrar notificación
       alert(`¡Clase "${clase.nombre || clase.tema}" iniciada! Los estudiantes pueden acceder ahora.${codigoMsg}`);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error al iniciar clase:', error);
+      console.error('Detalles del error:', error?.response?.data);
       alert('Error al iniciar la clase. Intenta nuevamente.');
     }
   };
