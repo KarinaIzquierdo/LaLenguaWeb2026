@@ -1627,17 +1627,16 @@ class ClaseViewSet(viewsets.ModelViewSet):
             from django.db.models import Q
             try:
                 usuario = CustomUser.objects.get(id=profesor_id)
-                nombres = [
-                    f"{usuario.first_name or ''} {usuario.last_name or ''}".strip(),
-                    usuario.username or '',
-                    usuario.email or ''
-                ]
-                nombres = [n for n in nombres if n]
-                if nombres:
-                    filtro = Q()
-                    for n in nombres:
-                        filtro |= Q(profesor__iexact=n)
-                    queryset = queryset.filter(filtro)
+                filtro = Q(profesor__isnull=True) | Q(profesor='')
+                if usuario.first_name:
+                    filtro |= Q(profesor__icontains=usuario.first_name)
+                if usuario.last_name:
+                    filtro |= Q(profesor__icontains=usuario.last_name)
+                if usuario.username:
+                    filtro |= Q(profesor__iexact=usuario.username)
+                if usuario.email:
+                    filtro |= Q(profesor__iexact=usuario.email)
+                queryset = queryset.filter(filtro)
             except (CustomUser.DoesNotExist, ValueError):
                 pass
         elif profesor:
