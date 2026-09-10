@@ -203,27 +203,35 @@ export default function HistorialDocente() {
               <div className="loading-state"><div className="spinner"></div><p>Cargando asistencias...</p></div>
             ) : errorAsistencia ? (
               <div className="empty-state"><p>⚠️ {errorAsistencia}</p></div>
-            ) : asistenciasClase.length === 0 ? (
-              <div className="empty-state"><p>No hay asistencias registradas</p></div>
             ) : (
-              <table className="asistencia-table">
-                <thead>
-                  <tr>
-                    <th>Estudiante</th>
-                    <th>Estado</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {asistenciasClase.map((a) => (
-                    <tr key={a.id}>
-                      <td>{a.estudiante_nombre}</td>
-                      <td>
-                        <span className={`estado-asistencia ${a.estado}`}>{a.estado_display || a.estado}</span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              (() => {
+                const asistenciasConfirmadas = asistenciasClase.filter(
+                  (a: any) => a.estado === 'presente' || a.estado === 'tardanza'
+                );
+                if (asistenciasConfirmadas.length === 0) {
+                  return <div className="empty-state"><p>No hay asistencias confirmadas</p></div>;
+                }
+                return (
+                  <table className="asistencia-table">
+                    <thead>
+                      <tr>
+                        <th>Estudiante</th>
+                        <th>Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {asistenciasConfirmadas.map((a: any) => (
+                        <tr key={a.id}>
+                          <td>{a.estudiante_nombre}</td>
+                          <td>
+                            <span className={`estado-asistencia ${a.estado}`}>{a.estado_display || a.estado}</span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                );
+              })()
             )}
           </div>
         </div>
