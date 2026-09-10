@@ -17,6 +17,7 @@ export default function HistorialAsistencias() {
   const [clases, setClases] = useState<any[]>([]);
   const [claseSeleccionada, setClaseSeleccionada] = useState<any>(null);
   const [asistencias, setAsistencias] = useState<AsistenciaHistorial[]>([]);
+  const [errorAsistencias, setErrorAsistencias] = useState<string | null>(null);
   const [cargando, setCargando] = useState(false);
 
   useEffect(() => {
@@ -45,14 +46,16 @@ export default function HistorialAsistencias() {
   const cargarAsistenciasClase = async (clase: any) => {
     try {
       setCargando(true);
+      setErrorAsistencias(null);
       setClaseSeleccionada(clase);
       
       // Obtener asistencias guardadas desde el backend (por clase y por fecha)
       let asistenciasData: any[] = [];
       try {
         asistenciasData = await asistenciaService.getAsistenciasPorClase(clase.id);
-      } catch (e) {
+      } catch (e: any) {
         console.error('Error cargando asistencias por clase:', e);
+        setErrorAsistencias(e?.response?.data?.error || e?.response?.data?.message || e?.message || 'Error cargando asistencias');
       }
 
       // También buscar asistencias guardadas con la misma fecha pero sin clase asignada
@@ -183,10 +186,22 @@ export default function HistorialAsistencias() {
               <h3>Selecciona una clase</h3>
               <p>Elige una clase de la lista para ver sus asistencias</p>
             </div>
+          ) : errorAsistencias ? (
+            <div className="empty-state">
+              <div className="empty-icon">⚠️</div>
+              <h3>Error al cargar asistencias</h3>
+              <p>{errorAsistencias}</p>
+            </div>
           ) : cargando ? (
             <div className="loading-state">
               <div className="spinner"></div>
               <p>Cargando asistencias...</p>
+            </div>
+          ) : asistencias.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-icon">📝</div>
+              <h3>No hay asistencias registradas</h3>
+              <p>Aún no se ha tomado asistencia para esta clase</p>
             </div>
           ) : (
             <>

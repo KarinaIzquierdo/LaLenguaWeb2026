@@ -1843,7 +1843,8 @@ class ClaseViewSet(viewsets.ModelViewSet):
         if getattr(usuario, 'role', '') != 'profesor':
             return False
         if not clase.profesor:
-            return False
+            # Si el campo profesor está vacío, cualquier profesor autenticado puede asumir la clase
+            return True
         profesor_clase = str(clase.profesor).strip().lower()
         nombres = [
             f"{usuario.first_name or ''} {usuario.last_name or ''}".strip(),

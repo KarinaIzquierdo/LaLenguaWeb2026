@@ -178,7 +178,7 @@ class ClaseSerializer(serializers.ModelSerializer):
             nombre_profesor = f"{request.user.first_name or ''} {request.user.last_name or ''}".strip()
             rol = getattr(request.user, 'role', '')
             es_admin = rol == 'admin'
-            es_profesor_clase = rol == 'profesor' and nombre_profesor and instance.profesor and nombre_profesor.lower() == instance.profesor.lower()
+            es_profesor_clase = rol == 'profesor' and (not instance.profesor or (nombre_profesor and instance.profesor and nombre_profesor.lower() == instance.profesor.lower()))
             if not (es_admin or es_profesor_clase):
                 data['codigo_asistencia'] = None
                 data['codigo_expiracion'] = None

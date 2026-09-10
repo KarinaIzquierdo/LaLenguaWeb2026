@@ -16,6 +16,7 @@ export default function HistorialDocente() {
   const [paginaActual, setPaginaActual] = useState(1);
   const [claseAsistenciaSeleccionada, setClaseAsistenciaSeleccionada] = useState<number | null>(null);
   const [asistenciasClase, setAsistenciasClase] = useState<any[]>([]);
+  const [errorAsistencia, setErrorAsistencia] = useState<string | null>(null);
   const [cargandoAsistencia, setCargandoAsistencia] = useState(false);
 
   useEffect(() => {
@@ -59,15 +60,19 @@ export default function HistorialDocente() {
     if (claseAsistenciaSeleccionada === claseId) {
       setClaseAsistenciaSeleccionada(null);
       setAsistenciasClase([]);
+      setErrorAsistencia(null);
       return;
     }
     try {
       setCargandoAsistencia(true);
+      setErrorAsistencia(null);
       setClaseAsistenciaSeleccionada(claseId);
       const data = await asistenciaService.getAsistenciasPorClase(claseId);
       setAsistenciasClase(Array.isArray(data) ? data : (data?.data || []));
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error cargando asistencias:', error);
+      const msg = error?.response?.data?.error || error?.response?.data?.message || error?.message || 'Error cargando asistencias';
+      setErrorAsistencia(msg);
       setAsistenciasClase([]);
     } finally {
       setCargandoAsistencia(false);
@@ -196,6 +201,8 @@ export default function HistorialDocente() {
             </div>
             {cargandoAsistencia ? (
               <div className="loading-state"><div className="spinner"></div><p>Cargando asistencias...</p></div>
+            ) : errorAsistencia ? (
+              <div className="empty-state"><p>⚠️ {errorAsistencia}</p></div>
             ) : asistenciasClase.length === 0 ? (
               <div className="empty-state"><p>No hay asistencias registradas</p></div>
             ) : (

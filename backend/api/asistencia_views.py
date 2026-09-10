@@ -63,7 +63,7 @@ def asistencias_list_create(request):
                 )
             
             # Obtener estudiante
-            estudiante = get_object_or_404(CustomUser, id=estudiante_id, role='student')
+            estudiante = get_object_or_404(CustomUser, id=estudiante_id)
             
             # Obtener clase si se proporciona
             clase = None
@@ -152,7 +152,7 @@ def estadisticas_asistencia(request, estudiante_id):
     """
     Obtiene estadísticas de asistencia de un estudiante
     """
-    estudiante = get_object_or_404(CustomUser, id=estudiante_id, role='student')
+    estudiante = get_object_or_404(CustomUser, id=estudiante_id)
     asistencias = Asistencia.objects.filter(estudiante=estudiante)
     
     total = asistencias.count()
