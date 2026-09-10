@@ -95,7 +95,7 @@ export default function TomarAsistencia({
   const handleGuardar = async () => {
     setGuardando(true);
     const asistencias: { [key: string]: string | null } = {};
-    const resultados: Array<{ id: number; exito: boolean; estado: string }> = [];
+    const resultados: Array<{ id: number; exito: boolean; estado: string; error?: string }> = [];
 
     try {
       for (const est of estudiantes) {
@@ -110,15 +110,18 @@ export default function TomarAsistencia({
             estado: est.estado as 'presente' | 'ausente' | 'tardanza' | 'justificado'
           });
           resultados.push({ id: est.id, exito: true, estado: est.estado });
-        } catch (error) {
+        } catch (error: any) {
+          const msg = error?.response?.data?.error || error?.response?.data?.message || error.message || 'Error desconocido';
           console.error(`Error guardando asistencia para estudiante ${est.id}:`, error);
-          resultados.push({ id: est.id, exito: false, estado: est.estado });
+          resultados.push({ id: est.id, exito: false, estado: est.estado, error: msg });
         }
       }
 
-      const fallidos = resultados.filter(r => !r.exito).length;
-      if (fallidos > 0) {
-        alert(`⚠️ Se sincronizaron ${resultados.length - fallidos} asistencias, pero ${fallidos} fallaron.`);
+      const exitosos = resultados.filter(r => r.exito);
+      const fallidos = resultados.filter(r => !r.exito);
+      if (fallidos.length > 0) {
+        const detalle = fallidos.map(f => `- ${estudiantes.find(e => e.id === f.id)?.nombre || `ID ${f.id}`}: ${f.error}`).join('\n');
+        alert(`⚠️ Se guardaron ${exitosos.length} asistencias. ${fallidos.length} fallaron:\n\n${detalle}`);
       } else {
         alert('✅ Asistencias guardadas correctamente');
       }
