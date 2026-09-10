@@ -25,7 +25,7 @@ export interface HistorialDocente {
 const getToken = () => localStorage.getItem('token') || '';
 
 export const historialDocenteService = {
-  async getHistorial(profesorId?: number, tipoEvento?: string): Promise<{
+  async getHistorial(profesorId?: number): Promise<{
     success: boolean;
     historial: HistorialDocente[];
     clases_dictadas?: any[];
@@ -37,7 +37,6 @@ export const historialDocenteService = {
   }> {
     const params = new URLSearchParams();
     if (profesorId) params.append('profesor', profesorId.toString());
-    if (tipoEvento) params.append('tipo_evento', tipoEvento);
 
     const url = `${API_BASE_URL}/historial-docente/${params.toString() ? `?${params.toString()}` : ''}`;
 

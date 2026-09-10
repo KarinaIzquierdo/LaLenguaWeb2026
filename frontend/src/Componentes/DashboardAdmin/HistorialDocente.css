@@ -94,10 +94,9 @@
 
 .filtros-container {
   display: flex;
-  flex-wrap: wrap;
-  gap: 2rem;
+  justify-content: center;
   background: white;
-  padding: 2rem;
+  padding: 1.5rem 2rem;
   border-radius: 20px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
   margin-bottom: 2.5rem;
@@ -108,8 +107,8 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  flex: 1;
-  min-width: 300px;
+  width: 100%;
+  max-width: 420px;
 }
 
 .filtro-group label {
@@ -301,6 +300,43 @@
   align-items: center;
   gap: 1rem;
   color: #94a3b8;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 1.25rem;
+  border-top: 1px solid #f1f5f9;
+}
+
+.pagination button {
+  padding: 0.5rem 1.25rem;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #334155;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pagination button:hover:not(:disabled) {
+  background: #ec4899;
+  color: white;
+  border-color: #ec4899;
+}
+
+.pagination button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pagination span {
+  color: #64748b;
+  font-size: 0.9rem;
+  font-weight: 500;
 }
 
 .spinner {
