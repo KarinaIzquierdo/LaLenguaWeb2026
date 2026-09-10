@@ -52,7 +52,12 @@ def historial_docente_list_create_view(request):
             })
             
         # Obtener datos de clases dictadas para complementar el historial
-        clases_queryset = Clase.objects.filter(estado='completada')
+        # Solo contar clases completadas que fueron verificadas (iniciadas y finalizadas por el profesor)
+        clases_queryset = Clase.objects.filter(
+            estado='completada',
+            hora_inicio_real__isnull=False,
+            hora_fin_real__isnull=False
+        )
         if profesor_id:
             # Filtrar por nombre de profesor ya que en Clase es CharField
             profesor_obj = get_object_or_404(CustomUser, id=profesor_id)
@@ -62,6 +67,8 @@ def historial_docente_list_create_view(request):
         clases_data = []
         total_horas = 0
         for clase in clases_queryset:
+            # Usar la duración real registrada; si no existe, usar la programada
+            duracion = clase.duracion_real if clase.duracion_real else clase.duracion
             clases_data.append({
                 'id': f"clase-{clase.id}",
                 'profesor': {
@@ -69,14 +76,16 @@ def historial_docente_list_create_view(request):
                 },
                 'fecha': clase.fecha.isoformat() if clase.fecha else None,
                 'hora': clase.hora,
-                'duracion': clase.duracion,
+                'hora_inicio_real': clase.hora_inicio_real.isoformat() if clase.hora_inicio_real else None,
+                'hora_fin_real': clase.hora_fin_real.isoformat() if clase.hora_fin_real else None,
+                'duracion': duracion,
                 'tipo_evento': 'clase',
                 'tipo_evento_display': 'Clase Completada',
                 'titulo': f"Clase: {clase.nombre}",
                 'descripcion': f"Tema: {clase.tema}. Modalidad: {clase.modalidad}",
                 'es_clase_automatica': True
             })
-            total_horas += (clase.duracion / 60)
+            total_horas += (duracion / 60)
 
         return Response({
             'success': True,

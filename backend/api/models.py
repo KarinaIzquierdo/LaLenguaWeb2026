@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from django.utils import timezone
 
 
 class CustomUser(AbstractUser):
@@ -149,6 +150,9 @@ class Clase(models.Model):
     fecha = models.DateField(blank=True, null=True)
     hora = models.CharField(max_length=20, blank=True, null=True, default='08:00')
     duracion = models.IntegerField(default=60, help_text="Duración en minutos")
+    hora_inicio_real = models.DateTimeField(null=True, blank=True, help_text="Hora real en la que el profesor inició la clase")
+    hora_fin_real = models.DateTimeField(null=True, blank=True, help_text="Hora real en la que el profesor finalizó la clase")
+    duracion_real = models.IntegerField(null=True, blank=True, help_text="Duración real en minutos calculada al finalizar")
     tema = models.CharField(max_length=200, blank=True)
     descripcion = models.TextField(blank=True)
     tipo_clase = models.CharField(max_length=20, choices=[('individual', 'Individual'), ('grupal', 'Grupal')], default='individual')
@@ -874,3 +878,49 @@ class ChatMessage(models.Model):
 
     def __str__(self):
         return f"De {self.sender.username} en {self.created_at.strftime('%Y-%m-%d %H:%M')}"
+
+
+class HistorialDocente(models.Model):
+    """
+    Modelo para registrar el historial y eventos significativos de los docentes
+    """
+    TIPO_EVENTO_CHOICES = [
+        ('clase', 'Clase Dictada'),
+        ('evaluacion', 'Evaluación Calificada'),
+        ('observacion', 'Observación de Desempeño'),
+        ('capacitacion', 'Capacitación Recibida'),
+        ('reunion', 'Reunión de Facultad'),
+        ('otro', 'Otro'),
+    ]
+
+    profesor = models.ForeignKey(
+        CustomUser, 
+        on_delete=models.CASCADE, 
+        related_name='historial_docente',
+        limit_choices_to={'role': 'profesor'}
+    )
+    fecha = models.DateTimeField(default=timezone.now)
+    tipo_evento = models.CharField(max_length=20, choices=TIPO_EVENTO_CHOICES, default='otro')
+    titulo = models.CharField(max_length=200)
+    descripcion = models.TextField(blank=True, null=True)
+    archivo_adjunto = models.FileField(upload_to='historial_docente/', blank=True, null=True)
+    
+    # Metadata
+    registrado_por = models.ForeignKey(
+        CustomUser, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        related_name='historiales_registrados',
+        help_text="Administrador que registró este evento"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-fecha']
+        verbose_name = 'Historial Docente'
+        verbose_name_plural = 'Historial Docente'
+
+    def __str__(self):
+        return f"{self.profesor.get_full_name() or self.profesor.username} - {self.titulo} ({self.fecha.strftime('%Y-%m-%d')})"

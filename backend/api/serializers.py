@@ -158,9 +158,9 @@ class ClaseSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Clase
-        fields = ['id', 'nombre', 'profesor', 'fecha', 'hora', 'duracion', 'tema', 'descripcion', 
-                 'tipo_clase', 'modalidad', 'meet_link', 'estado', 'estudiantes', 'estudiantesSeleccionados', 
-                 'created_at', 'updated_at']
+        fields = ['id', 'nombre', 'profesor', 'fecha', 'hora', 'duracion', 'hora_inicio_real', 'hora_fin_real', 'duracion_real',
+                  'tema', 'descripcion', 'tipo_clase', 'modalidad', 'meet_link', 'estado', 'estudiantes', 'estudiantesSeleccionados', 
+                  'created_at', 'updated_at']
     
     def to_representation(self, instance):
         data = super().to_representation(instance)

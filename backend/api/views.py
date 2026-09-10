@@ -1736,13 +1736,38 @@ class ClaseViewSet(viewsets.ModelViewSet):
     def cambiar_estado(self, request, pk=None):
         """
         Endpoint para cambiar el estado de una clase (programada -> activa -> completada)
+        Registra la hora real de inicio y fin para verificar que la clase fue dictada.
         """
+        from django.utils import timezone
+
         clase = self.get_object()
         nuevo_estado = request.data.get('estado')
         
         if nuevo_estado not in ['programada', 'activa', 'completada']:
             return Response({'error': 'Estado inválido'}, status=status.HTTP_400_BAD_REQUEST)
         
+        ahora = timezone.now()
+
+        if nuevo_estado == 'activa':
+            # Registrar hora real de inicio
+            clase.hora_inicio_real = ahora
+            clase.hora_fin_real = None
+            clase.duracion_real = None
+        elif nuevo_estado == 'completada':
+            # Registrar hora real de fin y calcular duración real
+            clase.hora_fin_real = ahora
+            if clase.hora_inicio_real:
+                diferencia = ahora - clase.hora_inicio_real
+                clase.duracion_real = max(1, int(diferencia.total_seconds() / 60))
+            else:
+                # Si no hay inicio registrado, usar la duración programada
+                clase.duracion_real = clase.duracion
+        elif nuevo_estado == 'programada':
+            # Reiniciar registro si se reprograma
+            clase.hora_inicio_real = None
+            clase.hora_fin_real = None
+            clase.duracion_real = None
+
         clase.estado = nuevo_estado
         clase.save()
         

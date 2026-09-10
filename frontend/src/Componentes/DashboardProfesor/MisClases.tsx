@@ -11,6 +11,9 @@ interface Clase {
   fecha: string;
   hora: string;
   duracion: number;
+  hora_inicio_real: string | null;
+  hora_fin_real: string | null;
+  duracion_real: number | null;
   tema: string;
   descripcion: string;
   estudiantes: string[];
@@ -878,7 +881,9 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
                     <div className="historial-info">
                       <span className="historial-tema">{clase.nombre || clase.tema}</span>
                       <span className="historial-estudiantes">{(clase.estudiantes ? clase.estudiantes.length : 0)} estudiante(s)</span>
-                      <span className="historial-duracion">⏱️ {clase.duracion} min</span>
+                      <span className="historial-duracion">
+                        ⏱️ {clase.duracion_real ? `${clase.duracion_real} min (real)` : `${clase.duracion} min (programada)`}
+                      </span>
                     </div>
                     <div className="historial-acciones">
                       <button 
@@ -964,9 +969,30 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
                   </div>
                   
                   <div className="detalle-grupo">
-                    <label><strong>Duración:</strong></label>
+                    <label><strong>Duración programada:</strong></label>
                     <p>{selectedClase.duracion} minutos</p>
                   </div>
+                  
+                  {selectedClase.duracion_real && (
+                    <div className="detalle-grupo">
+                      <label><strong>Duración real dictada:</strong></label>
+                      <p>{selectedClase.duracion_real} minutos</p>
+                    </div>
+                  )}
+                  
+                  {selectedClase.hora_inicio_real && (
+                    <div className="detalle-grupo">
+                      <label><strong>Iniciada:</strong></label>
+                      <p>{new Date(selectedClase.hora_inicio_real).toLocaleTimeString('es-ES', {hour: '2-digit', minute: '2-digit'})}</p>
+                    </div>
+                  )}
+                  
+                  {selectedClase.hora_fin_real && (
+                    <div className="detalle-grupo">
+                      <label><strong>Finalizada:</strong></label>
+                      <p>{new Date(selectedClase.hora_fin_real).toLocaleTimeString('es-ES', {hour: '2-digit', minute: '2-digit'})}</p>
+                    </div>
+                  )}
                   
                   <div className="detalle-grupo">
                     <label><strong>Tipo:</strong></label>
