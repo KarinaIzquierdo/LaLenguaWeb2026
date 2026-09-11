@@ -1665,13 +1665,13 @@ class ClaseViewSet(viewsets.ModelViewSet):
 
         # Asegurar que el profesor quede asociado correctamente
         profesor_id = data.pop('profesor_id', None)
-        if not data.get('profesor') and profesor_id:
+        if profesor_id:
             try:
                 usuario = CustomUser.objects.get(id=profesor_id)
                 data['profesor'] = f"{usuario.first_name or ''} {usuario.last_name or ''}".strip() or usuario.username or usuario.email
             except CustomUser.DoesNotExist:
                 pass
-        if not data.get('profesor') and request.user.is_authenticated and getattr(request.user, 'role', '') == 'profesor':
+        elif not data.get('profesor') and request.user.is_authenticated and getattr(request.user, 'role', '') == 'profesor':
             data['profesor'] = f"{request.user.first_name or ''} {request.user.last_name or ''}".strip() or request.user.username or request.user.email
 
         serializer = self.get_serializer(data=data)
@@ -1726,13 +1726,13 @@ class ClaseViewSet(viewsets.ModelViewSet):
 
         # Asegurar que el profesor quede asociado correctamente al actualizar
         profesor_id = data.pop('profesor_id', None)
-        if not data.get('profesor') and profesor_id:
+        if profesor_id:
             try:
                 usuario = CustomUser.objects.get(id=profesor_id)
                 data['profesor'] = f"{usuario.first_name or ''} {usuario.last_name or ''}".strip() or usuario.username or usuario.email
             except CustomUser.DoesNotExist:
                 pass
-        if not data.get('profesor') and request.user.is_authenticated and getattr(request.user, 'role', '') == 'profesor':
+        elif not data.get('profesor') and request.user.is_authenticated and getattr(request.user, 'role', '') == 'profesor':
             data['profesor'] = f"{request.user.first_name or ''} {request.user.last_name or ''}".strip() or request.user.username or request.user.email
 
         partial = kwargs.pop('partial', False)
