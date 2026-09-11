@@ -16,7 +16,7 @@ interface TomarAsistenciaProps {
   fecha: string;
   tema: string;
   codigoAsistencia?: string | null;
-  onGuardar: (asistencias: { [key: string]: string | null }) => void;
+  onGuardar: (asistencias: { [key: string]: string | null }) => void | Promise<void>;
   onCerrar: () => void;
 }
 
@@ -113,7 +113,7 @@ export default function TomarAsistencia({
     try {
       const resultado = await asistenciaService.guardarAsistenciaClase(claseId, asistenciasParaEnviar);
       alert(`✅ ${resultado.message || 'Asistencias guardadas correctamente'}`);
-      onGuardar(asistencias);
+      await onGuardar(asistencias);
     } catch (error: any) {
       const msg = error?.response?.data?.error || error?.response?.data?.message || error.message || 'Error guardando asistencias';
       console.error('Error guardando asistencias:', error);

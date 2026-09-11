@@ -92,7 +92,14 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
     setMostrarAsistencia(true);
   };
 
-  const guardarAsistencia = (asistencias: { [key: string]: string | null }) => {
+  const guardarAsistencia = async (asistencias: { [key: string]: string | null }) => {
+    if (claseAsistencia?.id) {
+      try {
+        await finalizarClase(claseAsistencia.id);
+      } catch (error) {
+        console.error('Error finalizando clase tras guardar asistencia:', error);
+      }
+    }
     setMostrarAsistencia(false);
     setClaseAsistencia(null);
   };
