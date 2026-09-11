@@ -45,6 +45,7 @@ export const historialDocenteService = {
     if (fechaDesde) params.append('fecha_desde', fechaDesde);
     if (fechaHasta) params.append('fecha_hasta', fechaHasta);
     if (materia) params.append('materia', materia);
+    params.append('_', String(Date.now()));
 
     const query = params.toString() ? `?${params.toString()}` : '';
     const url = `${API_BASE_URL}/historial-docente/${query}`;

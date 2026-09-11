@@ -62,6 +62,7 @@ export const ClaseService = {
     const params = new URLSearchParams();
     if (pid) params.append('profesor_id', String(pid));
     if (nombreCompleto) params.append('profesor', nombreCompleto);
+    params.append('_', String(Date.now()));
     const query = params.toString();
     const url = query ? `${API_URL}/clases/?${query}` : `${API_URL}/clases/`;
 

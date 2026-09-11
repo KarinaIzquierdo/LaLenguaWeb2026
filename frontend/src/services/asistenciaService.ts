@@ -70,7 +70,7 @@ export const asistenciaService = {
     try {
       const response = await axios.get(
         `${API_URL}/clases/${claseId}/asistencias/`,
-        { headers: getAuthHeaders() }
+        { headers: getAuthHeaders(), params: { _: Date.now() } }
       );
       return response.data;
     } catch (error) {
