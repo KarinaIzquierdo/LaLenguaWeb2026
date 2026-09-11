@@ -276,7 +276,7 @@ export default function HistorialDocente() {
                     <tbody>
                       {asistenciasOrdenadas.map((a: any) => (
                         <tr key={a.id}>
-                          <td>{a.estudiante_nombre}</td>
+                          <td>{a.estudiante_nombre || `ID: ${a.estudiante_id}` || 'Sin nombre'}</td>
                           <td>
                             <span className={`estado-asistencia ${a.estado}`}>{a.estado_display || a.estado}</span>
                           </td>
