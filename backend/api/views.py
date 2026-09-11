@@ -1646,6 +1646,11 @@ class ClaseViewSet(viewsets.ModelViewSet):
             )
 
         return queryset.order_by('-created_at')
+
+    def list(self, request, *args, **kwargs):
+        response = super().list(request, *args, **kwargs)
+        response['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+        return response
     
     def create(self, request, *args, **kwargs):
         """Crear clase asegurando asignación de estudiantes y enviar notificaciones."""
@@ -1954,7 +1959,7 @@ class ClaseViewSet(viewsets.ModelViewSet):
                 'fecha': a.fecha.isoformat() if a.fecha else None,
                 'observaciones': a.observaciones or '',
             })
-        return Response(data, status=status.HTTP_200_OK)
+        return Response(data, status=status.HTTP_200_OK, headers={'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0'})
 
     @action(detail=True, methods=['patch'], url_path='aprobar-asistencia')
     def aprobar_asistencia(self, request, pk=None):

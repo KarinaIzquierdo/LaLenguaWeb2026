@@ -134,7 +134,7 @@ def historial_docente_list_create_view(request):
                 'total_clases': len(clases_data),
                 'total_horas': round(total_horas, 1)
             }
-        })
+        }, headers={'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0'})
 
     elif request.method == 'POST':
         data = request.data
