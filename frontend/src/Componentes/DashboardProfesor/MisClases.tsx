@@ -94,11 +94,12 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
 
   const guardarAsistencia = async (asistencias: { [key: string]: string | null }) => {
     if (claseAsistencia?.id) {
-      try {
-        await finalizarClase(claseAsistencia.id, false);
-      } catch (error) {
-        console.error('Error finalizando clase tras guardar asistencia:', error);
-      }
+      const ahora = new Date().toISOString();
+      const actualizar = (c: Clase) => c.id === claseAsistencia.id
+        ? { ...c, estado: 'completada' as const, hora_fin_real: ahora }
+        : c;
+      setClases(prev => prev.map(actualizar));
+      setClasesDelBloque(prev => prev.map(actualizar));
     }
     setMostrarAsistencia(false);
     setClaseAsistencia(null);

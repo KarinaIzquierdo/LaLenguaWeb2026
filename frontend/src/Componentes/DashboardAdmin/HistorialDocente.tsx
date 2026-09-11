@@ -13,6 +13,9 @@ export default function HistorialDocente() {
   const [profesores, setProfesores] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtroProfesor, setFiltroProfesor] = useState('');
+  const [fechaDesde, setFechaDesde] = useState('');
+  const [fechaHasta, setFechaHasta] = useState('');
+  const [materia, setMateria] = useState('');
   const [paginaActual, setPaginaActual] = useState(1);
   const [claseAsistenciaSeleccionada, setClaseAsistenciaSeleccionada] = useState<number | null>(null);
   const [asistenciasClase, setAsistenciasClase] = useState<any[]>([]);
@@ -22,13 +25,16 @@ export default function HistorialDocente() {
   useEffect(() => {
     cargarDatos();
     cargarProfesores();
-  }, [filtroProfesor]);
+  }, [filtroProfesor, fechaDesde, fechaHasta, materia]);
 
   const cargarDatos = async () => {
     try {
       setLoading(true);
       const data = await historialDocenteService.getHistorial(
-        filtroProfesor ? parseInt(filtroProfesor) : undefined
+        filtroProfesor ? parseInt(filtroProfesor) : undefined,
+        fechaDesde || undefined,
+        fechaHasta || undefined,
+        materia || undefined
       );
       if (data.success) {
         setClasesDictadas(data.clases_dictadas || []);
@@ -79,8 +85,10 @@ export default function HistorialDocente() {
     }
   };
 
-  const formatearFecha = (fechaStr: string) => {
+  const formatearFecha = (fechaStr?: string) => {
+    if (!fechaStr) return '—';
     const fecha = new Date(fechaStr);
+    if (isNaN(fecha.getTime())) return '—';
     return fecha.toLocaleDateString('es-ES', {
       year: 'numeric',
       month: 'short',
@@ -113,13 +121,38 @@ export default function HistorialDocente() {
 
       <div className="filtros-container">
         <div className="filtro-group">
-          <label><FaUserTie /> Filtrar por Profesor</label>
+          <label><FaUserTie /> Profesor</label>
           <select value={filtroProfesor} onChange={(e) => setFiltroProfesor(e.target.value)}>
             <option value="">Todos los profesores</option>
             {profesores.map(p => (
               <option key={p.id} value={p.id}>{p.nombres} {p.apellidos}</option>
             ))}
           </select>
+        </div>
+        <div className="filtro-group">
+          <label>Desde</label>
+          <input
+            type="date"
+            value={fechaDesde}
+            onChange={(e) => setFechaDesde(e.target.value)}
+          />
+        </div>
+        <div className="filtro-group">
+          <label>Hasta</label>
+          <input
+            type="date"
+            value={fechaHasta}
+            onChange={(e) => setFechaHasta(e.target.value)}
+          />
+        </div>
+        <div className="filtro-group">
+          <label>Materia / Clase</label>
+          <input
+            type="text"
+            placeholder="Buscar..."
+            value={materia}
+            onChange={(e) => setMateria(e.target.value)}
+          />
         </div>
       </div>
 
@@ -142,32 +175,42 @@ export default function HistorialDocente() {
                   <th>Fecha</th>
                   <th>Docente</th>
                   <th>Clase</th>
+                  <th>Materia</th>
                   <th>Duración</th>
                   <th>Modalidad</th>
                   <th>Asistencia</th>
                 </tr>
               </thead>
               <tbody>
-                {registrosPagina.map((item) => (
-                  <tr key={item.id}>
-                    <td>{formatearFecha(item.fecha)}</td>
-                    <td className="font-bold">{item.profesor.nombre}</td>
-                    <td>{item.titulo}</td>
-                    <td>{item.duracion ? `${item.duracion} min` : '—'}</td>
-                    <td>{item.descripcion?.includes('Modalidad:') 
-                      ? item.descripcion.split('Modalidad:')[1]?.trim() 
-                      : '—'}
-                    </td>
-                    <td>
-                      <button 
-                        className="btn-ver-asistencia"
-                        onClick={() => verAsistencia(item.clase_id)}
-                      >
-                        {claseAsistenciaSeleccionada === item.clase_id ? 'Ocultar' : 'Ver asistencia'}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {registrosPagina.map((item) => {
+                  const resumen = item.resumen_asistencia || {};
+                  const resumenTexto = [
+                    resumen.presentes ? `P:${resumen.presentes}` : '',
+                    resumen.ausentes ? `A:${resumen.ausentes}` : '',
+                    resumen.tardanzas ? `T:${resumen.tardanzas}` : '',
+                    resumen.justificados ? `J:${resumen.justificados}` : '',
+                  ].filter(Boolean).join(' ') || '—';
+                  return (
+                    <tr key={item.id}>
+                      <td>{formatearFecha(item.fecha)}</td>
+                      <td className="font-bold">{item.profesor?.nombre || '—'}</td>
+                      <td>{item.titulo}</td>
+                      <td>{item.materia || '—'}</td>
+                      <td>{item.duracion ? `${item.duracion} min` : '—'}</td>
+                      <td>{item.modalidad || '—'}</td>
+                      <td>
+                        <button
+                          className="btn-ver-asistencia"
+                          onClick={() => verAsistencia(item.clase_id)}
+                          title={resumenTexto}
+                        >
+                          {claseAsistenciaSeleccionada === item.clase_id ? 'Ocultar' : 'Ver asistencia'}
+                          {resumenTexto !== '—' && <small style={{ display: 'block', fontSize: '0.75em' }}>{resumenTexto}</small>}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
             

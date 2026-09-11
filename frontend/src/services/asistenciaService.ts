@@ -135,17 +135,17 @@ export const asistenciaService = {
     }
   },
 
-  // Guardar asistencias de una clase de forma masiva (profesor/admin)
-  guardarAsistenciaClase: async (claseId: number, asistencias: AprobarAsistenciaData[]) => {
+  // Guardar asistencias de una clase en bloque (vinculadas a clase)
+  guardarAsistenciaClase: async (claseId: number, asistencias: AprobarAsistenciaData[], finalizarClase: boolean = false) => {
     try {
       const response = await axios.post(
         `${API_URL}/clases/${claseId}/guardar-asistencia/`,
-        { asistencias },
+        { asistencias, finalizar_clase: finalizarClase },
         { headers: getAuthHeaders() }
       );
       return response.data;
     } catch (error) {
-      console.error('Error guardando asistencias:', error);
+      console.error('Error guardando asistencias de clase:', error);
       throw error;
     }
   }

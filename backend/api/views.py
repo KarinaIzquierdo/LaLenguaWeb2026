@@ -2036,6 +2036,7 @@ class ClaseViewSet(viewsets.ModelViewSet):
         errores = []
         fecha = clase.fecha if clase.fecha else timezone.now().date()
         estados_validos = {'presente', 'ausente', 'tardanza', 'justificado', 'pendiente'}
+        finalizar_clase = request.data.get('finalizar_clase', False)
 
         for idx, item in enumerate(asistencias_data):
             estudiante_id = item.get('estudiante_id')
@@ -2073,9 +2074,42 @@ class ClaseViewSet(viewsets.ModelViewSet):
                 'estado_display': asistencia.get_estado_display()
             })
 
+        # Finalizar la clase automáticamente si se indica (una sola llamada desde frontend)
+        if finalizar_clase and guardados:
+            ahora = timezone.now()
+            if not clase.hora_inicio_real:
+                # Si no hay inicio registrado, intentar usar fecha/hora programada; si no, ahora
+                if clase.fecha and clase.hora:
+                    from datetime import datetime as dt
+                    from django.utils.dateparse import parse_time
+                    try:
+                        t = parse_time(clase.hora)
+                        inicio_naive = dt.combine(clase.fecha, t)
+                        inicio = timezone.make_aware(inicio_naive, timezone.get_current_timezone())
+                        if inicio > ahora:
+                            inicio = ahora
+                        clase.hora_inicio_real = inicio
+                    except Exception:
+                        clase.hora_inicio_real = ahora
+                else:
+                    clase.hora_inicio_real = ahora
+            clase.hora_fin_real = ahora
+            diferencia = clase.hora_fin_real - clase.hora_inicio_real
+            if diferencia.total_seconds() > 0:
+                clase.duracion_real = int(diferencia.total_seconds() // 60)
+            else:
+                clase.duracion_real = clase.duracion or 60
+            clase.codigo_expiracion = ahora
+            clase.estado = 'completada'
+            clase.save()
+
         return Response({
             'success': True,
             'message': f'{len(guardados)} asistencia(s) guardada(s)',
+            'clase_estado': clase.estado,
+            'hora_inicio_real': clase.hora_inicio_real.isoformat() if clase.hora_inicio_real else None,
+            'hora_fin_real': clase.hora_fin_real.isoformat() if clase.hora_fin_real else None,
+            'duracion_real': clase.duracion_real,
             'guardados': guardados,
             'errores': errores
         }, status=status.HTTP_200_OK)

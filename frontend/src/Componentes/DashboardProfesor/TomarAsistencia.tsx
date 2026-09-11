@@ -111,7 +111,7 @@ export default function TomarAsistencia({
     }
 
     try {
-      const resultado = await asistenciaService.guardarAsistenciaClase(claseId, asistenciasParaEnviar);
+      const resultado = await asistenciaService.guardarAsistenciaClase(claseId, asistenciasParaEnviar, true);
       alert(`✅ ${resultado.message || 'Asistencias guardadas correctamente'}`);
       await onGuardar(asistencias);
     } catch (error: any) {

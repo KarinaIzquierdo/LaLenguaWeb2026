@@ -391,7 +391,7 @@ export default function EstudiantesView() {
         estado: estado as 'presente' | 'ausente' | 'tardanza' | 'justificado'
       }));
 
-      await asistenciaService.guardarAsistenciaClase(claseSeleccionada.id, asistenciasParaEnviar);
+      await asistenciaService.guardarAsistenciaClase(claseSeleccionada.id, asistenciasParaEnviar, true);
 
       // Actualizar asistencias guardadas
       setAsistenciasClaseActual(asistenciasTemporal);

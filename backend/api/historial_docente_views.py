@@ -3,7 +3,7 @@ from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from rest_framework import status
 from django.shortcuts import get_object_or_404
-from .models import HistorialDocente, CustomUser, Clase
+from .models import HistorialDocente, CustomUser, Clase, Asistencia
 from django.db.models import Q, Sum
 import logging
 
@@ -18,15 +18,18 @@ def historial_docente_list_create_view(request):
     if request.method == 'GET':
         profesor_id = request.query_params.get('profesor')
         tipo_evento = request.query_params.get('tipo_evento')
-        
+        fecha_desde = request.query_params.get('fecha_desde')
+        fecha_hasta = request.query_params.get('fecha_hasta')
+        materia = request.query_params.get('materia')
+
         queryset = HistorialDocente.objects.all()
-        
+
         if profesor_id:
             queryset = queryset.filter(profesor_id=profesor_id)
-        
+
         if tipo_evento:
             queryset = queryset.filter(tipo_evento=tipo_evento)
-            
+
         historial = []
         for item in queryset:
             historial.append({
@@ -50,26 +53,55 @@ def historial_docente_list_create_view(request):
                 'created_at': item.created_at.isoformat(),
                 'updated_at': item.updated_at.isoformat(),
             })
-            
-        # Obtener datos de clases dictadas para complementar el historial
-        # Solo contar clases completadas
+
+        # Clases completadas como historial automatico
         clases_queryset = Clase.objects.filter(estado='completada')
+
         if profesor_id:
-            # Filtrar por nombre de profesor ya que en Clase es CharField
             profesor_obj = get_object_or_404(CustomUser, id=profesor_id)
             nombre_completo = f"{profesor_obj.first_name} {profesor_obj.last_name}".strip()
-            clases_queryset = clases_queryset.filter(profesor__icontains=nombre_completo)
-            
+            filtro_profesor = Q(profesor__isnull=True) | Q(profesor='')
+            if profesor_obj.first_name:
+                filtro_profesor |= Q(profesor__icontains=profesor_obj.first_name)
+            if profesor_obj.last_name:
+                filtro_profesor |= Q(profesor__icontains=profesor_obj.last_name)
+            if profesor_obj.username:
+                filtro_profesor |= Q(profesor__iexact=profesor_obj.username)
+            if profesor_obj.email:
+                filtro_profesor |= Q(profesor__iexact=profesor_obj.email)
+            clases_queryset = clases_queryset.filter(filtro_profesor)
+
+        if fecha_desde:
+            clases_queryset = clases_queryset.filter(fecha__gte=fecha_desde)
+        if fecha_hasta:
+            clases_queryset = clases_queryset.filter(fecha__lte=fecha_hasta)
+
+        if materia:
+            clases_queryset = clases_queryset.filter(
+                Q(nombre__icontains=materia) | Q(tema__icontains=materia) | Q(descripcion__icontains=materia)
+            )
+
+        clases_queryset = clases_queryset.order_by('-fecha', '-hora')
+
         clases_data = []
         total_horas = 0
         for clase in clases_queryset:
-            # Usar la duración real registrada; si no existe, usar la programada
             duracion = clase.duracion_real if clase.duracion_real else clase.duracion
+
+            # Resumen de asistencias de la clase
+            asistencias = Asistencia.objects.filter(clase=clase)
+            total_asistencias = asistencias.count()
+            presentes = asistencias.filter(estado='presente').count()
+            ausentes = asistencias.filter(estado='ausente').count()
+            tardanzas = asistencias.filter(estado='tardanza').count()
+            justificados = asistencias.filter(estado='justificado').count()
+            pendientes = asistencias.filter(estado='pendiente').count()
+
             clases_data.append({
                 'id': f"clase-{clase.id}",
                 'clase_id': clase.id,
                 'profesor': {
-                    'nombre': clase.profesor,
+                    'nombre': clase.profesor or '—',
                 },
                 'fecha': clase.fecha.isoformat() if clase.fecha else None,
                 'hora': clase.hora,
@@ -80,7 +112,17 @@ def historial_docente_list_create_view(request):
                 'tipo_evento_display': 'Clase Completada',
                 'titulo': f"Clase: {clase.nombre}",
                 'descripcion': f"Tema: {clase.tema}. Modalidad: {clase.modalidad}",
-                'es_clase_automatica': True
+                'materia': clase.tema or clase.nombre,
+                'modalidad': clase.modalidad,
+                'es_clase_automatica': True,
+                'resumen_asistencia': {
+                    'total': total_asistencias,
+                    'presentes': presentes,
+                    'ausentes': ausentes,
+                    'tardanzas': tardanzas,
+                    'justificados': justificados,
+                    'pendientes': pendientes,
+                }
             })
             total_horas += (duracion / 60)
 
