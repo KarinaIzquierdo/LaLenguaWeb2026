@@ -72,6 +72,7 @@ export const asistenciaService = {
         `${API_URL}/clases/${claseId}/asistencias/`,
         { headers: getAuthHeaders(), params: { _: Date.now() } }
       );
+      console.log('ASISTENCIAS_RESPONSE:', JSON.stringify(response.data, null, 2));
       return response.data;
     } catch (error) {
       console.error('Error obteniendo asistencias de clase:', error);
