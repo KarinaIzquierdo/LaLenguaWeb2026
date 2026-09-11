@@ -25,7 +25,7 @@ export default function HistorialDocente() {
   useEffect(() => {
     cargarDatos();
     cargarProfesores();
-  }, [filtroProfesor, fechaDesde, fechaHasta, materia]);
+  }, []);
 
   const cargarDatos = async () => {
     try {
@@ -153,6 +153,15 @@ export default function HistorialDocente() {
             value={materia}
             onChange={(e) => setMateria(e.target.value)}
           />
+        </div>
+        <div className="filtro-group" style={{ alignSelf: 'flex-end' }}>
+          <label>&nbsp;</label>
+          <button
+            className="btn-buscar"
+            onClick={() => { setPaginaActual(1); cargarDatos(); }}
+          >
+            Buscar
+          </button>
         </div>
       </div>
 
