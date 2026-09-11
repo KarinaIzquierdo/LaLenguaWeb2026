@@ -95,7 +95,7 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
   const guardarAsistencia = async (asistencias: { [key: string]: string | null }) => {
     if (claseAsistencia?.id) {
       try {
-        await finalizarClase(claseAsistencia.id);
+        await finalizarClase(claseAsistencia.id, false);
       } catch (error) {
         console.error('Error finalizando clase tras guardar asistencia:', error);
       }
@@ -172,7 +172,7 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
     }
   };
 
-  const finalizarClase = async (claseId: number) => {
+  const finalizarClase = async (claseId: number, mostrarAlerta: boolean = true) => {
     try {
       const claseActualizada = await ClaseService.cambiarEstadoClase(claseId, 'completada');
 
@@ -196,11 +196,15 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
       setClases(prev => prev.map(actualizar));
       setClasesDelBloque(prev => prev.map(actualizar));
 
-      alert('¡Clase finalizada exitosamente! Ahora puedes aprobar o rechazar las asistencias pendientes.');
+      if (mostrarAlerta) {
+        alert('¡Clase finalizada exitosamente! Ahora puedes aprobar o rechazar las asistencias pendientes.');
+      }
     } catch (error: any) {
       console.error('Error al finalizar clase:', error);
       console.error('Detalles del error:', error?.response?.data);
-      alert('Error al finalizar la clase. Intenta nuevamente.');
+      if (mostrarAlerta) {
+        alert('Error al finalizar la clase. Intenta nuevamente.');
+      }
     }
   };
 

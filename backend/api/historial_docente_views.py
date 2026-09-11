@@ -52,12 +52,8 @@ def historial_docente_list_create_view(request):
             })
             
         # Obtener datos de clases dictadas para complementar el historial
-        # Solo contar clases completadas que fueron verificadas (iniciadas y finalizadas por el profesor)
-        clases_queryset = Clase.objects.filter(
-            estado='completada',
-            hora_inicio_real__isnull=False,
-            hora_fin_real__isnull=False
-        )
+        # Solo contar clases completadas
+        clases_queryset = Clase.objects.filter(estado='completada')
         if profesor_id:
             # Filtrar por nombre de profesor ya que en Clase es CharField
             profesor_obj = get_object_or_404(CustomUser, id=profesor_id)
