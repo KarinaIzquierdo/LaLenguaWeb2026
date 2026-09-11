@@ -90,6 +90,7 @@ export default function HistorialDocente() {
     const fecha = new Date(fechaStr);
     if (isNaN(fecha.getTime())) return '—';
     return fecha.toLocaleDateString('es-ES', {
+      timeZone: 'UTC',
       year: 'numeric',
       month: 'short',
       day: 'numeric',
