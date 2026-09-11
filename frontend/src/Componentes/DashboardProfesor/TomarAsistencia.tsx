@@ -105,7 +105,7 @@ export default function TomarAsistencia({
       }));
 
     if (asistenciasParaEnviar.length === 0) {
-      alert('Por favor marca al menos una asistencia antes de guardar');
+      alert('Selecciona al menos un estudiante como Presente o Ausente antes de guardar');
       setGuardando(false);
       return;
     }
@@ -123,7 +123,7 @@ export default function TomarAsistencia({
     }
   };
 
-  const sinMarcar = estudiantes.filter(e => !e.estado).length;
+  const sinMarcar = estudiantes.filter(e => !e.estado || e.estado === 'pendiente').length;
 
   return (
     <div className="modal-overlay" onClick={onCerrar}>
