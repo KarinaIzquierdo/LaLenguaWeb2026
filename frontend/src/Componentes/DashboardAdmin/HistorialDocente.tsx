@@ -274,14 +274,16 @@ export default function HistorialDocente() {
                       </tr>
                     </thead>
                     <tbody>
-                      {asistenciasOrdenadas.map((a: any) => (
+                      {asistenciasOrdenadas.map((a: any) => {
+                        console.log('A_RENDER:', a, a.estudiante_nombre);
+                        return (
                         <tr key={a.id}>
-                          <td>{a.estudiante_nombre || `ID: ${a.estudiante_id}` || 'Sin nombre'}</td>
+                          <td style={{ color: '#000' }}>{a.estudiante_nombre || `ID: ${a.estudiante_id}` || 'Sin nombre'}</td>
                           <td>
                             <span className={`estado-asistencia ${a.estado}`}>{a.estado_display || a.estado}</span>
                           </td>
                         </tr>
-                      ))}
+                      );})}
                     </tbody>
                   </table>
                 );
