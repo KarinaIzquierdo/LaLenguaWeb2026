@@ -93,13 +93,13 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
   };
 
   const guardarAsistencia = async (asistencias: { [key: string]: string | null }) => {
-    if (claseAsistencia?.id) {
-      const ahora = new Date().toISOString();
-      const actualizar = (c: Clase) => c.id === claseAsistencia.id
-        ? { ...c, estado: 'completada' as const, hora_fin_real: ahora }
-        : c;
-      setClases(prev => prev.map(actualizar));
-      setClasesDelBloque(prev => prev.map(actualizar));
+    try {
+      const currentUser = authService.getUser?.();
+      const clasesActualizadas = await ClaseService.getClasesPorProfesor(currentUser?.id);
+      setClases(clasesActualizadas || []);
+      setClasesDelBloque([]);
+    } catch (err) {
+      console.error('❌ Error recargando clases tras asistencia:', err);
     }
     setMostrarAsistencia(false);
     setClaseAsistencia(null);
