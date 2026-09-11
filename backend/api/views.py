@@ -1948,7 +1948,7 @@ class ClaseViewSet(viewsets.ModelViewSet):
             data.append({
                 'id': a.id,
                 'estudiante_id': a.estudiante.id,
-                'estudiante_nombre': f"{a.estudiante.first_name} {a.estudiante.last_name}".strip(),
+                'estudiante_nombre': f"{a.estudiante.first_name} {a.estudiante.last_name}".strip() or a.estudiante.username or a.estudiante.email or '—',
                 'estado': a.estado,
                 'estado_display': a.get_estado_display(),
                 'fecha': a.fecha.isoformat() if a.fecha else None,
