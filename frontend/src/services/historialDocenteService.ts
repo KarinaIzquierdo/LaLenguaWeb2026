@@ -50,6 +50,7 @@ export const historialDocenteService = {
     const url = `${API_BASE_URL}/historial-docente/${query}`;
 
     const response = await fetch(url, {
+      cache: 'no-store',
       headers: {
         'Authorization': `Bearer ${getToken()}`,
         'Content-Type': 'application/json',

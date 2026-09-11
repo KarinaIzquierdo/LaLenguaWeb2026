@@ -43,6 +43,7 @@ export const userService = {
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(`${API_BASE_URL}/users/`, {
+        cache: 'no-store',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': token ? `Bearer ${token}` : '',
