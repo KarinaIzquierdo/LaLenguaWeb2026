@@ -168,7 +168,7 @@ export default function TomarAsistencia({
                 >
                   <option value="" disabled>— Seleccionar —</option>
                   <option value="presente">✅ Presente</option>
-                  <option value="ausente">❌ Rechazado</option>
+                  <option value="ausente">❌ Ausente</option>
                 </select>
               </div>
             ))
