@@ -471,8 +471,8 @@ export default function ProgramarClases() {
   return (
     <div className="gestion-container">
       <div className="dashboard-header">
-        <h2>Gestión de Clases</h2>
-        <p>Crea, edita y administra las clases programadas.</p>
+        <h2>Programar Clases (Agenda)</h2>
+        <p>Aquí asignas profesor, fecha y hora a los temas ya creados.</p>
       </div>
 
       {!showForm && (

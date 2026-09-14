@@ -32,20 +32,6 @@ export default function GestionClases() {
     nombre: '',
   });
 
-  const [nombresClasesDisponibles] = useState<string[]>([
-    'Introducción C1',
-    'A1 - Unidad 1: Saludos',
-    'A1 - Unidad 2: Familia',
-    'A2 - Unidad 1: Rutina',
-    'B1 - Unidad 1: Viajes',
-    'B2 - Unidad 1: Negocios',
-    'C1 - Academic Writing',
-    'Conversational Club',
-    'IELTS Preparation',
-    'TOEFL Preparation',
-    'Business English'
-  ]);
-
   const cargarClases = async () => {
     setIsLoading(true);
     setError(null);
@@ -127,34 +113,30 @@ export default function GestionClases() {
 
   return (
     <div className="gestion-clases-container">
-      <h2>Gestión de Clases</h2>
+      <h2>Administrador de Temas de Clase</h2>
+      <p>Aquí puedes agregar los nombres de las clases que los profesores podrán elegir luego.</p>
 
       {!showForm && (
         <button onClick={handleAdd} className="gestion-clases-add-btn" disabled={isLoading}>
-          <FaPlus /> Agregar clase
+          <FaPlus /> Agregar Nuevo Tema
         </button>
       )}
 
       {showForm && (
         <div className="gestion-clases-form-card">
-          <h3>{editingClass ? 'Editar Clase' : 'Agregar Nueva Clase'}</h3>
+          <h3>{editingClass ? 'Editar Tema' : 'Registrar Nuevo Tema'}</h3>
           {error && <div className="gestion-clases-error">{error}</div>}
           <form onSubmit={handleSubmit} className="gestion-clases-form">
             <div className="gestion-clases-form-group">
-              <label>Nombre de la clase</label>
-              <select
+              <label>Nombre del Tema (Ej: B2 - Unidad 5)</label>
+              <input
+                type="text"
                 value={formData.nombre}
                 onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
+                placeholder="Escribe el nombre del tema aquí..."
                 required
-                className="form-select"
-              >
-                <option value="">Selecciona una clase</option>
-                {nombresClasesDisponibles.map((nombre, index) => (
-                  <option key={index} value={nombre}>
-                    {nombre}
-                  </option>
-                ))}
-              </select>
+                className="form-control"
+              />
             </div>
             <div className="gestion-clases-form-actions">
               <button type="submit" className="gestion-clases-save-btn" disabled={isLoading}>
@@ -178,9 +160,7 @@ export default function GestionClases() {
             <thead>
               <tr>
                 <th>ID</th>
-                <th>Nombre clase</th>
-                <th>Profesor</th>
-                <th>Fecha</th>
+                <th>Nombre del Tema</th>
                 <th>Acciones</th>
               </tr>
             </thead>
@@ -189,8 +169,6 @@ export default function GestionClases() {
                 <tr key={clase.id}>
                   <td>{clase.id}</td>
                   <td>{clase.nombre}</td>
-                  <td>{clase.profesor}</td>
-                  <td>{clase.fecha}</td>
                   <td>
                     <div className="gestion-clases-actions">
                       <button
