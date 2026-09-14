@@ -9,6 +9,7 @@ import React, { useState, useEffect } from 'react';
 import { FaEdit, FaTrash, FaPlus, FaSpinner } from 'react-icons/fa';
 import { ClaseService } from '../../services/claseService';
 import { userService } from '../../services/userService';
+import { API_BASE_URL } from '../../config/api';
 import './ProgramarClases.css';
 
 /**
@@ -105,6 +106,28 @@ export default function ProgramarClases() {
    * @state {Array} profesoresDisponibles - Lista de profesores disponibles.
    */
   const [profesoresDisponibles, setProfesoresDisponibles] = useState<any[]>([]);
+
+  /**
+   * @state {Array<string>} nombresClasesDisponibles - Lista de nombres de clases predefinidos.
+   */
+  const [nombresClasesDisponibles, setNombresClasesDisponibles] = useState<string[]>([
+    'Introducción C1',
+    'A1 - Unidad 1: Saludos',
+    'A1 - Unidad 2: Familia',
+    'A2 - Unidad 1: Rutina',
+    'B1 - Unidad 1: Viajes',
+    'B2 - Unidad 1: Negocios',
+    'C1 - Academic Writing',
+    'Conversational Club',
+    'IELTS Preparation',
+    'TOEFL Preparation',
+    'Business English'
+  ]);
+
+  /**
+   * @state {boolean} cargandoNombres - Indica si se están cargando los nombres de clases.
+   */
+  const [cargandoNombres, setCargandoNombres] = useState<boolean>(false);
 
   /**
    * @state {string} filtroNivel - Filtro por nivel/bloque.
@@ -304,8 +327,9 @@ export default function ProgramarClases() {
       const profesorSeleccionado = profesoresDisponibles.find(p => p.nombre === formData.profesor);
       const dataToSend: any = {
         ...formData,
+        tema: formData.nombre, // Asegurar que el nombre se guarde como tema para el listado dinámico
         meet_link: generateMeetLink(),
-        estado: 'programada' // Asegurar que las clases nuevas se creen como programadas
+        estado: 'programada'
       };
 
       if (profesorSeleccionado && profesorSeleccionado.id) {
@@ -383,6 +407,32 @@ export default function ProgramarClases() {
     };
 
     cargarEstudiantes();
+
+    // Cargar nombres de clases únicos (temas) desde el backend
+    const cargarNombresClases = async () => {
+      setCargandoNombres(true);
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_BASE_URL}/admin/temas/`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {}
+        });
+        const data = await response.json();
+        if (data.success && Array.isArray(data.topics)) {
+          const nombresBackend = data.topics.map((t: any) => t.name);
+          // Combinar con los default y quitar duplicados
+          setNombresClasesDisponibles(prev => {
+            const set = new Set([...prev, ...nombresBackend]);
+            return Array.from(set).sort();
+          });
+        }
+      } catch (error) {
+        console.error('Error cargando nombres de clases:', error);
+      } finally {
+        setCargandoNombres(false);
+      }
+    };
+
+    cargarNombresClases();
   }, []);
 
   // Cargar todas las clases desde el backend (vista de administración)
@@ -447,17 +497,37 @@ export default function ProgramarClases() {
             )}
             <div className={`form-group ${formErrors.nombre ? 'error' : ''}`}>
               <label htmlFor="nombre">Nombre de la Clase *</label>
-              <input
-                type="text"
+              <select
                 id="nombre"
                 name="nombre"
                 value={formData.nombre}
                 onChange={handleChange}
-                placeholder="Ej: Introduccion C1"
                 required
-              />
+                className="form-select"
+              >
+                <option value="">{cargandoNombres ? 'Cargando clases...' : 'Selecciona una clase'}</option>
+                {nombresClasesDisponibles.map((nombre, index) => (
+                  <option key={index} value={nombre}>
+                    {nombre}
+                  </option>
+                ))}
+                {!cargandoNombres && <option value="OTRA">-- Otra (Escribir nombre) --</option>}
+              </select>
               {formErrors.nombre && <span className="error-message">{formErrors.nombre}</span>}
             </div>
+
+            {formData.nombre === 'OTRA' && (
+              <div className="form-group">
+                <label htmlFor="otro_nombre">Especificar Nombre de Clase</label>
+                <input
+                  type="text"
+                  id="otro_nombre"
+                  placeholder="Escribe el nombre de la clase..."
+                  onChange={(e) => setFormData(prev => ({ ...prev, nombre: e.target.value }))}
+                  className="form-control"
+                />
+              </div>
+            )}
 
             <div className={`form-group ${formErrors.profesor ? 'error' : ''}`}>
               <label htmlFor="profesor">Nombre del Profesor *</label>

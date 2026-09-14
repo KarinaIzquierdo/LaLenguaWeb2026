@@ -5,6 +5,20 @@ const AgregarClaseForm = ({ onAddClass }) => {
   const [nombre, setNombre] = useState('');
   const [profesor, setProfesor] = useState('');
 
+  const nombresClasesDisponibles = [
+    'Introducción C1',
+    'A1 - Unidad 1: Saludos',
+    'A1 - Unidad 2: Familia',
+    'A2 - Unidad 1: Rutina',
+    'B1 - Unidad 1: Viajes',
+    'B2 - Unidad 1: Negocios',
+    'C1 - Academic Writing',
+    'Conversational Club',
+    'IELTS Preparation',
+    'TOEFL Preparation',
+    'Business English'
+  ];
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!nombre || !profesor) return; // Validación simple
@@ -23,13 +37,18 @@ const AgregarClaseForm = ({ onAddClass }) => {
       <form onSubmit={handleSubmit}>
         <div className="form-group">
           <label htmlFor="nombre">Nombre de la Clase</label>
-          <input 
-            type="text" 
+          <select 
             id="nombre"
             value={nombre}
             onChange={(e) => setNombre(e.target.value)}
-            placeholder="Ej: React desde Cero"
-          />
+            className="form-control"
+            required
+          >
+            <option value="">Selecciona una clase</option>
+            {nombresClasesDisponibles.map((n, i) => (
+              <option key={i} value={n}>{n}</option>
+            ))}
+          </select>
         </div>
         <div className="form-group">
           <label htmlFor="profesor">Nombre del Profesor</label>

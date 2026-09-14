@@ -32,6 +32,20 @@ export default function GestionClases() {
     nombre: '',
   });
 
+  const [nombresClasesDisponibles] = useState<string[]>([
+    'Introducción C1',
+    'A1 - Unidad 1: Saludos',
+    'A1 - Unidad 2: Familia',
+    'A2 - Unidad 1: Rutina',
+    'B1 - Unidad 1: Viajes',
+    'B2 - Unidad 1: Negocios',
+    'C1 - Academic Writing',
+    'Conversational Club',
+    'IELTS Preparation',
+    'TOEFL Preparation',
+    'Business English'
+  ]);
+
   const cargarClases = async () => {
     setIsLoading(true);
     setError(null);
@@ -91,7 +105,7 @@ export default function GestionClases() {
     setIsLoading(true);
     setError(null);
     try {
-      const payload = { ...formData, profesor: '', hora: '', meet_link: '', estudiantes: [] };
+      const payload = { ...formData, tema: formData.nombre, profesor: '', hora: '', meet_link: '', estudiantes: [] };
       if (editingClass) {
         await ClaseService.updateClase(editingClass.id, payload);
       } else {
@@ -128,13 +142,19 @@ export default function GestionClases() {
           <form onSubmit={handleSubmit} className="gestion-clases-form">
             <div className="gestion-clases-form-group">
               <label>Nombre de la clase</label>
-              <input
-                type="text"
+              <select
                 value={formData.nombre}
                 onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-                placeholder="Ej: Escritura académica"
                 required
-              />
+                className="form-select"
+              >
+                <option value="">Selecciona una clase</option>
+                {nombresClasesDisponibles.map((nombre, index) => (
+                  <option key={index} value={nombre}>
+                    {nombre}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="gestion-clases-form-actions">
               <button type="submit" className="gestion-clases-save-btn" disabled={isLoading}>
