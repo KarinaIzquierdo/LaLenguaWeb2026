@@ -224,6 +224,8 @@ class Club(models.Model):
     """
     name = models.CharField(max_length=120)
     description = models.TextField(blank=True, null=True)
+    fecha = models.DateField(null=True, blank=True)
+    hora = models.TimeField(null=True, blank=True)
     profesor = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='clubs_dirigidos')
     students = models.ManyToManyField(CustomUser, related_name='clubs', blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

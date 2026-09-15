@@ -4,6 +4,8 @@ export interface Club {
   id: number;
   name: string;
   description?: string;
+  fecha?: string;
+  hora?: string;
   profesor: number;
   profesor_name?: string;
   is_member?: boolean;
@@ -48,7 +50,7 @@ export const clbService = {
     // El backend Django devuelve { success: true, data: [...] }
     return (data.data || data.clubs || data || []) as Club[];
   },
-  async createClub(payload: { name: string; description?: string }): Promise<Club> {
+  async createClub(payload: { name: string; description?: string; fecha?: string; hora?: string }): Promise<Club> {
     const res = await fetch(`${API_BASE_URL}/clubs/create/`, {
       method: 'POST',
       headers: jsonHeaders(),
@@ -60,7 +62,7 @@ export const clbService = {
     return data.data as Club;
   },
 
-  async updateClub(clubId: number, payload: { name?: string; description?: string }): Promise<Club> {
+  async updateClub(clubId: number, payload: { name?: string; description?: string; fecha?: string; hora?: string }): Promise<Club> {
     const res = await fetch(`${API_BASE_URL}/clubs/${clubId}/update/`, {
       method: 'PUT',
       headers: jsonHeaders(),

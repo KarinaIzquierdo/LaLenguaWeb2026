@@ -19,13 +19,15 @@ export default function MisClubs(_props: MisClubsProps) {
   const [currentPageUsers, setCurrentPageUsers] = useState(1);
   const usersPerPage = 12;
 
-  const [form, setForm] = useState({ name: '', description: '' });
+  const [form, setForm] = useState({ name: '', description: '', fecha: '', hora: '' });
 
   const [showEditClub, setShowEditClub] = useState(false);
-  const [editForm, setEditForm] = useState<{ id: number | null; name: string; description: string }>({
+  const [editForm, setEditForm] = useState<{ id: number | null; name: string; description: string; fecha: string; hora: string }>({
     id: null,
     name: '',
     description: '',
+    fecha: '',
+    hora: '',
   });
   const [savingEdit, setSavingEdit] = useState(false);
   const [deletingClubId, setDeletingClubId] = useState<number | null>(null);
@@ -98,9 +100,14 @@ export default function MisClubs(_props: MisClubsProps) {
     }
     try {
       setCreating(true);
-      const created = await clbService.createClub({ name: form.name.trim(), description: form.description.trim() });
+      const created = await clbService.createClub({ 
+        name: form.name.trim(), 
+        description: form.description.trim(),
+        fecha: form.fecha,
+        hora: form.hora
+      });
       setShowCreate(false);
-      setForm({ name: '', description: '' });
+      setForm({ name: '', description: '', fecha: '', hora: '' });
       setClubs(prev => [created, ...prev]);
       setSelectedClub(created);
     } catch (e) {
@@ -112,7 +119,13 @@ export default function MisClubs(_props: MisClubsProps) {
   };
 
   const openEditClub = (club: Club) => {
-    setEditForm({ id: club.id, name: club.name, description: club.description || '' });
+    setEditForm({ 
+      id: club.id, 
+      name: club.name, 
+      description: club.description || '',
+      fecha: club.fecha || '',
+      hora: club.hora || ''
+    });
     setShowEditClub(true);
   };
 
@@ -128,6 +141,8 @@ export default function MisClubs(_props: MisClubsProps) {
       const updated = await clbService.updateClub(editForm.id, {
         name: editForm.name.trim(),
         description: editForm.description.trim() || undefined,
+        fecha: editForm.fecha,
+        hora: editForm.hora
       });
       setClubs(prev => prev.map(c => (c.id === updated.id ? updated : c)));
       setSelectedClub(prev => (prev && prev.id === updated.id ? updated : prev));
@@ -273,6 +288,26 @@ export default function MisClubs(_props: MisClubsProps) {
                 <label>Descripción</label>
                 <textarea rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
               </div>
+              <div className="form-row" style={{ display: 'flex', gap: '15px', marginBottom: '15px' }}>
+                <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                  <label>Fecha del encuentro</label>
+                  <input 
+                    type="date" 
+                    value={form.fecha} 
+                    onChange={(e) => setForm({ ...form, fecha: e.target.value })} 
+                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }}
+                  />
+                </div>
+                <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                  <label>Hora</label>
+                  <input 
+                    type="time" 
+                    value={form.hora} 
+                    onChange={(e) => setForm({ ...form, hora: e.target.value })} 
+                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }}
+                  />
+                </div>
+              </div>
               <div className="form-actions">
                 <button type="button" className="btn-secondary" onClick={() => setShowCreate(false)}>Cancelar</button>
                 <button type="submit" className="btn-primary" disabled={creating}>{creating ? 'Creando…' : 'Crear'}</button>
@@ -306,6 +341,10 @@ export default function MisClubs(_props: MisClubsProps) {
                     <span className="club-badge">{(allClubsStudents[c.id] || []).length} estudiantes</span>
                   </div>
                   <p className="club-description">{c.description || 'Sin descripción'}</p>
+                  <div className="club-schedule" style={{ fontSize: '0.85rem', color: '#666', marginBottom: '10px', display: 'flex', gap: '10px' }}>
+                    {c.fecha && <span>📅 {c.fecha}</span>}
+                    {c.hora && <span>🕒 {c.hora}</span>}
+                  </div>
                   <div className="club-card-footer">
                     <span className="club-profesor">👤 {c.profesor_name ?? 'Yo'}</span>
                     <div className="club-card-actions">
@@ -474,6 +513,26 @@ export default function MisClubs(_props: MisClubsProps) {
                   value={editForm.description}
                   onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
                 />
+              </div>
+              <div className="form-row" style={{ display: 'flex', gap: '15px', marginBottom: '15px' }}>
+                <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                  <label>Fecha del encuentro</label>
+                  <input 
+                    type="date" 
+                    value={editForm.fecha} 
+                    onChange={(e) => setEditForm(prev => ({ ...prev, fecha: e.target.value }))} 
+                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }}
+                  />
+                </div>
+                <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                  <label>Hora</label>
+                  <input 
+                    type="time" 
+                    value={editForm.hora} 
+                    onChange={(e) => setEditForm(prev => ({ ...prev, hora: e.target.value }))} 
+                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }}
+                  />
+                </div>
               </div>
               <div className="form-actions">
                 <button
