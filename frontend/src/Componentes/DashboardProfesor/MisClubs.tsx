@@ -288,24 +288,30 @@ export default function MisClubs(_props: MisClubsProps) {
                 <label>Descripción</label>
                 <textarea rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
               </div>
-              <div className="form-row" style={{ display: 'flex', gap: '15px', marginBottom: '15px' }}>
+              <div className="form-row" style={{ display: 'flex', gap: '15px', marginBottom: '20px' }}>
                 <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
-                  <label>Fecha del encuentro</label>
-                  <input 
-                    type="date" 
-                    value={form.fecha} 
-                    onChange={(e) => setForm({ ...form, fecha: e.target.value })} 
-                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }}
-                  />
+                  <label style={{ fontWeight: 600, color: '#4b5563', marginBottom: '8px', display: 'block' }}>Fecha del encuentro</label>
+                  <div style={{ position: 'relative' }}>
+                    <input 
+                      type="date" 
+                      value={form.fecha} 
+                      onChange={(e) => setForm({ ...form, fecha: e.target.value })} 
+                      className="modern-date-input"
+                    />
+                    <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#6b7280' }}>📅</span>
+                  </div>
                 </div>
                 <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
-                  <label>Hora</label>
-                  <input 
-                    type="time" 
-                    value={form.hora} 
-                    onChange={(e) => setForm({ ...form, hora: e.target.value })} 
-                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }}
-                  />
+                  <label style={{ fontWeight: 600, color: '#4b5563', marginBottom: '8px', display: 'block' }}>Hora</label>
+                  <div style={{ position: 'relative' }}>
+                    <input 
+                      type="time" 
+                      value={form.hora} 
+                      onChange={(e) => setForm({ ...form, hora: e.target.value })} 
+                      className="modern-date-input"
+                    />
+                    <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#6b7280' }}>🕒</span>
+                  </div>
                 </div>
               </div>
               <div className="form-actions">
@@ -514,24 +520,30 @@ export default function MisClubs(_props: MisClubsProps) {
                   onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
                 />
               </div>
-              <div className="form-row" style={{ display: 'flex', gap: '15px', marginBottom: '15px' }}>
+              <div className="form-row" style={{ display: 'flex', gap: '15px', marginBottom: '20px' }}>
                 <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
-                  <label>Fecha del encuentro</label>
-                  <input 
-                    type="date" 
-                    value={editForm.fecha} 
-                    onChange={(e) => setEditForm(prev => ({ ...prev, fecha: e.target.value }))} 
-                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }}
-                  />
+                  <label style={{ fontWeight: 600, color: '#4b5563', marginBottom: '8px', display: 'block' }}>Fecha del encuentro</label>
+                  <div style={{ position: 'relative' }}>
+                    <input 
+                      type="date" 
+                      value={editForm.fecha} 
+                      onChange={(e) => setEditForm(prev => ({ ...prev, fecha: e.target.value }))} 
+                      className="modern-date-input"
+                    />
+                    <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#6b7280' }}>📅</span>
+                  </div>
                 </div>
                 <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
-                  <label>Hora</label>
-                  <input 
-                    type="time" 
-                    value={editForm.hora} 
-                    onChange={(e) => setEditForm(prev => ({ ...prev, hora: e.target.value }))} 
-                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #ddd' }}
-                  />
+                  <label style={{ fontWeight: 600, color: '#4b5563', marginBottom: '8px', display: 'block' }}>Hora</label>
+                  <div style={{ position: 'relative' }}>
+                    <input 
+                      type="time" 
+                      value={editForm.hora} 
+                      onChange={(e) => setEditForm(prev => ({ ...prev, hora: e.target.value }))} 
+                      className="modern-date-input"
+                    />
+                    <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#6b7280' }}>🕒</span>
+                  </div>
                 </div>
               </div>
               <div className="form-actions">
