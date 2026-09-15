@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import './Dashboard_Profesor.css';
 import { clbService, type Club } from '../../services/clbService';
+import { FaCalendarAlt, FaClock, FaPencilAlt, FaPlus } from 'react-icons/fa';
 
 interface MisClubsProps {}
 
@@ -298,7 +299,7 @@ export default function MisClubs(_props: MisClubsProps) {
                       onChange={(e) => setForm({ ...form, fecha: e.target.value })} 
                       className="modern-date-input"
                     />
-                    <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#6b7280' }}>📅</span>
+                    <span className="input-icon-elegant"><FaCalendarAlt /></span>
                   </div>
                 </div>
                 <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
@@ -310,7 +311,7 @@ export default function MisClubs(_props: MisClubsProps) {
                       onChange={(e) => setForm({ ...form, hora: e.target.value })} 
                       className="modern-date-input"
                     />
-                    <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#6b7280' }}>🕒</span>
+                    <span className="input-icon-elegant"><FaClock /></span>
                   </div>
                 </div>
               </div>
@@ -347,9 +348,9 @@ export default function MisClubs(_props: MisClubsProps) {
                     <span className="club-badge">{(allClubsStudents[c.id] || []).length} estudiantes</span>
                   </div>
                   <p className="club-description">{c.description || 'Sin descripción'}</p>
-                  <div className="club-schedule" style={{ fontSize: '0.85rem', color: '#666', marginBottom: '10px', display: 'flex', gap: '10px' }}>
-                    {c.fecha && <span>📅 {c.fecha}</span>}
-                    {c.hora && <span>🕒 {c.hora}</span>}
+                  <div className="club-schedule" style={{ fontSize: '0.85rem', color: '#666', marginBottom: '10px', display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    {c.fecha && <span><FaCalendarAlt style={{ marginRight: '4px', verticalAlign: 'middle' }} /> {c.fecha}</span>}
+                    {c.hora && <span><FaClock style={{ marginRight: '4px', verticalAlign: 'middle' }} /> {c.hora}</span>}
                   </div>
                   <div className="club-card-footer">
                     <span className="club-profesor">👤 {c.profesor_name ?? 'Yo'}</span>
@@ -530,7 +531,7 @@ export default function MisClubs(_props: MisClubsProps) {
                       onChange={(e) => setEditForm(prev => ({ ...prev, fecha: e.target.value }))} 
                       className="modern-date-input"
                     />
-                    <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#6b7280' }}>📅</span>
+                    <span className="input-icon-elegant"><FaCalendarAlt /></span>
                   </div>
                 </div>
                 <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
@@ -542,7 +543,7 @@ export default function MisClubs(_props: MisClubsProps) {
                       onChange={(e) => setEditForm(prev => ({ ...prev, hora: e.target.value }))} 
                       className="modern-date-input"
                     />
-                    <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#6b7280' }}>🕒</span>
+                    <span className="input-icon-elegant"><FaClock /></span>
                   </div>
                 </div>
               </div>
