@@ -638,8 +638,8 @@ export default function ProgramarClases() {
                       <option value="B1">B1</option>
                       <option value="B1+">B1+</option>
                       <option value="B2">B2</option>
+                      <option value="B2+">B2+</option>
                       <option value="C1">C1</option>
-                      <option value="C2">C2</option>
                       <option value="Sin nivel">Sin nivel</option>
                     </select>
                     

@@ -75,7 +75,7 @@ export default function FormularioUsuarios() {
     rol: 'Estudiante',
     contrasena: '',
     especializacion_id: undefined,
-    english_level: 'A1',
+    english_level: 'Sin nivel',
   });
 
   /**
@@ -188,7 +188,7 @@ export default function FormularioUsuarios() {
       rol: 'Estudiante',
       contrasena: '',
       especializacion_id: undefined,
-      english_level: 'A1',
+      english_level: 'Sin nivel',
     });
     setFormErrors({});
   };
@@ -209,7 +209,7 @@ export default function FormularioUsuarios() {
       rol: user.rol,
       contrasena: '', // Contraseña no se edita directamente aquí por seguridad
       especializacion_id: user.especializacion_id,
-      english_level: user.nivel || 'A1',
+      english_level: user.nivel || 'Sin nivel',
     });
     setFormErrors({});
   };
@@ -310,7 +310,7 @@ export default function FormularioUsuarios() {
           password: formData.contrasena,
           email: formData.correo?.trim() || undefined,
           especializacion: formData.especializacion_id ?? null,
-          english_level: formData.rol === 'Estudiante' ? (formData.english_level || 'A1') : undefined,
+          english_level: formData.english_level || 'Sin nivel',
         };
 
         const result = await userService.register(registerData);
@@ -330,6 +330,7 @@ export default function FormularioUsuarios() {
           first_name: formData.nombres.trim(),
           last_name: formData.apellidos.trim(),
           correo_personal: formData.correo_personal.trim(),
+          english_level: formData.english_level || 'Sin nivel',
         };
 
         await userService.update(editingUser.id, updateData);
@@ -595,24 +596,26 @@ export default function FormularioUsuarios() {
             </select>
           </div>
 
-          {formData.rol === 'Estudiante' && (
             <div className="form-field">
               <label htmlFor="english_level">Nivel de Inglés</label>
               <select
                 id="english_level"
                 name="english_level"
-                value={formData.english_level || 'A1'}
+                value={formData.english_level || 'Sin nivel'}
                 onChange={handleChange}
               >
-                <option value="A1">A1 - Principiante</option>
-                <option value="A2">A2 - Básico</option>
-                <option value="B1">B1 - Intermedio</option>
-                <option value="B2">B2 - Intermedio-Alto</option>
-                <option value="C1">C1 - Avanzado</option>
-                <option value="C2">C2 - Competente/Nativo</option>
+                <option value="Sin nivel">Sin nivel</option>
+                <option value="A1">A1</option>
+                <option value="A1+">A1+</option>
+                <option value="A2">A2</option>
+                <option value="A2+">A2+</option>
+                <option value="B1">B1</option>
+                <option value="B1+">B1+</option>
+                <option value="B2">B2</option>
+                <option value="B2+">B2+</option>
+                <option value="C1">C1</option>
               </select>
             </div>
-          )}
 
           <div className="form-field">
             <label htmlFor="especializacion_id">Especialización</label>

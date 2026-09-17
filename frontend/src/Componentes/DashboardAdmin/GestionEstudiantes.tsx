@@ -15,6 +15,7 @@ interface Student {
   correo_personal?: string;
   bloque_asignado: string;
   nivel?: string;
+  rol: string;
   especializacion?: string;
   especializacion_id?: number | null;
   is_active: boolean;
@@ -77,14 +78,14 @@ const GestionEstudiantes = () => {
         console.warn('⚠️ No se recibieron usuarios o la lista está vacía');
       }
 
-      // Filtrar solo estudiantes (excluir admin, teacher, profesor)
-      const estudiantesOnly = data.filter((u: any) => 
-        u.rol === 'student' || u.rol === 'estudiante'
+      // Filtrar estudiantes y profesores (excluir admin, financiero, etc.)
+      const usersList = data.filter((u: any) => 
+        u.rol === 'student' || u.rol === 'estudiante' || u.rol === 'profesor'
       );
-      console.log('🎓 Estudiantes filtrados:', estudiantesOnly.length, estudiantesOnly);
+      console.log('🎓 Usuarios filtrados (Estudiantes + Profesores):', usersList.length, usersList);
       
-      setStudents(estudiantesOnly);
-      setFilteredStudents(estudiantesOnly);
+      setStudents(usersList);
+      setFilteredStudents(usersList);
     } catch (error) {
       console.error('Error cargando estudiantes:', error);
     } finally {
@@ -190,6 +191,24 @@ const GestionEstudiantes = () => {
     }
   };
 
+  const getRoleBadgeColor = (rol: string) => {
+    switch (rol) {
+      case 'profesor': return '#4f46e5'; // Índigo
+      case 'student':
+      case 'estudiante': return '#10b981'; // Esmeralda
+      default: return '#6b7280';
+    }
+  };
+
+  const getRoleLabel = (rol: string) => {
+    switch (rol) {
+      case 'profesor': return 'Profesor';
+      case 'student':
+      case 'estudiante': return 'Estudiante';
+      default: return rol;
+    }
+  };
+
   const getNivelColor = (nivel?: string) => {
     const colors: any = {
       'A1': '#10b981',
@@ -233,19 +252,19 @@ const GestionEstudiantes = () => {
   return (
     <div className="student-management-container">
       <div className="header-section">
-        <h2>Gestión de Estudiantes</h2>
+        <h2>Gestión de Estudiantes y Profesores</h2>
         <div className="stats-summary">
           <div className="stat-card">
             <span className="stat-value">{students.length}</span>
-            <span className="stat-label">Total Estudiantes</span>
+            <span className="stat-label">Total Usuarios</span>
           </div>
           <div className="stat-card">
-            <span className="stat-value">{students.filter(s => s.is_active).length}</span>
-            <span className="stat-label">Activos</span>
+            <span className="stat-value">{students.filter(s => s.rol === 'profesor').length}</span>
+            <span className="stat-label">Profesores</span>
           </div>
           <div className="stat-card">
-            <span className="stat-value">{students.filter(s => !s.is_active).length}</span>
-            <span className="stat-label">Inactivos</span>
+            <span className="stat-value">{students.filter(s => s.rol === 'student' || s.rol === 'estudiante').length}</span>
+            <span className="stat-label">Estudiantes</span>
           </div>
         </div>
       </div>
@@ -274,8 +293,6 @@ const GestionEstudiantes = () => {
           <option value="B2">B2</option>
           <option value="B2+">B2+</option>
           <option value="C1">C1</option>
-          <option value="C1+">C1+</option>
-          <option value="C2">C2</option>
         </select>
         {(searchTerm || filterNivel) && (
           <button
@@ -302,6 +319,7 @@ const GestionEstudiantes = () => {
               <tr>
                 <th>Nombre Completo</th>
                 <th>Email</th>
+                <th>Rol</th>
                 <th>Nivel</th>
                 <th>Especialización</th>
                 <th>Estado</th>
@@ -316,6 +334,21 @@ const GestionEstudiantes = () => {
                     {student.nombres} {student.apellidos}
                   </td>
                   <td>{student.correo_personal || 'N/A'}</td>
+                  <td>
+                    <span 
+                      className="role-badge"
+                      style={{ 
+                        backgroundColor: getRoleBadgeColor(student.rol),
+                        color: 'white',
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        fontSize: '0.8rem',
+                        fontWeight: 'bold'
+                      }}
+                    >
+                      {getRoleLabel(student.rol)}
+                    </span>
+                  </td>
                   <td>
                     <span 
                       className="nivel-badge"
@@ -589,8 +622,6 @@ const GestionEstudiantes = () => {
                   <option value="B2">B2</option>
                   <option value="B2+">B2+</option>
                   <option value="C1">C1</option>
-                  <option value="C1+">C1+</option>
-                  <option value="C2">C2</option>
                 </select>
               </div>
               <div className="form-group">

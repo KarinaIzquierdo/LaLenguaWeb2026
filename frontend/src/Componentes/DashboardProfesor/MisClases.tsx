@@ -410,45 +410,53 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
   const hoy = new Date().toISOString().split('T')[0];
   
   const esClasePasada = (clase: Clase) => {
-    const ahora = new Date();
-    const [year, month, day] = clase.fecha.split('-').map(Number);
-    const [horaStr, minutoStr] = (clase.hora || '00:00').split(':').map(Number);
-    const fechaHoraClase = new Date(year, month - 1, day, horaStr || 0, minutoStr || 0);
-    return fechaHoraClase < ahora;
+    // Si la clase está activa, NO se considera pasada
+    if (clase.estado === 'activa') return false;
+    
+    // Si la clase es de hoy o futura, NO se considera pasada visualmente
+    // Solo se moverá al historial cuando el profesor la finalice manualmente (estado 'completada')
+    const hoyStr = new Date().toISOString().split('T')[0];
+    if (clase.fecha >= hoyStr) return false;
+
+    // Solo clases con fecha anterior a hoy se consideran pasadas automáticamente
+    return true;
   };
 
   const clasesVisibles = clasesDelBloque.filter(clase => {
-    // Verificar estado en localStorage para persistencia
+    // Prioridad 1: Si está activa en el backend, se muestra siempre
+    if (clase.estado === 'activa') return true;
+
+    // Prioridad 2: Si está completada (backend o local), no se muestra
+    if (clase.estado === 'completada') return false;
+    
     const claseKey = `clase_${clase.tema.replace(/\s+/g, '_')}_estado`;
-    const estadoGuardado = localStorage.getItem(claseKey);
+    if (localStorage.getItem(claseKey) === 'completada') return false;
     
-    // Si está completada en localStorage, no mostrar
-    if (estadoGuardado === 'completada') {
-      return false;
-    }
-    
-    // No mostrar clases que ya pasaron en fecha u hora
-    if (esClasePasada(clase)) {
-      return false;
-    }
-    
-    return clase.estado !== 'completada';
+    // Prioridad 3: Filtro de tiempo para programadas
+    return !esClasePasada(clase);
   });
   const clasesHoy = clases.filter(clase => {
-    // Verificar estado en localStorage para persistencia
+    // Solo clases de hoy
+    if (clase.fecha !== hoy) return false;
+
+    // Si está activa, mostrar siempre
+    if (clase.estado === 'activa') return true;
+
+    // Si ya está completada, no mostrar aquí
+    if (clase.estado === 'completada') return false;
+
+    // Si localmente está marcada como completada, no mostrar
     const claseKey = `clase_${clase.tema.replace(/\s+/g, '_')}_estado`;
-    const estadoGuardado = localStorage.getItem(claseKey);
+    if (localStorage.getItem(claseKey) === 'completada') return false;
     
-    
-    // Si está completada en localStorage, no mostrar
-    if (estadoGuardado === 'completada') {
-      return false;
-    }
-    
-    return clase.fecha === hoy && !esClasePasada(clase) && clase.estado !== 'completada';
+    // Mostrar si no ha pasado la hora
+    return !esClasePasada(clase);
   });
   
   const clasesProximas = clases.filter(clase => {
+    // Si la clase está activa, no es "próxima", es actual (se maneja en clasesHoy)
+    if (clase.estado === 'activa') return false;
+
     // Verificar estado en localStorage para persistencia
     const claseKey = `clase_${clase.tema.replace(/\s+/g, '_')}_estado`;
     const estadoGuardado = localStorage.getItem(claseKey);
@@ -462,11 +470,14 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
   });
   
   const clasesCompletadas = clases.filter(clase => {
-    // Considerar como historial tanto las marcadas como 'completada'
-    // como las que ya pasaron en fecha aunque sigan 'programada'
+    // Considerar como historial:
+    // 1. Marcadas explícitamente como 'completada'
+    // 2. O que ya pasaron de fecha/hora Y NO están 'activas'
     const esCompletadaPorEstado = clase.estado === 'completada';
-    const esPasada = esFechaPasada(clase.fecha);
-    return esCompletadaPorEstado || esPasada;
+    const esPasadaYNoActiva = esFechaPasada(clase.fecha) && clase.estado !== 'activa';
+    const esHoraPasadaYNoActiva = clase.fecha === hoy && esClasePasada(clase) && clase.estado !== 'activa';
+    
+    return esCompletadaPorEstado || esPasadaYNoActiva || esHoraPasadaYNoActiva;
   });
 
   const clasesDelBloqueFiltradas = filtrarClasesDelBloque();
@@ -607,7 +618,7 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
                     <div className="clase-detalles">
                       <div className="detalle-item">
                         <span className="detalle-icon">🕐</span>
-                        <span>{clase.hora} - {clase.duracion} min</span>
+                        <span>{clase.hora}</span>
                       </div>
                       {clase.estado === 'activa' && clase.codigo_asistencia && (
                         <div className="detalle-item codigo-asistencia">
@@ -699,7 +710,7 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
                 <div className="clase-detalles">
                   <div className="detalle-item">
                     <span className="detalle-icon">🕐</span>
-                    <span>{clase.hora} - {clase.duracion} min</span>
+                    <span>{clase.hora}</span>
                   </div>
                   {clase.estado === 'activa' && clase.codigo_asistencia && (
                     <div className="detalle-item codigo-asistencia">
@@ -798,9 +809,6 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
                       {clase.tipoClase === 'individual' ? '👤' : '👥'} {clase.tipoClase}
                     </span>
                     <span className="meta-item">
-                      ⏱️ {clase.duracion} min
-                    </span>
-                    <span className="meta-item">
                       👥 {(clase.estudiantes ? clase.estudiantes.length : 0)} estudiante(s)
                     </span>
                   </div>
@@ -876,7 +884,9 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
                         📋 Asistencia
                       </button>
                     </div>
-                    <div className="historial-estado">✅ Completada</div>
+                    <div className="historial-estado">
+                      {clase.estado === 'completada' ? '✅ Completada' : '📚 Historial'}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -949,11 +959,6 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
                   <div className="detalle-grupo">
                     <label><strong>Fecha y Hora:</strong></label>
                     <p>{formatearFecha(selectedClase.fecha)} a las {selectedClase.hora}</p>
-                  </div>
-                  
-                  <div className="detalle-grupo">
-                    <label><strong>Duración programada:</strong></label>
-                    <p>{selectedClase.duracion} minutos</p>
                   </div>
                   
                   {selectedClase.duracion_real && (
@@ -1051,17 +1056,6 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
                       className="modal-input"
                       value={editForm.hora || ''}
                       onChange={(e) => handleEditChange('hora', e.target.value)}
-                    />
-                  </div>
-                  
-                  <div className="detalle-grupo">
-                    <label><strong>Duración (minutos):</strong></label>
-                    <input
-                      type="number"
-                      className="modal-input"
-                      min={15}
-                      value={editForm.duracion || 0}
-                      onChange={(e) => handleEditChange('duracion', parseInt(e.target.value, 10) || 0)}
                     />
                   </div>
                   

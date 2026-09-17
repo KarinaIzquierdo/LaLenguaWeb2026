@@ -14,7 +14,6 @@ interface EstudianteDisponible {
 interface FormularioClase {
   fecha: string;
   hora: string;
-  duracion: number;
   tema: string;
   descripcion: string;
   estudiantesSeleccionados: string[];
@@ -27,7 +26,6 @@ export default function ProgramarClase() {
   const [formulario, setFormulario] = useState<FormularioClase>({
     fecha: '',
     hora: '',
-    duracion: 60,
     tema: '',
     descripcion: '',
     estudiantesSeleccionados: [],
@@ -268,7 +266,6 @@ export default function ProgramarClase() {
         profesor_id: profesorId,
         fecha: formulario.fecha,
         hora: formulario.hora,
-        duracion: formulario.duracion,
         tema: formulario.tema,
         descripcion: formulario.descripcion,
         tipo_clase: formulario.tipoClase,
@@ -288,7 +285,6 @@ export default function ProgramarClase() {
       setFormulario({
         fecha: '',
         hora: '',
-        duracion: 60,
         tema: '',
         descripcion: '',
         estudiantesSeleccionados: [],
@@ -347,22 +343,6 @@ export default function ProgramarClase() {
             </div>
 
             <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="duracion">Duración (minutos)</label>
-                <select
-                  id="duracion"
-                  name="duracion"
-                  value={formulario.duracion}
-                  onChange={handleInputChange}
-                >
-                  <option value={30}>30 minutos</option>
-                  <option value={45}>45 minutos</option>
-                  <option value={60}>60 minutos</option>
-                  <option value={90}>90 minutos</option>
-                  <option value={120}>120 minutos</option>
-                </select>
-              </div>
-              
               <div className="form-group">
                 <label htmlFor="modalidad">Modalidad</label>
                 <select
