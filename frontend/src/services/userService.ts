@@ -69,13 +69,17 @@ export const userService = {
           ? (isInstitutional(rawPersonal) ? null : rawPersonal)
           : (isInstitutional(rawEmail) ? null : rawEmail);
 
+        // Normalizar rol: si es profesor por flag pero el role quedó como student, corregir
+        const rolNormalizado = (user.is_profesor && user.role === 'student') ? 'profesor' : user.role;
+
         return {
           id: user.id,
           nombres: user.first_name,
           apellidos: user.last_name,
           correo: user.email,
           correo_personal,
-          rol: user.role,
+          rol: rolNormalizado,
+          is_profesor: user.is_profesor === true,
           activo: user.is_active,
           is_active: user.is_active,
           bloque_asignado: user.bloque_asignado,

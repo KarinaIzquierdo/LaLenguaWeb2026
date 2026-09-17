@@ -16,6 +16,7 @@ interface Student {
   bloque_asignado: string;
   nivel?: string;
   rol: string;
+  is_profesor?: boolean;
   especializacion?: string;
   especializacion_id?: number | null;
   is_active: boolean;
@@ -80,7 +81,7 @@ const GestionEstudiantes = () => {
 
       // Filtrar estudiantes y profesores (excluir admin, financiero, etc.)
       const usersList = data.filter((u: any) => 
-        u.rol === 'student' || u.rol === 'estudiante' || u.rol === 'profesor'
+        u.rol === 'student' || u.rol === 'estudiante' || u.rol === 'profesor' || u.is_profesor === true
       );
       console.log('🎓 Usuarios filtrados (Estudiantes + Profesores):', usersList.length, usersList);
       
@@ -259,7 +260,7 @@ const GestionEstudiantes = () => {
             <span className="stat-label">Total Usuarios</span>
           </div>
           <div className="stat-card">
-            <span className="stat-value">{students.filter(s => s.rol === 'profesor').length}</span>
+            <span className="stat-value">{students.filter(s => s.rol === 'profesor' || s.is_profesor === true).length}</span>
             <span className="stat-label">Profesores</span>
           </div>
           <div className="stat-card">

@@ -2224,6 +2224,11 @@ def list_users_view(request):
     print(f"Usuario: {request.user.email} (Role: {getattr(request.user, 'role', 'N/A')})")
     
     from .serializers import MobileUserSerializer
+
+    # Sincronizar roles: quien tenga is_profesor=True debe tener role='profesor'
+    # (algunos usuarios quedaron con role='student' aunque son profesores)
+    CustomUser.objects.filter(is_profesor=True).exclude(role='profesor').update(role='profesor')
+
     users = CustomUser.objects.all().order_by('-date_joined')
     print(f"Total usuarios en DB: {users.count()}")
     

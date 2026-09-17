@@ -26,7 +26,7 @@ class MobileUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
         fields = ('id', 'username', 'email', 'first_name', 'last_name', 'role', 
-                 'is_active', 'especializacion', 'date_joined', 'correo_personal', 'english_level')
+                 'is_active', 'is_profesor', 'especializacion', 'date_joined', 'correo_personal', 'english_level')
         read_only_fields = ('id', 'date_joined')
     
     def get_especializacion(self, obj):
