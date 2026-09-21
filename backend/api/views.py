@@ -8,7 +8,7 @@ from django.http import HttpResponse
 from django.shortcuts import render
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
-from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode, base36_to_int
 from django.utils.encoding import force_bytes
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from datetime import date, timedelta
@@ -918,7 +918,18 @@ def reset_password_view(request):
 
     token_generator = PasswordResetTokenGenerator()
     if not token_generator.check_token(user, token):
-        return Response({ 'success': False, 'message': 'Token inválido o expirado' }, status=status.HTTP_400_BAD_REQUEST)
+        # Distinguir expirado de inválido para dar un mensaje útil y depurar en logs
+        try:
+            ts_b36 = token.split('-')[0]
+            elapsed = token_generator._num_seconds(token_generator._now()) - base36_to_int(ts_b36)
+            expired = elapsed > getattr(settings, 'PASSWORD_RESET_TIMEOUT', 3600)
+        except Exception:
+            expired = False
+        print(f"⚠️ reset_password: check_token falló para user pk={user.pk} (expirado={expired})")
+        msg = ('El enlace expiró (es válido por 1 hora). Solicita uno nuevo.'
+               if expired else
+               'El enlace es inválido o ya fue utilizado. Solicita uno nuevo.')
+        return Response({ 'success': False, 'message': msg }, status=status.HTTP_400_BAD_REQUEST)
 
     user.set_password(new_password)
     user.save()
