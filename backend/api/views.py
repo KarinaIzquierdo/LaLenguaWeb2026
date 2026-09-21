@@ -2176,13 +2176,14 @@ def register_view(request):
                 # Obtener la contraseña del request (solo disponible en este momento)
                 temporary_password = request.data.get('password', '')
                 
-                # Enviar email de bienvenida
+                # Enviar email de bienvenida (URL del frontend configurable por entorno)
+                frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:5173').rstrip('/')
                 send_welcome_email(
                     user_email=user.correo_personal,
                     user_name=user_name,
                     user_role=user_role,
                     temporary_password=temporary_password,
-                    login_url='http://localhost:5173'  # Cambiar en producción
+                    login_url=frontend_url
                 )
                 print(f"📧 Email de bienvenida enviado a: {user.correo_personal}")
             except Exception as e:
