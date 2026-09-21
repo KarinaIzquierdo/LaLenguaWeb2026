@@ -287,4 +287,10 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='your-email@gmail.com')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='your-app-password')
-DEFAULT_FROM_EMAIL = 'La Lengua <noreply@lalengua.co>'
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default=f'La Lengua <{EMAIL_HOST_USER}>')
+
+# URL pública del frontend (se usa en enlaces enviados por correo, ej. recuperar contraseña)
+FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:5173')
+
+# Expiración del token de recuperación de contraseña (1 hora, igual que dice el correo)
+PASSWORD_RESET_TIMEOUT = 60 * 60

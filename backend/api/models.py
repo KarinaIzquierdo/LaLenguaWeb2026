@@ -582,8 +582,7 @@ class Venta(models.Model):
     def dias_restantes(self):
         """Calcula los días restantes del plan"""
         if self.fecha_fin_plan:
-            from datetime import date
-            return (self.fecha_fin_plan - date.today()).days
+            return (self.fecha_fin_plan - timezone.localdate()).days
         return None
 
 
@@ -634,9 +633,8 @@ class Suscripcion(models.Model):
     @property
     def dias_restantes(self):
         """Calcula los días restantes de la suscripción"""
-        from datetime import date
         if self.fecha_fin:
-            dias = (self.fecha_fin - date.today()).days
+            dias = (self.fecha_fin - timezone.localdate()).days
             return max(0, dias)
         return 0
     
@@ -654,8 +652,9 @@ class Suscripcion(models.Model):
     
     def actualizar_estado(self):
         """Actualiza el estado de la suscripción basado en la fecha"""
-        from datetime import date, timedelta
-        hoy = date.today()
+        from django.utils import timezone
+        from datetime import timedelta
+        hoy = timezone.localdate()
         
         if self.fecha_fin < hoy:
             self.estado = 'vencida'

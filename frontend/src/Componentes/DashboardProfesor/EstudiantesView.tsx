@@ -87,8 +87,8 @@ export default function EstudiantesView() {
       
       setClasesDelProfesor(clasesActivas);
       
-      // Seleccionar automáticamente la clase de hoy si existe
-      const hoy = new Date().toISOString().split('T')[0];
+      // Seleccionar automáticamente la clase de hoy si existe (fecha local, no UTC)
+      const hoy = new Date().toLocaleDateString('en-CA');
       const claseHoy = clasesActivas.find((c: any) => c.fecha === hoy);
       if (claseHoy) {
         setClaseSeleccionada(claseHoy);

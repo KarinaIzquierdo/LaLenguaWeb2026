@@ -27,25 +27,12 @@ export default function ResetPassword() {
     }
     try {
       setIsLoading(true);
-      // 1) Solicitar token/enlace al backend (el backend envía el email automáticamente)
-      let resetLink: string | undefined;
-      try {
-        const req = await authService.requestPasswordReset(value);
-        if (req?.reset_link) {
-          resetLink = req.reset_link;
-          if (resetLink.startsWith('/')) {
-            resetLink = `${window.location.origin}${resetLink}`;
-          }
-        }
-      } catch {}
-
-      // 2) Si tenemos token/enlace, llevar de una vez al formulario de nueva contraseña
-      if (resetLink) {
-        window.location.assign(resetLink);
-        return;
+      const res = await authService.requestPasswordReset(value);
+      if (res?.success) {
+        setStatus({ type: 'success', message: res.message || 'Si el correo existe, hemos enviado instrucciones. Revisa tu bandeja y spam.' });
+      } else {
+        setStatus({ type: 'error', message: (res as any)?.message || 'No pudimos enviar el correo. Intenta nuevamente.' });
       }
-      // 3) Si no hubo token (usuario no existe o respuesta genérica), mostrar mensaje
-      setStatus({ type: 'success', message: 'Si el correo existe, hemos enviado instrucciones. Revisa tu bandeja y spam.' });
     } catch (e) {
       setStatus({ type: 'error', message: 'No pudimos enviar el correo. Intenta nuevamente.' });
     } finally {

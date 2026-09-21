@@ -313,7 +313,7 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
     const hoyStr = new Date().toLocaleDateString('en-CA');
 
     const clasesConFecha = (rawClases || []).map((clase) => {
-      const fechaRaw = clase.fecha || new Date().toISOString();
+      const fechaRaw = clase.fecha || new Date().toLocaleDateString('en-CA');
       const fechaClaseStr =
         typeof fechaRaw === 'string' && fechaRaw.length >= 10
           ? fechaRaw.slice(0, 10)

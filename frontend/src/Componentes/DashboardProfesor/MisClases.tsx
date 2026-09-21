@@ -324,7 +324,7 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
   };
 
   const esHoy = (fecha: string) => {
-    const hoy = new Date().toISOString().split('T')[0];
+    const hoy = new Date().toLocaleDateString('en-CA');
     return fecha === hoy;
   };
 
@@ -338,8 +338,8 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
   };
 
   const esFechaPasada = (fecha: string) => {
-    // Comparar usando solo la cadena YYYY-MM-DD para evitar problemas de zona horaria
-    const hoyStr = new Date().toISOString().split('T')[0];
+    // Comparar usando solo la cadena YYYY-MM-DD en fecha local para evitar problemas de zona horaria
+    const hoyStr = new Date().toLocaleDateString('en-CA');
     return fecha < hoyStr;
   };
 
@@ -390,10 +390,10 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
       clasesFiltradas = clasesFiltradas.filter(clase => clase.estado === filtroEstado);
     }
     
-    // Filtro por fecha
-    const hoy = new Date().toISOString().split('T')[0];
-    const manana = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-    const enUnaSemana = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    // Filtro por fecha (fecha local del navegador, no UTC)
+    const hoy = new Date().toLocaleDateString('en-CA');
+    const manana = new Date(Date.now() + 24 * 60 * 60 * 1000).toLocaleDateString('en-CA');
+    const enUnaSemana = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('en-CA');
     
     if (filtroFecha === 'hoy') {
       clasesFiltradas = clasesFiltradas.filter(clase => clase.fecha === hoy);
@@ -406,8 +406,8 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
     return clasesFiltradas;
   };
 
-  // Filtrar clases por fecha
-  const hoy = new Date().toISOString().split('T')[0];
+  // Filtrar clases por fecha (fecha local del navegador, no UTC)
+  const hoy = new Date().toLocaleDateString('en-CA');
   
   const esClasePasada = (clase: Clase) => {
     // Si la clase está activa, NO se considera pasada
@@ -415,7 +415,8 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
     
     // Si la clase es de hoy o futura, NO se considera pasada visualmente
     // Solo se moverá al historial cuando el profesor la finalice manualmente (estado 'completada')
-    const hoyStr = new Date().toISOString().split('T')[0];
+    // Usar fecha LOCAL del navegador (toISOString usa UTC y adelanta un día después de las 7 PM en Colombia)
+    const hoyStr = new Date().toLocaleDateString('en-CA');
     if (clase.fecha >= hoyStr) return false;
 
     // Solo clases con fecha anterior a hoy se consideran pasadas automáticamente

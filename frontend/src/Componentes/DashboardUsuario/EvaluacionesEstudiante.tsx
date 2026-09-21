@@ -62,7 +62,7 @@ export default function EvaluacionesEstudiante() {
             enlace,
             tipo: evalBackend.tipo || 'quiz',
             fecha_limite: evalBackend.fecha_limite || undefined,
-            created_at: evalBackend.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
+            created_at: evalBackend.created_at?.split('T')[0] || new Date().toLocaleDateString('en-CA'),
             profesor_nombre: evalBackend.profesor_nombre || 'Profesor',
             archivo_url: evalBackend.archivo || undefined,
             activa: evalBackend.estado === 'publicada'

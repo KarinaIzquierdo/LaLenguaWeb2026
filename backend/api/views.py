@@ -25,6 +25,7 @@ from .serializers import (
 )
 from .especializacion_serializer import EspecializacionSerializer
 from django.shortcuts import get_object_or_404
+from django.conf import settings
 from django.utils import timezone
 from django.db import connection
 from django.db.models import Sum, Count, Q
@@ -379,8 +380,9 @@ def mobile_classes_view(request):
     user = request.user
     
     try:
-        from datetime import date
-        hoy = date.today()
+        # Usar la fecha local configurada (America/Bogota); date.today() usa la
+        # fecha del servidor (UTC) y adelanta un día después de las 7 PM en Colombia
+        hoy = timezone.localdate()
         
         # Obtener todas las clases del usuario
         todas_clases = user.clases.all().order_by('fecha', 'hora')
@@ -848,34 +850,43 @@ def request_password_reset_view(request):
         # Determinar el correo de destino (SIEMPRE correo personal primero)
         email_destino = user.correo_personal if user.correo_personal else user.email
         
-        # Link completo para el frontend
-        reset_link = f"http://localhost:5173/new-password?token={combined}"
+        # Link completo para el frontend (producción usa FRONTEND_URL, dev cae a localhost)
+        frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:5173').rstrip('/')
+        reset_link = f"{frontend_url}/new-password?token={combined}"
         
         # Nombre del usuario
         user_name = f"{user.first_name} {user.last_name}".strip() or user.username
         
         # Enviar email usando la utilidad de Django
-        try:
-            send_password_reset_email(
-                user_email=email_destino,
-                user_name=user_name,
-                reset_link=reset_link
-            )
+        enviado = send_password_reset_email(
+            user_email=email_destino,
+            user_name=user_name,
+            reset_link=reset_link
+        )
+        
+        if enviado:
+            response_data = {
+                'success': True,
+                'message': 'Si el correo existe, se han enviado instrucciones. Revisa tu bandeja y spam.'
+            }
+            # Solo exponer el enlace en desarrollo para pruebas locales
+            if settings.DEBUG:
+                response_data['reset_link'] = reset_link
+            return Response(response_data, status=status.HTTP_200_OK)
+        
+        # El envío falló (credenciales/SMTP) — en dev dar el enlace para probar, en prod avisar
+        print(f"⚠️ Error al enviar email de recuperación a {email_destino}")
+        if settings.DEBUG:
             return Response({
                 'success': True,
-                'message': 'Se han enviado instrucciones a tu correo.',
-                'reset_link': reset_link  # Solo para desarrollo/testing
+                'message': 'Modo dev: no se pudo enviar el correo, usa este enlace.',
+                'token': combined,
+                'reset_link': reset_link,
             }, status=status.HTTP_200_OK)
-        except Exception as email_error:
-            # Si falla el envío, devolver el token para desarrollo
-            print(f"⚠️ Error al enviar email de recuperación: {str(email_error)}")
-            return Response({
-                'success': True,
-                'message': 'Se han enviado instrucciones a tu correo.',
-                'token': combined,  # Solo para desarrollo
-                'reset_link': reset_link,  # Solo para desarrollo
-                'email_error': str(email_error)  # Solo para desarrollo
-            }, status=status.HTTP_200_OK)
+        return Response({
+            'success': False,
+            'message': 'No pudimos enviar el correo en este momento. Intenta nuevamente en unos minutos.'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     except Exception as e:
         return Response({
             'success': False,

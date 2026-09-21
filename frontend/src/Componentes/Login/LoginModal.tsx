@@ -70,30 +70,12 @@ export default function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps
       return;
     }
     try {
-      // 1) Solicitar token y enlace reales al backend
-      let resetLink: string | undefined;
-      try {
-        const req = await authService.requestPasswordReset(email);
-        // En backend devolvemos reset_link en dev para conveniencia
-        if (req && (req as any).reset_link) {
-          resetLink = (req as any).reset_link as string;
-          // Asegurar absoluto en UI también
-          if (resetLink.startsWith('/')) {
-            resetLink = `${window.location.origin}${resetLink}`;
-          }
-        }
-      } catch (e) {
-        // No bloquear el flujo: si falla, seguiremos con fallback dentro de emailService
+      const req = await authService.requestPasswordReset(email);
+      if (req && req.success) {
+        setResetStatus({ type: 'success', message: req.message || 'Hemos enviado un correo con instrucciones para recuperar tu contraseña.' });
+      } else {
+        setResetStatus({ type: 'error', message: (req as any)?.message || 'No pudimos enviar el correo de recuperación. Intenta nuevamente.' });
       }
-
-      // Si no obtuvimos token/enlace, mostrar error
-      if (!resetLink) {
-        setResetStatus({ type: 'error', message: 'No encontramos este correo o no pudimos generar el enlace. Verifica el email e inténtalo nuevamente.' });
-        return;
-      }
-
-      // El backend ya envió el email automáticamente
-      setResetStatus({ type: 'success', message: 'Hemos enviado un correo con instrucciones para recuperar tu contraseña.' });
     } catch (e) {
       setResetStatus({ type: 'error', message: 'No pudimos enviar el correo de recuperación.' });
     }
