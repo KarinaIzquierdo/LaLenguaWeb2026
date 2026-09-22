@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { FaCalendarAlt, FaClock } from 'react-icons/fa';
 import '../DashboardStudent.css';
 import type { Club, ClubMaterial } from '../../../services/clbService';
 
@@ -24,6 +25,12 @@ export default function ClubMaterialsView({
   isJoining,
 }: ClubMaterialsViewProps) {
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
+
+  // Formatea 'YYYY-MM-DD' a 'DD/MM/YYYY' sin usar Date (evita problemas de zona horaria)
+  const formatFecha = (fecha: string) => {
+    const [y, m, d] = fecha.split('-');
+    return `${d}/${m}/${y}`;
+  };
 
   const selectedClub = useMemo(
     () => clubs.find((c) => c.id === selectedClubId) || null,
@@ -104,6 +111,12 @@ export default function ClubMaterialsView({
                 {typeof selectedClub.students_count === 'number' && (
                   <span>{selectedClub.students_count} estudiante(s)</span>
                 )}
+                {selectedClub.fecha && (
+                  <span><FaCalendarAlt style={{ marginRight: '4px', verticalAlign: 'middle' }} /> {formatFecha(selectedClub.fecha)}</span>
+                )}
+                {selectedClub.hora && (
+                  <span><FaClock style={{ marginRight: '4px', verticalAlign: 'middle' }} /> {selectedClub.hora.slice(0, 5)}</span>
+                )}
               </div>
               <div className="club-join-row">
                 <p>No estás inscrito. Únete para acceder al material.</p>
@@ -133,6 +146,12 @@ export default function ClubMaterialsView({
                 {selectedClub.profesor_name && <span>Profesor: {selectedClub.profesor_name}</span>}
                 {typeof selectedClub.students_count === 'number' && (
                   <span>{selectedClub.students_count} estudiante(s)</span>
+                )}
+                {selectedClub.fecha && (
+                  <span><FaCalendarAlt style={{ marginRight: '4px', verticalAlign: 'middle' }} /> {formatFecha(selectedClub.fecha)}</span>
+                )}
+                {selectedClub.hora && (
+                  <span><FaClock style={{ marginRight: '4px', verticalAlign: 'middle' }} /> {selectedClub.hora.slice(0, 5)}</span>
                 )}
               </div>
               {onLeaveClub && (
