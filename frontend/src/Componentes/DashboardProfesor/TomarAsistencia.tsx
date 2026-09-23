@@ -72,7 +72,8 @@ export default function TomarAsistencia({
           id: Number(idStr),
           nombre,
           email,
-          estado: asistencia?.estado ?? null
+          // Dejar vacío intencionalmente: el profesor debe seleccionar Presente/Ausente explícitamente
+          estado: null
         });
       });
 
