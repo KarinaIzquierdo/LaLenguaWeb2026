@@ -22,14 +22,22 @@ class Migration(migrations.Migration):
                 'verbose_name_plural': 'Ciclos de Ranking de Retos',
             },
         ),
-        migrations.AddField(
-            model_name='club',
-            name='fecha',
-            field=models.DateField(blank=True, null=True),
-        ),
-        migrations.AddField(
-            model_name='club',
-            name='hora',
-            field=models.TimeField(blank=True, null=True),
+        # Las columnas club.fecha y club.hora ya existen en la BD de producción
+        # (fueron creadas previamente). Solo actualizamos el estado de Django
+        # sin tocar la base de datos.
+        migrations.SeparateDatabaseAndState(
+            database_operations=[],
+            state_operations=[
+                migrations.AddField(
+                    model_name='club',
+                    name='fecha',
+                    field=models.DateField(blank=True, null=True),
+                ),
+                migrations.AddField(
+                    model_name='club',
+                    name='hora',
+                    field=models.TimeField(blank=True, null=True),
+                ),
+            ],
         ),
     ]
