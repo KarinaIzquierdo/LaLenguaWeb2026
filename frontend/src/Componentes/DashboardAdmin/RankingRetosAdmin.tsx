@@ -36,6 +36,7 @@ const RankingRetosAdmin: React.FC = () => {
   const [items, setItems] = useState<RankingItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [proximoReinicio, setProximoReinicio] = useState<string | null>(null);
 
   const load = async (nivelFiltro: string) => {
     try {
@@ -69,6 +70,7 @@ const RankingRetosAdmin: React.FC = () => {
       }
 
       setItems((data.data || []) as RankingItem[]);
+      setProximoReinicio(data.proximo_reinicio || null);
     } catch (e: any) {
       console.error('Error cargando ranking de retos:', e);
       setError(e.message || 'Error cargando ranking de retos');
@@ -90,6 +92,15 @@ const RankingRetosAdmin: React.FC = () => {
           Revisa qué estudiantes han completado más retos diarios y cuántos han fallado.
           Usa este panel para reconocer esfuerzo y dedicación.
         </p>
+        {proximoReinicio && (
+          <p style={{ marginTop: '0.5rem', fontWeight: 600 }}>
+            🔄 El ranking se reinicia automáticamente cada 30 días. Próximo reinicio:{' '}
+            {(() => {
+              const [y, m, d] = proximoReinicio.split('-');
+              return `${d}/${m}/${y}`;
+            })()}
+          </p>
+        )}
       </header>
 
       <div className="filters-section" style={{ marginBottom: '1.5rem' }}>

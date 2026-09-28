@@ -14,7 +14,7 @@ from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from datetime import date, timedelta
 import secrets
 import string
-from .models import CustomUser, Profesor, Clase, Evaluation, MediaItem, Club, ClubMaterial, Especializacion, Evaluacion, Notificacion, NotificacionEstudiante, RespuestaEvaluacion, DailyChallengeQuestion, RegistroEliminacion, Asistencia, Suscripcion, ChatRoom, ChatMessage
+from .models import CustomUser, Profesor, Clase, Evaluation, MediaItem, Club, ClubMaterial, Especializacion, Evaluacion, Notificacion, NotificacionEstudiante, RespuestaEvaluacion, DailyChallengeQuestion, RegistroEliminacion, Asistencia, Suscripcion, ChatRoom, ChatMessage, CicloRetosRanking
 from .profesor_views import *
 from .chat_views import chat_rooms_view, chat_messages_view, chat_contacts_view, unread_messages_count_view
 from .serializers import (
@@ -1297,6 +1297,8 @@ def gamificacion_estado_view(request):
 def gamificacion_reto_diario_view(request):
     user = request.user
 
+    reiniciar_ranking_retos_si_corresponde()
+
     hoy = timezone.localdate()
     ultima_fecha = getattr(user, 'reto_ultima_fecha', None)
     racha_actual = getattr(user, 'reto_racha_actual', 0) or 0
@@ -1372,6 +1374,9 @@ def gamificacion_reto_diario_view(request):
 @permission_classes([IsAuthenticated])
 def gamificacion_reto_diario_fallo_view(request):
     user = request.user
+
+    reiniciar_ranking_retos_si_corresponde()
+
     hoy = timezone.localdate()
     ultima_fecha = getattr(user, 'reto_ultima_fecha', None)
 
@@ -1460,6 +1465,35 @@ def gamificacion_mision_view(request):
     }, status=status.HTTP_200_OK)
 
 
+def reiniciar_ranking_retos_si_corresponde():
+    """Reinicia los contadores del ranking de retos cada 30 días.
+
+    Funciona sin cron: la primera vez que alguien consulta el ranking o
+    juega un reto después de cumplirse el ciclo, se ponen en cero los
+    contadores de todos los estudiantes.
+    Retorna la fecha del próximo reinicio.
+    """
+    hoy = timezone.localdate()
+    ciclo, _ = CicloRetosRanking.objects.get_or_create(id=1, defaults={'fecha_inicio': hoy})
+
+    proximo_reinicio = ciclo.fecha_inicio + timedelta(days=30)
+    if hoy >= proximo_reinicio:
+        CustomUser.objects.filter(role='student').update(
+            reto_completados_total=0,
+            reto_fallidos_total=0,
+            reto_intentos_fallidos_total=0,
+        )
+        # Avanzar el ciclo hasta que el próximo reinicio quede en el futuro
+        # (por si pasaron varios ciclos sin actividad)
+        while proximo_reinicio <= hoy:
+            ciclo.fecha_inicio = proximo_reinicio
+            proximo_reinicio = ciclo.fecha_inicio + timedelta(days=30)
+        ciclo.save(update_fields=['fecha_inicio'])
+        print(f"🔄 Ranking de retos reiniciado (nuevo ciclo desde {ciclo.fecha_inicio})")
+
+    return proximo_reinicio
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def gamificacion_ranking_retos_view(request):
@@ -1469,6 +1503,8 @@ def gamificacion_ranking_retos_view(request):
     Lee directamente de la tabla api_customuser para evitar depender
     de campos adicionales en el modelo CustomUser.
     """
+
+    proximo_reinicio = reiniciar_ranking_retos_si_corresponde()
 
     nivel = request.query_params.get('nivel') or request.query_params.get('level')
 
@@ -1531,6 +1567,8 @@ def gamificacion_ranking_retos_view(request):
     return Response({
         'success': True,
         'data': ranking,
+        'proximo_reinicio': proximo_reinicio.isoformat(),
+        'ciclo_dias': 30,
     }, status=status.HTTP_200_OK)
 
 

@@ -928,3 +928,16 @@ class HistorialDocente(models.Model):
 
     def __str__(self):
         return f"{self.profesor.get_full_name() or self.profesor.username} - {self.titulo} ({self.fecha.strftime('%Y-%m-%d')})"
+
+
+class CicloRetosRanking(models.Model):
+    """Controla el ciclo de 30 días del ranking de retos diarios (singleton, id=1)."""
+    fecha_inicio = models.DateField(help_text="Fecha en que inició el ciclo actual del ranking")
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Ciclo de Ranking de Retos'
+        verbose_name_plural = 'Ciclos de Ranking de Retos'
+
+    def __str__(self):
+        return f"Ciclo desde {self.fecha_inicio}"
