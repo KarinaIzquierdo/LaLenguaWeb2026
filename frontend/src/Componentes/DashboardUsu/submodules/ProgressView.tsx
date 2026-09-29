@@ -1,5 +1,6 @@
 import React from 'react';
 import '../DashboardStudent.css';
+import AnilloProgreso from './progreso/AnilloProgreso';
 
 interface ProgressViewProps {
   userTitle: string;
@@ -30,17 +31,8 @@ export default function ProgressView({
 
       <div className="panel progress-panel">
         <div className="progress-summary">
-          <div className="progress-current">
-            <span className="progress-title">{userTitle || 'Principiante'}</span>
-            <span className="progress-xp">{experience} XP</span>
-          </div>
-          <div className="progress-bar-clean">
-            <div
-              className="progress-bar-fill"
-              style={{ width: `${Math.max(0, Math.min(100, progressPercentage))}%` }}
-            ></div>
-          </div>
-          <p className="progress-label">{progressPercentage}% hacia el siguiente nivel</p>
+          <h3 className="progress-subtitle">Mi nivel: {userTitle || 'Principiante'}</h3>
+          <AnilloProgreso porcentaje={progressPercentage} xp={experience} />
         </div>
 
         <div className="skills-grid">

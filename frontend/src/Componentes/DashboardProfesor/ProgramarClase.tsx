@@ -259,6 +259,12 @@ export default function ProgramarClase() {
         }
       }
       
+      // Normalizar enlace: si no tiene protocolo, agregar https://
+      let meetLinkNormalizado = formulario.meetLink?.trim() || '';
+      if (meetLinkNormalizado && !/^https?:\/\//i.test(meetLinkNormalizado)) {
+        meetLinkNormalizado = `https://${meetLinkNormalizado}`;
+      }
+
       // Preparar datos para enviar al backend
       const claseData = {
         nombre: formulario.tema,
@@ -270,7 +276,7 @@ export default function ProgramarClase() {
         descripcion: formulario.descripcion,
         tipo_clase: formulario.tipoClase,
         modalidad: formulario.modalidad,
-        meet_link: formulario.meetLink,
+        meet_link: meetLinkNormalizado,
         estudiantesSeleccionados: formulario.estudiantesSeleccionados
       };
 
@@ -293,9 +299,20 @@ export default function ProgramarClase() {
         meetLink: ''
       });
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error al programar clase:', error);
-      alert('Error al programar la clase. Intenta nuevamente.');
+      // Mostrar el mensaje específico del backend si existe (ej. URL inválida, campo faltante)
+      const data = error?.response?.data;
+      let detalleBackend = data?.message || (data?.errors ? JSON.stringify(data.errors) : null);
+      // Formato DRF de validación: {"campo": ["error1", ...]}
+      if (!detalleBackend && data && typeof data === 'object') {
+        detalleBackend = Object.entries(data)
+          .map(([campo, msgs]) => `${campo}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
+          .join(' | ') || null;
+      }
+      alert(detalleBackend
+        ? `Error al programar la clase: ${detalleBackend}`
+        : 'Error al programar la clase. Intenta nuevamente.');
     }
   };
 
@@ -397,7 +414,7 @@ export default function ProgramarClase() {
                       <div className="meet-manual">
                         <label>Ingresa el enlace de la clase (Zoom, Meet, Teams, etc.):</label>
                         <input
-                          type="url"
+                          type="text"
                           placeholder="https://tu-plataforma.com/tu-reunion"
                           onChange={(e) => setFormulario(prev => ({ ...prev, meetLink: e.target.value }))}
                           className="meet-input"
