@@ -15,6 +15,14 @@ interface GamificacionEstadoResponse {
     skill_gramatica?: number;
     skill_conversacion?: number;
     skill_expresiones?: number;
+    reto_vocab_intentos?: number;
+    reto_vocab_aciertos?: number;
+    reto_gram_intentos?: number;
+    reto_gram_aciertos?: number;
+    reto_conv_intentos?: number;
+    reto_conv_aciertos?: number;
+    reto_expr_intentos?: number;
+    reto_expr_aciertos?: number;
     title?: string;
     title_code?: string;
     next_title_xp?: number | null;

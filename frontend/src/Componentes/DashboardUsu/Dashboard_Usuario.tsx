@@ -130,10 +130,12 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
   const [userTitleCode, setUserTitleCode] = useState<string | null>(null);
   const [nextTitleXp, setNextTitleXp] = useState<number | null>(null);
 
-  const [skillVocabulario, setSkillVocabulario] = useState(0);
-  const [skillGramatica, setSkillGramatica] = useState(0);
-  const [skillConversacion, setSkillConversacion] = useState(0);
-  const [skillExpresiones, setSkillExpresiones] = useState(0);
+  const [skillDatos, setSkillDatos] = useState({
+    vocabulario: { valor: 0, intentos: 0, aciertos: 0 },
+    gramatica: { valor: 0, intentos: 0, aciertos: 0 },
+    conversacion: { valor: 0, intentos: 0, aciertos: 0 },
+    expresiones: { valor: 0, intentos: 0, aciertos: 0 },
+  });
   const [weeklyProgress, setWeeklyProgress] = useState(0);
   const [userFirstName, setUserFirstName] = useState<string>('');
 
@@ -367,6 +369,14 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
           skill_gramatica,
           skill_conversacion,
           skill_expresiones,
+          reto_vocab_intentos,
+          reto_vocab_aciertos,
+          reto_gram_intentos,
+          reto_gram_aciertos,
+          reto_conv_intentos,
+          reto_conv_aciertos,
+          reto_expr_intentos,
+          reto_expr_aciertos,
           reto_semana_progreso,
           reto_racha_actual,
           reto_ultima_fecha,
@@ -377,10 +387,12 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
         if (typeof title_code === 'string') setUserTitleCode(title_code);
         if (typeof next_title_xp !== 'undefined') setNextTitleXp(next_title_xp);
         if (Array.isArray(allAchievements)) setAchievements(allAchievements);
-        setSkillVocabulario(skill_vocabulario ?? 0);
-        setSkillGramatica(skill_gramatica ?? 0);
-        setSkillConversacion(skill_conversacion ?? 0);
-        setSkillExpresiones(skill_expresiones ?? 0);
+        setSkillDatos({
+          vocabulario: { valor: skill_vocabulario ?? 0, intentos: reto_vocab_intentos ?? 0, aciertos: reto_vocab_aciertos ?? 0 },
+          gramatica: { valor: skill_gramatica ?? 0, intentos: reto_gram_intentos ?? 0, aciertos: reto_gram_aciertos ?? 0 },
+          conversacion: { valor: skill_conversacion ?? 0, intentos: reto_conv_intentos ?? 0, aciertos: reto_conv_aciertos ?? 0 },
+          expresiones: { valor: skill_expresiones ?? 0, intentos: reto_expr_intentos ?? 0, aciertos: reto_expr_aciertos ?? 0 },
+        });
         setWeeklyProgress(reto_semana_progreso ?? 0);
 
         const racha = typeof reto_racha_actual === 'number' ? reto_racha_actual : 0;
@@ -843,10 +855,7 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
             userTitle={userTitle}
             progressPercentage={progressPercentage}
             experience={experience}
-            skillVocabulario={skillVocabulario}
-            skillGramatica={skillGramatica}
-            skillConversacion={skillConversacion}
-            skillExpresiones={skillExpresiones}
+            skillDatos={skillDatos}
           />
         );
       case 'recompensas':

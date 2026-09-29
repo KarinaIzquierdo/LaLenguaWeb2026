@@ -1289,6 +1289,14 @@ def gamificacion_estado_view(request):
             'skill_gramatica': getattr(user, 'skill_gramatica', 0) or 0,
             'skill_conversacion': getattr(user, 'skill_conversacion', 0) or 0,
             'skill_expresiones': getattr(user, 'skill_expresiones', 0) or 0,
+            'reto_vocab_intentos': getattr(user, 'reto_vocab_intentos', 0) or 0,
+            'reto_vocab_aciertos': getattr(user, 'reto_vocab_aciertos', 0) or 0,
+            'reto_gram_intentos': getattr(user, 'reto_gram_intentos', 0) or 0,
+            'reto_gram_aciertos': getattr(user, 'reto_gram_aciertos', 0) or 0,
+            'reto_conv_intentos': getattr(user, 'reto_conv_intentos', 0) or 0,
+            'reto_conv_aciertos': getattr(user, 'reto_conv_aciertos', 0) or 0,
+            'reto_expr_intentos': getattr(user, 'reto_expr_intentos', 0) or 0,
+            'reto_expr_aciertos': getattr(user, 'reto_expr_aciertos', 0) or 0,
         }
     }, status=status.HTTP_200_OK)
 

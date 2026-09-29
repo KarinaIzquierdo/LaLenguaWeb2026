@@ -4,24 +4,31 @@ import AnilloProgreso from './progreso/AnilloProgreso';
 import RadarHabilidades from './progreso/RadarHabilidades';
 import CaminoNiveles from './progreso/CaminoNiveles';
 
+export interface SkillDato {
+  valor: number;
+  intentos: number;
+  aciertos: number;
+}
+
+export interface SkillDatos {
+  vocabulario: SkillDato;
+  gramatica: SkillDato;
+  conversacion: SkillDato;
+  expresiones: SkillDato;
+}
+
 interface ProgressViewProps {
   userTitle: string;
   progressPercentage: number;
   experience: number;
-  skillVocabulario: number;
-  skillGramatica: number;
-  skillConversacion: number;
-  skillExpresiones: number;
+  skillDatos: SkillDatos;
 }
 
 export default function ProgressView({
   userTitle,
   progressPercentage,
   experience,
-  skillVocabulario,
-  skillGramatica,
-  skillConversacion,
-  skillExpresiones,
+  skillDatos,
 }: ProgressViewProps) {
   return (
     <div className="module-view">
@@ -40,12 +47,7 @@ export default function ProgressView({
 
         <div className="skills-section">
           <h3 className="progress-subtitle">Tus habilidades</h3>
-          <RadarHabilidades
-            vocabulario={skillVocabulario}
-            gramatica={skillGramatica}
-            conversacion={skillConversacion}
-            expresiones={skillExpresiones}
-          />
+          <RadarHabilidades datos={skillDatos} />
         </div>
       </div>
     </div>
