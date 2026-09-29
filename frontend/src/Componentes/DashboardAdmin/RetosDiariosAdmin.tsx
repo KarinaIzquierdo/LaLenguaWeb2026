@@ -6,7 +6,7 @@ import { authService } from '../../services/authService';
 export interface DailyChallengeAdminItem {
   id: number;
   pregunta: string;
-  categoria: 'vocabulary' | 'grammar' | 'conversation' | 'general' | string;
+  categoria: 'vocabulary' | 'grammar' | 'conversation' | 'expressions' | string;
   nivel?: string | null;
   opcion_a: string;
   opcion_b: string;
@@ -33,7 +33,7 @@ const RetosDiariosAdmin: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<Partial<DailyChallengeAdminItem>>({
-    categoria: 'general',
+    categoria: 'vocabulary',
     respuesta_correcta: 'A',
     activo: true,
   });
@@ -41,7 +41,7 @@ const RetosDiariosAdmin: React.FC = () => {
   const resetForm = () => {
     setEditingId(null);
     setForm({
-      categoria: 'general',
+      categoria: 'vocabulary',
       respuesta_correcta: 'A',
       activo: true,
     });
@@ -81,7 +81,7 @@ const RetosDiariosAdmin: React.FC = () => {
 
     const payload: any = {
       pregunta: form.pregunta,
-      categoria: form.categoria || 'general',
+      categoria: form.categoria || 'vocabulary',
       nivel: form.nivel || '',
       opcion_a: form.opcion_a,
       opcion_b: form.opcion_b,
@@ -181,13 +181,13 @@ const RetosDiariosAdmin: React.FC = () => {
             <div className="form-group">
               <label>Categoría</label>
               <select
-                value={form.categoria || 'general'}
+                value={form.categoria || 'vocabulary'}
                 onChange={e => setForm({ ...form, categoria: e.target.value as any })}
               >
-                <option value="general">General</option>
                 <option value="vocabulary">Vocabulario</option>
                 <option value="grammar">Gramática</option>
                 <option value="conversation">Conversación</option>
+                <option value="expressions">Expresiones</option>
               </select>
             </div>
             <div className="form-group">

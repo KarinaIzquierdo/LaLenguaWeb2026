@@ -10,6 +10,7 @@ interface ProgressViewProps {
   skillVocabulario: number;
   skillGramatica: number;
   skillConversacion: number;
+  skillExpresiones: number;
 }
 
 export default function ProgressView({
@@ -19,6 +20,7 @@ export default function ProgressView({
   skillVocabulario,
   skillGramatica,
   skillConversacion,
+  skillExpresiones,
 }: ProgressViewProps) {
   return (
     <div className="module-view">
@@ -36,6 +38,7 @@ export default function ProgressView({
             vocabulario={skillVocabulario}
             gramatica={skillGramatica}
             conversacion={skillConversacion}
+            expresiones={skillExpresiones}
           />
         </div>
       </div>

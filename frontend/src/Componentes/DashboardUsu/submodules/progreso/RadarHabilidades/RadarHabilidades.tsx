@@ -6,6 +6,7 @@ interface RadarHabilidadesProps {
   vocabulario: number;
   gramatica: number;
   conversacion: number;
+  expresiones: number;
   max?: number;
   tamano?: number;
 }
@@ -21,8 +22,9 @@ export default function RadarHabilidades({
   vocabulario,
   gramatica,
   conversacion,
+  expresiones,
   max = 3,
-  tamano = 320,
+  tamano = 340,
 }: RadarHabilidadesProps) {
   const [anim, setAnim] = useState(0);
   const animadoRef = useRef(false);
@@ -48,15 +50,16 @@ export default function RadarHabilidades({
     { nombre: 'Vocabulario', valor: Math.max(0, Math.min(max, vocabulario)) },
     { nombre: 'Gramática', valor: Math.max(0, Math.min(max, gramatica)) },
     { nombre: 'Conversación', valor: Math.max(0, Math.min(max, conversacion)) },
+    { nombre: 'Expresiones', valor: Math.max(0, Math.min(max, expresiones)) },
   ];
 
-  // Geometría: centro en (160,160), radio máximo 110 a partir del ángulo superior
+  // Geometría genérica para N ejes: centro en (160,160), radio máximo 95
   const centro = 160;
-  const radioMax = 110;
+  const radioMax = 95;
+  const totalEjes = ejes.length;
 
   const punto = (idx: number, fraccion: number) => {
-    // idx 0 = arriba, 1 = abajo-derecha, 2 = abajo-izquierda
-    const angulo = (Math.PI * 2 * idx) / 3 - Math.PI / 2;
+    const angulo = (Math.PI * 2 * idx) / totalEjes - Math.PI / 2;
     return {
       x: centro + Math.cos(angulo) * radioMax * fraccion,
       y: centro + Math.sin(angulo) * radioMax * fraccion,
@@ -132,7 +135,7 @@ export default function RadarHabilidades({
 
       {/* Etiquetas con nivel */}
       {ejes.map((eje, i) => {
-        const p = punto(i, 1.22);
+        const p = punto(i, 1.3);
         return (
           <div
             key={i}

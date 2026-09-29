@@ -1288,8 +1288,49 @@ def gamificacion_estado_view(request):
             'skill_vocabulario': getattr(user, 'skill_vocabulario', 0) or 0,
             'skill_gramatica': getattr(user, 'skill_gramatica', 0) or 0,
             'skill_conversacion': getattr(user, 'skill_conversacion', 0) or 0,
+            'skill_expresiones': getattr(user, 'skill_expresiones', 0) or 0,
         }
     }, status=status.HTTP_200_OK)
+
+
+# --- Radar de habilidades: seguimiento por categoría del reto diario ---
+
+CAMPOS_RETO_CATEGORIA = {
+    'vocabulary': ('reto_vocab_intentos', 'reto_vocab_aciertos', 'skill_vocabulario'),
+    'grammar': ('reto_gram_intentos', 'reto_gram_aciertos', 'skill_gramatica'),
+    'conversation': ('reto_conv_intentos', 'reto_conv_aciertos', 'skill_conversacion'),
+    'expressions': ('reto_expr_intentos', 'reto_expr_aciertos', 'skill_expresiones'),
+}
+
+
+def calcular_skill_desde_precision(aciertos: int, intentos: int) -> int:
+    """0-3 estrellas según precisión, exigiendo un mínimo de intentos."""
+    if intentos < 5:
+        return 0
+    precision = aciertos / intentos
+    if precision >= 0.85:
+        return 3
+    if precision >= 0.70:
+        return 2
+    if precision >= 0.50:
+        return 1
+    return 0
+
+
+def registrar_resultado_reto(user, categoria: str, acierto: bool) -> list:
+    """Incrementa intentos/aciertos de la categoría y recalcula sus estrellas.
+    Devuelve la lista de campos modificados."""
+    campos = CAMPOS_RETO_CATEGORIA.get(categoria)
+    if not campos:
+        return []
+    f_intentos, f_aciertos, f_skill = campos
+    intentos = (getattr(user, f_intentos, 0) or 0) + 1
+    aciertos = (getattr(user, f_aciertos, 0) or 0) + (1 if acierto else 0)
+    setattr(user, f_intentos, intentos)
+    setattr(user, f_aciertos, aciertos)
+    user_skill = calcular_skill_desde_precision(aciertos, intentos)
+    setattr(user, f_skill, user_skill)
+    return [f_intentos, f_aciertos, f_skill]
 
 
 @api_view(['POST'])
@@ -1351,7 +1392,9 @@ def gamificacion_reto_diario_view(request):
     user.reto_ultima_fecha = hoy
     user.reto_semana_progreso = semana_progreso
     user.reto_completados_total = (getattr(user, 'reto_completados_total', 0) or 0) + 1
-    user.save(update_fields=['total_dulces', 'total_xp', 'reto_racha_actual', 'reto_mejor_racha', 'reto_ultima_fecha', 'reto_semana_progreso', 'reto_completados_total'])
+    categoria = request.data.get('categoria', '')
+    campos_skill = registrar_resultado_reto(user, categoria, True)
+    user.save(update_fields=['total_dulces', 'total_xp', 'reto_racha_actual', 'reto_mejor_racha', 'reto_ultima_fecha', 'reto_semana_progreso', 'reto_completados_total'] + campos_skill)
 
     return Response({
         'success': True,
@@ -1399,7 +1442,9 @@ def gamificacion_reto_diario_fallo_view(request):
     user.reto_ultima_fecha = hoy
     user.reto_fallidos_total = (getattr(user, 'reto_fallidos_total', 0) or 0) + 1
     user.reto_intentos_fallidos_total = (getattr(user, 'reto_intentos_fallidos_total', 0) or 0) + 1
-    user.save(update_fields=['reto_racha_actual', 'reto_semana_progreso', 'reto_ultima_fecha', 'reto_fallidos_total', 'reto_intentos_fallidos_total'])
+    categoria = request.data.get('categoria', '')
+    campos_skill = registrar_resultado_reto(user, categoria, False)
+    user.save(update_fields=['reto_racha_actual', 'reto_semana_progreso', 'reto_ultima_fecha', 'reto_fallidos_total', 'reto_intentos_fallidos_total'] + campos_skill)
 
     return Response({
         'success': True,

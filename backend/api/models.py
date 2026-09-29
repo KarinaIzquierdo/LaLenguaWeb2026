@@ -61,6 +61,17 @@ class CustomUser(AbstractUser):
     skill_vocabulario = models.IntegerField(default=0, help_text="Nivel de vocabulario (0-3 estrellas)")
     skill_gramatica = models.IntegerField(default=0, help_text="Nivel de gramática (0-3 estrellas)")
     skill_conversacion = models.IntegerField(default=0, help_text="Nivel de conversación (0-3 estrellas)")
+    skill_expresiones = models.IntegerField(default=0, help_text="Nivel de expresiones (0-3 estrellas)")
+
+    # Contadores por categoría del reto diario (alimentan el radar de habilidades)
+    reto_vocab_intentos = models.IntegerField(default=0)
+    reto_vocab_aciertos = models.IntegerField(default=0)
+    reto_gram_intentos = models.IntegerField(default=0)
+    reto_gram_aciertos = models.IntegerField(default=0)
+    reto_conv_intentos = models.IntegerField(default=0)
+    reto_conv_aciertos = models.IntegerField(default=0)
+    reto_expr_intentos = models.IntegerField(default=0)
+    reto_expr_aciertos = models.IntegerField(default=0)
     
     # Progreso semanal de retos diarios (0 a 7 segmentos visuales)
     reto_semana_progreso = models.IntegerField(default=0, help_text="Segmentos completados esta semana (0-7)")
@@ -814,11 +825,11 @@ class DailyChallengeQuestion(models.Model):
         ('vocabulary', 'Vocabulario'),
         ('grammar', 'Gramática'),
         ('conversation', 'Conversación'),
-        ('general', 'General'),
+        ('expressions', 'Expresiones'),
     ]
 
     pregunta = models.TextField()
-    categoria = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='general')
+    categoria = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='vocabulary')
     nivel = models.CharField(max_length=50, blank=True, null=True, help_text="Nivel sugerido (A1, A2, B1, etc.)")
 
     opcion_a = models.CharField(max_length=255)

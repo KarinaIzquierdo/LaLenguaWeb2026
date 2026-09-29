@@ -37,6 +37,7 @@ interface DailyChallenge {
   options: string[];
   correctAnswer: number;
   explanation: string;
+  category?: string;
 }
 
 const DEFAULT_DAILY_CHALLENGES: DailyChallenge[] = [
@@ -132,6 +133,7 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
   const [skillVocabulario, setSkillVocabulario] = useState(0);
   const [skillGramatica, setSkillGramatica] = useState(0);
   const [skillConversacion, setSkillConversacion] = useState(0);
+  const [skillExpresiones, setSkillExpresiones] = useState(0);
   const [weeklyProgress, setWeeklyProgress] = useState(0);
   const [userFirstName, setUserFirstName] = useState<string>('');
 
@@ -364,6 +366,7 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
           skill_vocabulario,
           skill_gramatica,
           skill_conversacion,
+          skill_expresiones,
           reto_semana_progreso,
           reto_racha_actual,
           reto_ultima_fecha,
@@ -377,6 +380,7 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
         setSkillVocabulario(skill_vocabulario ?? 0);
         setSkillGramatica(skill_gramatica ?? 0);
         setSkillConversacion(skill_conversacion ?? 0);
+        setSkillExpresiones(skill_expresiones ?? 0);
         setWeeklyProgress(reto_semana_progreso ?? 0);
 
         const racha = typeof reto_racha_actual === 'number' ? reto_racha_actual : 0;
@@ -506,7 +510,7 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
 
     if (currentChallenge && selectedAnswer === currentChallenge.correctAnswer) {
       try {
-        const resp = await gamificationService.claimDailyChallenge();
+        const resp = await gamificationService.claimDailyChallenge(currentChallenge.category);
         if (!resp.success) {
           showNotification('info', 'Reto diario', resp.message || 'Ya reclamaste la recompensa del reto diario hoy.');
         } else if (resp.data) {
@@ -551,7 +555,7 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
       setWeeklyProgress(0);
       localStorage.setItem(`challengeProgress_${userId}`, '0');
       try {
-        await gamificationService.registerDailyChallengeFailure();
+        await gamificationService.registerDailyChallengeFailure(currentChallenge?.category);
       } catch (error) {
         console.error('Error registrando fallo de reto diario:', error);
       }
@@ -630,6 +634,7 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
             options: item.options || [],
             correctAnswer: item.correct_answer,
             explanation: item.explanation || '',
+            category: item.category || '',
           }));
           if (mapped.length > 0) setDailyChallenges(mapped);
         }
@@ -841,6 +846,7 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
             skillVocabulario={skillVocabulario}
             skillGramatica={skillGramatica}
             skillConversacion={skillConversacion}
+            skillExpresiones={skillExpresiones}
           />
         );
       case 'recompensas':

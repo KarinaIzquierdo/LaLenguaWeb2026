@@ -8,8 +8,13 @@ interface GamificacionEstadoResponse {
     reto_racha_actual: number;
     reto_mejor_racha: number;
     reto_ultima_fecha: string | null;
+    reto_semana_progreso?: number;
     reto_completados_total?: number;
     reto_fallidos_total?: number;
+    skill_vocabulario?: number;
+    skill_gramatica?: number;
+    skill_conversacion?: number;
+    skill_expresiones?: number;
     title?: string;
     title_code?: string;
     next_title_xp?: number | null;
@@ -54,10 +59,11 @@ export const gamificationService = {
     return json;
   },
 
-  async claimDailyChallenge(): Promise<GamificacionAccionResponse> {
+  async claimDailyChallenge(categoria?: string): Promise<GamificacionAccionResponse> {
     const res = await fetch(`${API_BASE_URL}/gamificacion/reto-diario/`, {
       method: 'POST',
       headers: getAuthHeaders(),
+      body: JSON.stringify({ categoria: categoria || '' }),
     });
 
     const json = (await res.json()) as GamificacionAccionResponse;
@@ -68,10 +74,11 @@ export const gamificationService = {
     return json;
   },
 
-  async registerDailyChallengeFailure(): Promise<GamificacionAccionResponse> {
+  async registerDailyChallengeFailure(categoria?: string): Promise<GamificacionAccionResponse> {
     const res = await fetch(`${API_BASE_URL}/gamificacion/reto-diario-fallo/`, {
       method: 'POST',
       headers: getAuthHeaders(),
+      body: JSON.stringify({ categoria: categoria || '' }),
     });
 
     const json = (await res.json()) as GamificacionAccionResponse;
