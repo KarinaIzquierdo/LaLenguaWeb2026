@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import './HojaInfoProgreso.css';
 
 export default function HojaInfoProgreso() {
@@ -17,8 +18,9 @@ export default function HojaInfoProgreso() {
         <span className="hojainfo-fab-brinillo" />
       </button>
 
-      {/* Hoja de libreta */}
-      {abierta && (
+      {/* Hoja de libreta (portal al body para que no quede tapada por el panel) */}
+      {abierta &&
+        createPortal(
         <div className="hojainfo-overlay" onClick={() => setAbierta(false)}>
           <div className="hojainfo-hoja" onClick={(e) => e.stopPropagation()}>
             {/* Cinta adhesiva */}
@@ -82,7 +84,8 @@ export default function HojaInfoProgreso() {
               a la vez. ¡No lo sueltes! 🔥
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
