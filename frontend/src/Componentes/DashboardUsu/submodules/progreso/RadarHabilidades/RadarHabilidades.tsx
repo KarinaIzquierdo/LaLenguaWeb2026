@@ -20,7 +20,7 @@ const DURACION_MS = 1200;
 export default function RadarHabilidades({
   datos,
   max = 3,
-  tamano = 340,
+  tamano = 380,
   minIntentosEvaluar = 5,
 }: RadarHabilidadesProps) {
   const [anim, setAnim] = useState(0);

@@ -953,7 +953,7 @@ body {
 
 /* Progress */
 .progress-panel {
-  max-width: 700px;
+  width: 100%;
 }
 
 .progress-summary {
