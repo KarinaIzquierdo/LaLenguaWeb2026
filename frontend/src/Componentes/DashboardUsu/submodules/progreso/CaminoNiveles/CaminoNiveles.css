@@ -24,8 +24,8 @@
 
 .camino-segmento.completado {
   stroke: url(#camino-gradiente);
-  stroke-dasharray: 110;
-  stroke-dashoffset: 110;
+  stroke-dasharray: 150;
+  stroke-dashoffset: 150;
   animation: camino-llenar 0.9s ease-out forwards;
 }
 

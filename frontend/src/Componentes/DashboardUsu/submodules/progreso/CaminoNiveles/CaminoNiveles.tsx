@@ -21,10 +21,21 @@ const NIVELES: Nivel[] = [
   { nombre: 'Experto', xp: 1500 },
 ];
 
-const PESO_ANCHO = 600;
-const NODO_INICIO_X = 60;
-const NODO_ESPACIO = 96;
-const NODO_Y = 34;
+const VIEW_ANCHO = 600;
+const VIEW_ALTO = 200;
+
+// Posiciones serpenteantes: zig-zag vertical a lo largo del camino
+const NODOS_X = [50, 150, 250, 350, 450, 550];
+const NODOS_Y = [140, 60, 140, 60, 140, 60];
+
+function segmentoCurva(i: number): string {
+  const x1 = NODOS_X[i];
+  const y1 = NODOS_Y[i];
+  const x2 = NODOS_X[i + 1];
+  const y2 = NODOS_Y[i + 1];
+  const medio = (x1 + x2) / 2;
+  return `M ${x1} ${y1} C ${medio} ${y1}, ${medio} ${y2}, ${x2} ${y2}`;
+}
 
 export default function CaminoNiveles({ xpTotal }: CaminoNivelesProps) {
   const [nodoActivo, setNodoActivo] = useState<number | null>(null);
@@ -33,13 +44,11 @@ export default function CaminoNiveles({ xpTotal }: CaminoNivelesProps) {
 
   const nivelActual = NIVELES.reduce((acc, nivel, i) => (xp >= nivel.xp ? i : acc), 0);
 
-  const nodoX = (i: number) => NODO_INICIO_X + i * NODO_ESPACIO;
-
   const toggleNodo = (i: number) => setNodoActivo((prev) => (prev === i ? null : i));
 
   return (
     <div className="camino-wrapper">
-      <svg className="camino-svg" viewBox={`0 0 ${PESO_ANCHO} 90`} role="img" aria-label="Camino de niveles">
+      <svg className="camino-svg" viewBox={`0 0 ${VIEW_ANCHO} ${VIEW_ALTO}`} role="img" aria-label="Camino de niveles">
         <defs>
           <linearGradient id="camino-gradiente" x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%" stopColor={COLOR_MODULO} />
@@ -47,16 +56,15 @@ export default function CaminoNiveles({ xpTotal }: CaminoNivelesProps) {
           </linearGradient>
         </defs>
 
-        {/* Segmentos del camino */}
+        {/* Segmentos curvos del camino */}
         {NIVELES.slice(0, -1).map((_, i) => {
           const completado = i < nivelActual;
           return (
-            <line
+            <path
               key={i}
-              x1={nodoX(i)}
-              y1={NODO_Y}
-              x2={nodoX(i + 1)}
-              y2={NODO_Y}
+              d={segmentoCurva(i)}
+              fill="none"
+              pathLength={150}
               className={`camino-segmento ${completado ? 'completado' : 'pendiente'}`}
             />
           );
@@ -66,7 +74,10 @@ export default function CaminoNiveles({ xpTotal }: CaminoNivelesProps) {
         {NIVELES.map((nivel, i) => {
           const pasado = i < nivelActual;
           const actual = i === nivelActual;
-          const cx = nodoX(i);
+          const cx = NODOS_X[i];
+          const cy = NODOS_Y[i];
+          // Nombre debajo si el nodo va en la parte baja del zig-zag, encima si va arriba
+          const textoY = cy > 100 ? cy + 38 : cy - 34;
           return (
             <g
               key={nivel.nombre}
@@ -75,18 +86,17 @@ export default function CaminoNiveles({ xpTotal }: CaminoNivelesProps) {
               onMouseEnter={() => setNodoActivo(i)}
               onMouseLeave={() => setNodoActivo(null)}
             >
-              {/* Anillo pulsante del nodo actual */}
-              {actual && <circle cx={cx} cy={NODO_Y} r="24" className="camino-pulso" />}
+              {actual && <circle cx={cx} cy={cy} r="24" className="camino-pulso" />}
               <circle
                 cx={cx}
-                cy={NODO_Y}
-                r={actual ? 17 : 13}
+                cy={cy}
+                r={actual ? 20 : 15}
                 className={`camino-nodo ${pasado ? 'pasado' : ''} ${actual ? 'actual' : ''} ${!pasado && !actual ? 'futuro' : ''}`}
               />
-              <text x={cx} y={NODO_Y + 5} textAnchor="middle" className="camino-icono">
+              <text x={cx} y={cy + 6} textAnchor="middle" className="camino-icono">
                 {pasado ? '✓' : actual ? '🏅' : '🔒'}
               </text>
-              <text x={cx} y={NODO_Y + 48} textAnchor="middle" className={`camino-nombre ${actual ? 'nombre-actual' : ''}`}>
+              <text x={cx} y={textoY} textAnchor="middle" className={`camino-nombre ${actual ? 'nombre-actual' : ''}`}>
                 {nivel.nombre}
               </text>
             </g>
@@ -99,7 +109,7 @@ export default function CaminoNiveles({ xpTotal }: CaminoNivelesProps) {
         <div
           className="camino-tooltip"
           style={{
-            left: `${(nodoX(nodoActivo) / PESO_ANCHO) * 100}%`,
+            left: `${(NODOS_X[nodoActivo] / VIEW_ANCHO) * 100}%`,
           }}
         >
           <strong>{NIVELES[nodoActivo].nombre}</strong>
