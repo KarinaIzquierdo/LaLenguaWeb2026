@@ -1,8 +1,25 @@
 .radar-wrapper {
   position: relative;
-  width: 320px;
+  width: 380px;
   max-width: 100%;
   margin: 0 auto;
+}
+
+@media (max-width: 480px) {
+  .radar-etiqueta {
+    font-size: 0.85em;
+  }
+
+  .radar-nombre {
+    font-size: 0.7rem;
+    letter-spacing: 0.3px;
+  }
+
+  .radar-tooltip {
+    max-width: 170px;
+    font-size: 12px;
+    padding: 8px 10px;
+  }
 }
 
 .radar-svg {

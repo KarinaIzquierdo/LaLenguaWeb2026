@@ -114,6 +114,11 @@
   animation: deco-flotar 3.5s ease-in-out infinite;
 }
 
+.camino-bandera.bandera-meta {
+  font-size: 30px;
+  filter: drop-shadow(0 0 6px rgba(247, 197, 107, 0.8));
+}
+
 /* Nodo por desbloquear (tramo ≥85%) */
 .camino-pulso.pulso-dorado {
   stroke: #f7c56b;

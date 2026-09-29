@@ -21,7 +21,7 @@ const NIVELES: Nivel[] = [
   { nombre: 'Experto', xp: 1500 },
 ];
 
-const VIEW_ANCHO = 600;
+const VIEW_ANCHO = 640;
 const VIEW_ALTO = 200;
 
 // Posiciones serpenteantes: zig-zag vertical a lo largo del camino
@@ -133,11 +133,11 @@ export default function CaminoNiveles({ xpTotal }: CaminoNivelesProps) {
           );
         })}
 
-        {/* Banderas de inicio y meta */}
+        {/* Banderas: 🏁 marca la salida, ⭐ señala la meta sobre el nodo final */}
         <text x={NODOS_X[0] - 30} y={NODOS_Y[0] - 24} className="camino-bandera">
           🏁
         </text>
-        <text x={NODOS_X[5] + 30} y={NODOS_Y[5] - 20} className="camino-bandera">
+        <text x={NODOS_X[5] + 34} y={NODOS_Y[5] + 8} className="camino-bandera bandera-meta">
           ⭐
         </text>
 
@@ -149,7 +149,8 @@ export default function CaminoNiveles({ xpTotal }: CaminoNivelesProps) {
           const cy = NODOS_Y[i];
           // El siguiente nodo titila cuando el tramo actual va ≥85%
           const casiDesbloqueado = i === nivelActual + 1 && tramoActualProgreso >= 0.85;
-          const textoY = cy > 100 ? cy + 38 : cy - 34;
+          // En el nodo final el nombre va debajo para dejar espacio a la ⭐ de meta
+          const textoY = i === NIVELES.length - 1 ? cy + 38 : cy > 100 ? cy + 38 : cy - 34;
           return (
             <g
               key={nivel.nombre}

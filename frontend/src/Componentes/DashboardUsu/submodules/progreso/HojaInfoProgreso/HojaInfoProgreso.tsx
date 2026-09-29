@@ -38,8 +38,11 @@ export default function HojaInfoProgreso() {
               <div>
                 <strong>Tu camino</strong>
                 <p>
-                  Cada nivel (Principiante → Experto) se desbloquea acumulando <em>XP</em>. Ganas XP
-                  con retos diarios, misiones y clase. Pasa el mouse sobre cada nodo para ver cuánto te falta.
+                  Una ruta zig-zag de <em>Principiante a Experto</em> (termina en la ⭐). Cada nivel
+                  se desbloquea acumulando <em>XP</em>: la línea se va pintando en teal a medida que
+                  avanzas. Cuando falta poco, el siguiente candado <em>brilla dorado</em> ✨ y al
+                  desbloquear... ¡llueve confetti! 🎊 Pasa el mouse sobre cada nodo para ver
+                  cuánto XP te falta.
                 </p>
               </div>
             </div>
@@ -49,8 +52,9 @@ export default function HojaInfoProgreso() {
               <div>
                 <strong>El anillo</strong>
                 <p>
-                  Te muestra qué tan cerca estás de tu siguiente título. Cuando llega al
-                  100%... ¡subes de rango! ✨
+                  Es tu progreso <em>dentro del nivel actual</em>. Debajo verás tu título real y
+                  cuántos XP necesitas para el siguiente. Al llegar al <em>100%</em> el sello cambia
+                  y subes de rango.
                 </p>
               </div>
             </div>
@@ -60,9 +64,10 @@ export default function HojaInfoProgreso() {
               <div>
                 <strong>Tus habilidades</strong>
                 <p>
-                  El radar registra tus respuestas del reto diario por tema: Vocabulario, Gramática,
-                  Conversación y Expresiones. Necesitas <em>5 retos</em> por tema para calcular tu
-                  nivel, y las estrellas suben con tu precisión:
+                  El radar registra tus retos diarios por tema: Vocabulario, Gramática, Conversación
+                  y Expresiones. <em>Pasa el mouse sobre cada puntito</em> y ve tus aciertos reales
+                  y qué te falta para la siguiente estrella. Necesitas <em>5 retos</em> por tema
+                  para obtener tu evaluación:
                 </p>
                 <div className="hojainfo-regla">
                   <span>⭐ ≥ 50%</span>
@@ -73,7 +78,8 @@ export default function HojaInfoProgreso() {
             </div>
 
             <div className="hojainfo-pie">
-              <span>💡</span> Tip: la constancia manda. ¡Un reto al día mantiene tu racha viva! 🔥
+              <span>💡</span> Tip: la constancia manda — el reto diario suma XP, racha y estrellas
+              a la vez. ¡No lo sueltes! 🔥
             </div>
           </div>
         </div>
