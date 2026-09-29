@@ -1260,7 +1260,8 @@ def get_title_from_xp(total_xp: int):
         (1000, 'Avanzado', 'avanzado', 1500),
         (1500, 'Experto', 'experto', None),
     ]
-    for min_xp, title, code, next_xp in thresholds:
+    # Iterar de mayor a menor: el primer umbral alcanzado define el título
+    for min_xp, title, code, next_xp in reversed(thresholds):
         if total_xp >= min_xp:
             return {'title': title, 'title_code': code, 'next_title_xp': next_xp}
     return {'title': 'Principiante', 'title_code': 'principiante', 'next_title_xp': 100}
