@@ -144,9 +144,14 @@
   color: white;
 }
 
+.challenge-option.selected .option-text {
+  color: #1e40af;
+}
+
 .option-text {
   flex: 1;
   font-weight: 500;
+  color: #1e293b;
 }
 
 .challenge-actions {
