@@ -2,6 +2,7 @@ import React from 'react';
 import '../DashboardStudent.css';
 import AnilloProgreso from './progreso/AnilloProgreso';
 import RadarHabilidades from './progreso/RadarHabilidades';
+import CaminoNiveles from './progreso/CaminoNiveles';
 
 interface ProgressViewProps {
   userTitle: string;
@@ -27,6 +28,11 @@ export default function ProgressView({
       <h2 className="module-title">Progreso</h2>
 
       <div className="panel progress-panel">
+        <div className="camino-section">
+          <h3 className="progress-subtitle">Tu camino</h3>
+          <CaminoNiveles xpTotal={experience} />
+        </div>
+
         <div className="progress-summary">
           <h3 className="progress-subtitle">Mi nivel: {userTitle || 'Principiante'}</h3>
           <AnilloProgreso porcentaje={progressPercentage} xp={experience} />

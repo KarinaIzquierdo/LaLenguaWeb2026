@@ -1,0 +1,154 @@
+.camino-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+  padding-bottom: 8px;
+}
+
+.camino-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.camino-segmento {
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+
+.camino-segmento.pendiente {
+  stroke: #d8e4e5;
+  stroke-dasharray: 6 8;
+}
+
+.camino-segmento.completado {
+  stroke: url(#camino-gradiente);
+  stroke-dasharray: 110;
+  stroke-dashoffset: 110;
+  animation: camino-llenar 0.9s ease-out forwards;
+}
+
+@keyframes camino-llenar {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.camino-nodo {
+  stroke-width: 3;
+  cursor: pointer;
+  transition: r 0.2s ease, filter 0.2s ease;
+}
+
+.camino-nodo.pasado {
+  fill: #53b1b4;
+  stroke: #ffffff;
+}
+
+.camino-nodo.actual {
+  fill: url(#camino-gradiente);
+  stroke: #ffffff;
+  filter: drop-shadow(0 4px 10px rgba(83, 177, 180, 0.45));
+}
+
+.camino-nodo.futuro {
+  fill: #eef4f5;
+  stroke: #c3d8d9;
+}
+
+.camino-nodo-grupo:hover .camino-nodo {
+  filter: brightness(1.05) drop-shadow(0 2px 8px rgba(83, 177, 180, 0.35));
+}
+
+.camino-pulso {
+  fill: none;
+  stroke: #53b1b4;
+  stroke-width: 3;
+  opacity: 0.6;
+  animation: camino-pulsar 1.8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes camino-pulsar {
+  0% {
+    r: 20;
+    opacity: 0.6;
+  }
+  100% {
+    r: 30;
+    opacity: 0;
+  }
+}
+
+.camino-icono {
+  font-size: 14px;
+  pointer-events: none;
+}
+
+.camino-nombre {
+  font-size: 13px;
+  font-weight: 600;
+  fill: #5b7d7f;
+  pointer-events: none;
+}
+
+.camino-nombre.nombre-actual {
+  fill: #23787b;
+  font-weight: 800;
+}
+
+.camino-tooltip {
+  position: absolute;
+  top: 0;
+  transform: translate(-50%, -105%);
+  background: #1e293b;
+  color: #ffffff;
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  white-space: nowrap;
+  z-index: 10;
+  pointer-events: none;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  animation: camino-tooltip-in 0.15s ease-out;
+}
+
+.camino-tooltip strong {
+  color: #7fc6c8;
+}
+
+.camino-tooltip::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-bottom: none;
+  border-top-color: #1e293b;
+}
+
+@keyframes camino-tooltip-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -95%);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -105%);
+  }
+}
+
+@media (max-width: 640px) {
+  .camino-nombre {
+    font-size: 10px;
+  }
+
+  .camino-icono {
+    font-size: 12px;
+  }
+}
