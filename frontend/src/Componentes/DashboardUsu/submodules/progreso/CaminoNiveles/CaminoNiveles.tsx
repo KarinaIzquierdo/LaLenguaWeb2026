@@ -137,7 +137,7 @@ export default function CaminoNiveles({ xpTotal }: CaminoNivelesProps) {
         <text x={NODOS_X[0] - 30} y={NODOS_Y[0] - 24} className="camino-bandera">
           🏁
         </text>
-        <text x={NODOS_X[5] + 34} y={NODOS_Y[5] + 8} className="camino-bandera bandera-meta">
+        <text x={NODOS_X[5] + 62} y={NODOS_Y[5] + 8} className="camino-bandera bandera-meta">
           ⭐
         </text>
 
