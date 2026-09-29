@@ -1,6 +1,7 @@
 import React from 'react';
 import '../DashboardStudent.css';
 import AnilloProgreso from './progreso/AnilloProgreso';
+import RadarHabilidades from './progreso/RadarHabilidades';
 
 interface ProgressViewProps {
   userTitle: string;
@@ -10,12 +11,6 @@ interface ProgressViewProps {
   skillGramatica: number;
   skillConversacion: number;
 }
-
-const renderStars = (level: number) => {
-  const filled = Math.max(0, Math.min(3, level));
-  const empty = 3 - filled;
-  return '⭐'.repeat(filled) + '☆'.repeat(empty);
-};
 
 export default function ProgressView({
   userTitle,
@@ -35,19 +30,13 @@ export default function ProgressView({
           <AnilloProgreso porcentaje={progressPercentage} xp={experience} />
         </div>
 
-        <div className="skills-grid">
-          <div className="skill-card skill-vocabulario">
-            <span className="skill-name">Vocabulario</span>
-            <div className="skill-stars">{renderStars(skillVocabulario)}</div>
-          </div>
-          <div className="skill-card skill-gramatica">
-            <span className="skill-name">Gramática</span>
-            <div className="skill-stars">{renderStars(skillGramatica)}</div>
-          </div>
-          <div className="skill-card skill-conversacion">
-            <span className="skill-name">Conversación</span>
-            <div className="skill-stars">{renderStars(skillConversacion)}</div>
-          </div>
+        <div className="skills-section">
+          <h3 className="progress-subtitle">Tus habilidades</h3>
+          <RadarHabilidades
+            vocabulario={skillVocabulario}
+            gramatica={skillGramatica}
+            conversacion={skillConversacion}
+          />
         </div>
       </div>
     </div>

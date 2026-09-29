@@ -1,0 +1,69 @@
+.radar-wrapper {
+  position: relative;
+  width: 320px;
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+.radar-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.radar-nivel {
+  fill: none;
+  stroke: #dfe9ea;
+  stroke-width: 1;
+}
+
+.radar-nivel:last-of-type {
+  stroke: #c3d8d9;
+  stroke-width: 1.5;
+}
+
+.radar-eje {
+  stroke: #dfe9ea;
+  stroke-width: 1;
+}
+
+.radar-datos {
+  fill: url(#radar-gradiente);
+  stroke: #53b1b4;
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+  transition: points 0.1s linear;
+}
+
+.radar-vertice {
+  fill: #53b1b4;
+  stroke: #ffffff;
+  stroke-width: 2.5;
+}
+
+.radar-etiqueta {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  pointer-events: none;
+}
+
+.radar-nombre {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #23787b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.radar-valor {
+  display: block;
+  font-size: 0.9rem;
+  color: #53b1b4;
+  letter-spacing: 2px;
+}
+
+.radar-vacias {
+  color: #d8e4e5;
+}

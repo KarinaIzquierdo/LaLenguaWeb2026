@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { rangoPorPorcentaje } from '../rangos';
+import { rangoPorPorcentaje, COLOR_MODULO, COLOR_MODULO_OSCURO } from '../rangos';
 import './AnilloProgreso.css';
 
 interface AnilloProgresoProps {
@@ -46,8 +46,8 @@ export default function AnilloProgreso({ porcentaje, xp, tamano = 260 }: AnilloP
       <svg className="anillo-svg" viewBox="0 0 240 240">
         <defs>
           <linearGradient id="anillo-gradiente" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor={rango.color} />
-            <stop offset="100%" stopColor="#8b5cf6" />
+            <stop offset="0%" stopColor={COLOR_MODULO} />
+            <stop offset="100%" stopColor={COLOR_MODULO_OSCURO} />
           </linearGradient>
         </defs>
         <circle className="anillo-fondo" cx="120" cy="120" r={radio} />
