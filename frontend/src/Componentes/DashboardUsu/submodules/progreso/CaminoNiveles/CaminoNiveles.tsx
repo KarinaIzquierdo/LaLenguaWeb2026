@@ -59,14 +59,31 @@ export default function CaminoNiveles({ xpTotal }: CaminoNivelesProps) {
         {/* Segmentos curvos del camino */}
         {NIVELES.slice(0, -1).map((_, i) => {
           const completado = i < nivelActual;
+          // Tramo actual: fracción de XP acumulado hacia el siguiente nodo (0 a 1)
+          let progreso = 0;
+          if (i === nivelActual) {
+            const desde = NIVELES[i].xp;
+            const hasta = NIVELES[i + 1].xp;
+            progreso = Math.min(1, Math.max(0, (xp - desde) / (hasta - desde)));
+          }
           return (
-            <path
-              key={i}
-              d={segmentoCurva(i)}
-              fill="none"
-              pathLength={150}
-              className={`camino-segmento ${completado ? 'completado' : 'pendiente'}`}
-            />
+            <g key={i}>
+              <path
+                d={segmentoCurva(i)}
+                fill="none"
+                pathLength={150}
+                className={`camino-segmento ${completado ? 'completado' : 'pendiente'}`}
+              />
+              {!completado && progreso > 0 && (
+                <path
+                  d={segmentoCurva(i)}
+                  fill="none"
+                  pathLength={150}
+                  strokeDasharray={`${progreso * 150} 150`}
+                  className="camino-segmento camino-parcial"
+                />
+              )}
+            </g>
           );
         })}
 

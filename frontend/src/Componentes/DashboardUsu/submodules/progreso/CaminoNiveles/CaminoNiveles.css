@@ -29,6 +29,11 @@
   animation: camino-llenar 0.9s ease-out forwards;
 }
 
+.camino-segmento.camino-parcial {
+  stroke: url(#camino-gradiente);
+  transition: stroke-dasharray 0.8s ease-out;
+}
+
 @keyframes camino-llenar {
   to {
     stroke-dashoffset: 0;
