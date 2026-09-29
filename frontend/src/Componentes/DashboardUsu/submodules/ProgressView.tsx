@@ -38,8 +38,6 @@ export default function ProgressView({
 }: ProgressViewProps) {
   return (
     <div className="module-view">
-      <h2 className="module-title">Progreso</h2>
-
       <div className="panel progress-panel">
         {/* Ambiente de fondo: degradado + blobs difuminados */}
         <div className="ambiente-fondo" aria-hidden="true" />
