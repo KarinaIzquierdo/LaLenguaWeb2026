@@ -6,11 +6,28 @@ interface AnilloProgresoProps {
   porcentaje: number;
   xp: number;
   tamano?: number;
+  titulo?: string;
+  proximoTituloXp?: number | null;
 }
 
 const DURACION_MS = 1500;
 
-export default function AnilloProgreso({ porcentaje, xp, tamano = 260 }: AnilloProgresoProps) {
+const NOMBRE_TITULOS: Record<string, string> = {
+  principiante: 'Principiante',
+  explorador: 'Explorador',
+  aventurero: 'Aventurero',
+  intermedio: 'Intermedio',
+  avanzado: 'Avanzado',
+  experto: 'Experto',
+};
+
+export default function AnilloProgreso({
+  porcentaje,
+  xp,
+  tamano = 260,
+  titulo,
+  proximoTituloXp,
+}: AnilloProgresoProps) {
   const objetivo = Math.max(0, Math.min(100, porcentaje));
   const [progreso, setProgreso] = useState(0);
   const [xpAnimado, setXpAnimado] = useState(0);
@@ -36,6 +53,9 @@ export default function AnilloProgreso({ porcentaje, xp, tamano = 260 }: AnilloP
   }, [objetivo, xp]);
 
   const rango = rangoPorPorcentaje(objetivo);
+  const tituloVisible = titulo
+    ? NOMBRE_TITULOS[titulo.toLowerCase()] || titulo.charAt(0).toUpperCase() + titulo.slice(1).toLowerCase()
+    : rango.nombre;
 
   const radio = 100;
   const circunferencia = 2 * Math.PI * radio;
@@ -67,8 +87,11 @@ export default function AnilloProgreso({ porcentaje, xp, tamano = 260 }: AnilloP
           className="anillo-rango"
           style={{ backgroundColor: `${rango.color}22`, color: rango.color }}
         >
-          {rango.nombre}
+          {tituloVisible}
         </span>
+        {proximoTituloXp ? (
+          <span className="anillo-meta">Siguiente: {proximoTituloXp.toLocaleString('es-CO')} XP</span>
+        ) : null}
       </div>
     </div>
   );

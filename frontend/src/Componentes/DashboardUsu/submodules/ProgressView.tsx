@@ -21,6 +21,8 @@ export interface SkillDatos {
 
 interface ProgressViewProps {
   userTitle: string;
+  userTitleCode: string | null;
+  nextTitleXp: number | null;
   progressPercentage: number;
   experience: number;
   skillDatos: SkillDatos;
@@ -28,6 +30,8 @@ interface ProgressViewProps {
 
 export default function ProgressView({
   userTitle,
+  userTitleCode,
+  nextTitleXp,
   progressPercentage,
   experience,
   skillDatos,
@@ -49,7 +53,12 @@ export default function ProgressView({
         <div className="progress-columns">
           <div className="progress-summary">
             <h3 className="progress-subtitle">Mi nivel: {userTitle || 'Principiante'}</h3>
-            <AnilloProgreso porcentaje={progressPercentage} xp={experience} />
+            <AnilloProgreso
+              porcentaje={progressPercentage}
+              xp={experience}
+              titulo={userTitleCode || userTitle}
+              proximoTituloXp={nextTitleXp ?? 0}
+            />
           </div>
 
           <div className="skills-section">

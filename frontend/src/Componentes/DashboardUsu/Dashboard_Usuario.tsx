@@ -764,32 +764,17 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
   };
 
   const progressPercentage = (() => {
-    if (!nextTitleXp || nextTitleXp <= 0) return 100;
-    const code = userTitleCode || '';
-    let minXp = 0;
-    switch (code) {
-      case 'explorador':
-        minXp = 100;
-        break;
-      case 'aventurero':
-        minXp = 300;
-        break;
-      case 'intermedio':
-        minXp = 600;
-        break;
-      case 'avanzado':
-        minXp = 1000;
-        break;
-      case 'experto':
-        minXp = 1500;
-        break;
-      default:
-        minXp = 0;
+    // Umbrales de título (mismos del backend): progreso dentro del nivel actual
+    const UMBRALES = [0, 100, 300, 600, 1000, 1500];
+    const xp = Math.max(0, experience || 0);
+    if (xp >= UMBRALES[UMBRALES.length - 1]) return 100;
+    for (let i = UMBRALES.length - 1; i >= 1; i--) {
+      if (xp >= UMBRALES[i - 1] && xp < UMBRALES[i]) {
+        const span = UMBRALES[i] - UMBRALES[i - 1];
+        return Math.max(0, Math.min(100, Math.round(((xp - UMBRALES[i - 1]) / span) * 100)));
+      }
     }
-    const span = nextTitleXp - minXp;
-    if (span <= 0) return 100;
-    const value = ((experience - minXp) / span) * 100;
-    return Math.max(0, Math.min(100, Math.round(value)));
+    return 0;
   })();
 
   const renderModule = () => {
@@ -853,6 +838,8 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
         return (
           <ProgressView
             userTitle={userTitle}
+            userTitleCode={userTitleCode}
+            nextTitleXp={nextTitleXp}
             progressPercentage={progressPercentage}
             experience={experience}
             skillDatos={skillDatos}
