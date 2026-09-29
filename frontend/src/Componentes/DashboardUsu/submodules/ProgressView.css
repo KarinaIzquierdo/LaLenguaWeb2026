@@ -1,0 +1,59 @@
+/* Layout y ambiente del panel de Progreso */
+
+.progress-panel {
+  position: relative;
+  overflow: hidden;
+}
+
+.progress-panel > *:not(.ambiente-fondo) {
+  position: relative;
+  z-index: 1;
+}
+
+/* Fondo ambiental: degradado teal sutil + blobs difuminados */
+.ambiente-fondo {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(127, 198, 200, 0.09), transparent 45%);
+}
+
+.ambiente-fondo::before {
+  content: '';
+  position: absolute;
+  top: -80px;
+  right: -60px;
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(83, 177, 180, 0.16), transparent 70%);
+  filter: blur(8px);
+}
+
+.ambiente-fondo::after {
+  content: '';
+  position: absolute;
+  bottom: -70px;
+  left: -50px;
+  width: 230px;
+  height: 230px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(116, 190, 168, 0.14), transparent 70%);
+  filter: blur(10px);
+}
+
+/* Dos columnas: anillo | radar */
+.progress-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: start;
+  margin-top: 20px;
+}
+
+@media (max-width: 900px) {
+  .progress-columns {
+    grid-template-columns: 1fr;
+  }
+}

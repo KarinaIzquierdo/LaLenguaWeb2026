@@ -4,6 +4,7 @@ import AnilloProgreso from './progreso/AnilloProgreso';
 import RadarHabilidades from './progreso/RadarHabilidades';
 import CaminoNiveles from './progreso/CaminoNiveles';
 import HojaInfoProgreso from './progreso/HojaInfoProgreso';
+import './ProgressView.css';
 
 export interface SkillDato {
   valor: number;
@@ -35,7 +36,9 @@ export default function ProgressView({
     <div className="module-view">
       <h2 className="module-title">Progreso</h2>
 
-      <div className="panel progress-panel" style={{ position: 'relative' }}>
+      <div className="panel progress-panel">
+        {/* Ambiente de fondo: degradado + blobs difuminados */}
+        <div className="ambiente-fondo" aria-hidden="true" />
         <HojaInfoProgreso />
 
         <div className="camino-section">
@@ -43,14 +46,16 @@ export default function ProgressView({
           <CaminoNiveles xpTotal={experience} />
         </div>
 
-        <div className="progress-summary">
-          <h3 className="progress-subtitle">Mi nivel: {userTitle || 'Principiante'}</h3>
-          <AnilloProgreso porcentaje={progressPercentage} xp={experience} />
-        </div>
+        <div className="progress-columns">
+          <div className="progress-summary">
+            <h3 className="progress-subtitle">Mi nivel: {userTitle || 'Principiante'}</h3>
+            <AnilloProgreso porcentaje={progressPercentage} xp={experience} />
+          </div>
 
-        <div className="skills-section">
-          <h3 className="progress-subtitle">Tus habilidades</h3>
-          <RadarHabilidades datos={skillDatos} />
+          <div className="skills-section">
+            <h3 className="progress-subtitle">Tus habilidades</h3>
+            <RadarHabilidades datos={skillDatos} />
+          </div>
         </div>
       </div>
     </div>

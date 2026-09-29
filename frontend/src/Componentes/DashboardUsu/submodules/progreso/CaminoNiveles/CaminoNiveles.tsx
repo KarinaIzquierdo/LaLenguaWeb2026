@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { COLOR_MODULO, COLOR_MODULO_OSCURO } from '../rangos';
 import './CaminoNiveles.css';
 
@@ -37,12 +37,53 @@ function segmentoCurva(i: number): string {
   return `M ${x1} ${y1} C ${medio} ${y1}, ${medio} ${y2}, ${x2} ${y2}`;
 }
 
+// Decoración ambiental sobre las curvas del camino (estilo mapa de juego)
+const DECO = ['🌴', '☁️', '⛰️', '🦋', '🌴'];
+
+// Piezas de confetti al subir de nivel
+const COLORES_CONFETTI = ['#53b1b4', '#7fc6c8', '#f7c56b', '#4a9e9e', '#ffffff'];
+
+function generarConfetti() {
+  return Array.from({ length: 26 }, (_, i) => ({
+    id: i,
+    izquierda: Math.random() * 100,
+    retardo: Math.random() * 0.5,
+    tamano: 6 + Math.random() * 7,
+    color: COLORES_CONFETTI[Math.floor(Math.random() * COLORES_CONFETTI.length)],
+    redondeado: Math.random() > 0.5,
+  }));
+}
+
 export default function CaminoNiveles({ xpTotal }: CaminoNivelesProps) {
   const [nodoActivo, setNodoActivo] = useState<number | null>(null);
+  const [confetti, setConfetti] = useState<ReturnType<typeof generarConfetti> | null>(null);
+  const nivelPrevioRef = useRef<number | null>(null);
 
   const xp = Math.max(0, xpTotal || 0);
 
   const nivelActual = NIVELES.reduce((acc, nivel, i) => (xp >= nivel.xp ? i : acc), 0);
+
+  // Detectar subida de nivel → confetti una sola vez
+  useEffect(() => {
+    const previo = nivelPrevioRef.current;
+    if (previo !== null && nivelActual > previo) {
+      setConfetti(generarConfetti());
+      const timer = setTimeout(() => setConfetti(null), 2900);
+      nivelPrevioRef.current = nivelActual;
+      return () => clearTimeout(timer);
+    }
+    nivelPrevioRef.current = nivelActual;
+  }, [nivelActual]);
+
+  // Fracción de progreso del tramo actual (0 a 1)
+  const progresoTramo = (i: number): number => {
+    if (i !== nivelActual) return 0;
+    const desde = NIVELES[i].xp;
+    const hasta = NIVELES[i + 1].xp;
+    return Math.min(1, Math.max(0, (xp - desde) / (hasta - desde)));
+  };
+
+  const tramoActualProgreso = nivelActual < NIVELES.length - 1 ? progresoTramo(nivelActual) : 1;
 
   const toggleNodo = (i: number) => setNodoActivo((prev) => (prev === i ? null : i));
 
@@ -59,13 +100,7 @@ export default function CaminoNiveles({ xpTotal }: CaminoNivelesProps) {
         {/* Segmentos curvos del camino */}
         {NIVELES.slice(0, -1).map((_, i) => {
           const completado = i < nivelActual;
-          // Tramo actual: fracción de XP acumulado hacia el siguiente nodo (0 a 1)
-          let progreso = 0;
-          if (i === nivelActual) {
-            const desde = NIVELES[i].xp;
-            const hasta = NIVELES[i + 1].xp;
-            progreso = Math.min(1, Math.max(0, (xp - desde) / (hasta - desde)));
-          }
+          const progreso = progresoTramo(i);
           return (
             <g key={i}>
               <path
@@ -87,13 +122,33 @@ export default function CaminoNiveles({ xpTotal }: CaminoNivelesProps) {
           );
         })}
 
+        {/* Decoración ambiental sobre las curvas */}
+        {DECO.map((emoji, i) => {
+          const x = (NODOS_X[i] + NODOS_X[i + 1]) / 2;
+          const y = (NODOS_Y[i] + NODOS_Y[i + 1]) / 2 - 26;
+          return (
+            <text key={i} x={x} y={y} textAnchor="middle" className="camino-deco">
+              {emoji}
+            </text>
+          );
+        })}
+
+        {/* Banderas de inicio y meta */}
+        <text x={NODOS_X[0] - 30} y={NODOS_Y[0] - 24} className="camino-bandera">
+          🏁
+        </text>
+        <text x={NODOS_X[5] + 30} y={NODOS_Y[5] - 20} className="camino-bandera">
+          ⭐
+        </text>
+
         {/* Nodos */}
         {NIVELES.map((nivel, i) => {
           const pasado = i < nivelActual;
           const actual = i === nivelActual;
           const cx = NODOS_X[i];
           const cy = NODOS_Y[i];
-          // Nombre debajo si el nodo va en la parte baja del zig-zag, encima si va arriba
+          // El siguiente nodo titila cuando el tramo actual va ≥85%
+          const casiDesbloqueado = i === nivelActual + 1 && tramoActualProgreso >= 0.85;
           const textoY = cy > 100 ? cy + 38 : cy - 34;
           return (
             <g
@@ -104,11 +159,12 @@ export default function CaminoNiveles({ xpTotal }: CaminoNivelesProps) {
               onMouseLeave={() => setNodoActivo(null)}
             >
               {actual && <circle cx={cx} cy={cy} r="24" className="camino-pulso" />}
+              {casiDesbloqueado && <circle cx={cx} cy={cy} r="24" className="camino-pulso pulso-dorado" />}
               <circle
                 cx={cx}
                 cy={cy}
                 r={actual ? 20 : 15}
-                className={`camino-nodo ${pasado ? 'pasado' : ''} ${actual ? 'actual' : ''} ${!pasado && !actual ? 'futuro' : ''}`}
+                className={`camino-nodo ${pasado ? 'pasado' : ''} ${actual ? 'actual' : ''} ${casiDesbloqueado ? 'por-desbloquear' : ''} ${!pasado && !actual && !casiDesbloqueado ? 'futuro' : ''}`}
               />
               <text x={cx} y={cy + 6} textAnchor="middle" className="camino-icono">
                 {pasado ? '✓' : actual ? '🏅' : '🔒'}
@@ -120,6 +176,26 @@ export default function CaminoNiveles({ xpTotal }: CaminoNivelesProps) {
           );
         })}
       </svg>
+
+      {/* Confetti al subir de nivel */}
+      {confetti && (
+        <div className="camino-confetti" aria-hidden="true">
+          {confetti.map((pieza) => (
+            <span
+              key={pieza.id}
+              className="confetti-pieza"
+              style={{
+                left: `${pieza.izquierda}%`,
+                animationDelay: `${pieza.retardo}s`,
+                width: pieza.tamano,
+                height: pieza.redondeado ? pieza.tamano : pieza.tamano * 1.6,
+                background: pieza.color,
+                borderRadius: pieza.redondeado ? '50%' : 2,
+              }}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Tooltip del nodo activo */}
       {nodoActivo !== null && (
