@@ -3,6 +3,7 @@ import '../DashboardStudent.css';
 import AnilloProgreso from './progreso/AnilloProgreso';
 import RadarHabilidades from './progreso/RadarHabilidades';
 import CaminoNiveles from './progreso/CaminoNiveles';
+import HojaInfoProgreso from './progreso/HojaInfoProgreso';
 
 export interface SkillDato {
   valor: number;
@@ -34,7 +35,9 @@ export default function ProgressView({
     <div className="module-view">
       <h2 className="module-title">Progreso</h2>
 
-      <div className="panel progress-panel">
+      <div className="panel progress-panel" style={{ position: 'relative' }}>
+        <HojaInfoProgreso />
+
         <div className="camino-section">
           <h3 className="progress-subtitle">Tu camino</h3>
           <CaminoNiveles xpTotal={experience} />
