@@ -41,10 +41,12 @@ export default function ProgressView({
       <div className="panel progress-panel">
         {/* Ambiente de fondo: degradado + blobs difuminados */}
         <div className="ambiente-fondo" aria-hidden="true" />
-        <HojaInfoProgreso />
 
         <div className="camino-section">
-          <h3 className="progress-subtitle">Tu camino</h3>
+          <div className="camino-header">
+            <h3 className="progress-subtitle">Tu camino</h3>
+            <HojaInfoProgreso />
+          </div>
           <CaminoNiveles xpTotal={experience} />
         </div>
 

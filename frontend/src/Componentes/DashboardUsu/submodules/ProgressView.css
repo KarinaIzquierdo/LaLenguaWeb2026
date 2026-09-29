@@ -43,6 +43,24 @@
   filter: blur(10px);
 }
 
+/* Fila de encabezado del camino: título + bombillo alineados */
+.camino-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.camino-header .progress-subtitle {
+  margin-bottom: 0;
+}
+
+.camino-header .hojainfo-fab {
+  position: relative;
+  top: auto;
+  right: auto;
+  flex-shrink: 0;
+}
+
 /* Dos columnas: anillo | radar */
 .progress-columns {
   display: grid;
