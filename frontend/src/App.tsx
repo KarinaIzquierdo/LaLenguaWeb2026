@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import Home from './Componentes/Home/Home'
 import Blog from './Componentes/Blog/Blog'
 import PlanesPublicos from './Componentes/Planes/PlanesPublicos'
@@ -33,7 +33,8 @@ import HistorialDocente from './Componentes/DashboardAdmin/HistorialDocente';
 import NotificacionesProfesor from './Componentes/DashboardProfesor/NotificacionesProfesor';
 import PantallaCarga from './Componentes/PantallaCarga/PantallaCarga';
 
-function App() {
+function AppContent() {
+  const navigate = useNavigate();
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState(() => !!localStorage.getItem('authToken'))
   const [isLoading, setIsLoading] = useState(false)
@@ -112,30 +113,32 @@ function App() {
             setShowUserInfoModal(true);
           }
 
+          // Navegación interna SPA: fluida y sin recarga completa ni pantalla negra
+          if (role === 'student') {
+            navigate('/dashboard', { replace: true });
+          } else if (role === 'profesor') {
+            navigate('/dashboard-profesor', { replace: true });
+          } else if (role === 'admin') {
+            navigate('/admin', { replace: true });
+          }
+
           // Esperar el tiempo mínimo para que la animación de carga se aprecie
           const restante = MIN_CARGA_MS - (Date.now() - inicio);
           if (restante > 0) {
             await new Promise((resolve) => setTimeout(resolve, restante));
-          }
-
-          // Forzar recarga completa de la página para evitar problemas de estado
-          if (role === 'student') {
-            window.location.replace('/dashboard');
-          } else if (role === 'profesor') {
-            window.location.replace('/dashboard-profesor');
-          } else if (role === 'admin') {
-            window.location.replace('/admin');
           }
         } catch (error) {
           console.error('Error getting profile:', error);
           // Si no puede obtener el perfil, asumir que es estudiante y primer login
           setUserRole('student');
           setShowUserInfoModal(true);
-          const restante = MIN_CARGA_MS - (Date.now() - inicio);
-          if (restante > 0) {
-            await new Promise((resolve) => setTimeout(resolve, restante));
+          navigate('/dashboard', { replace: true });
+          const restanteError = MIN_CARGA_MS - (Date.now() - inicio);
+          if (restanteError > 0) {
+            await new Promise((resolve) => setTimeout(resolve, restanteError));
           }
-          window.location.replace('/dashboard');
+        } finally {
+          setIsLoading(false);
         }
       } else {
         setIsLoading(false);
@@ -152,6 +155,7 @@ function App() {
     setIsAuthenticated(false)
     setUserRole(null)
     setShowUserInfoModal(false)
+    navigate('/', { replace: true })
   }
 
   const handleUserInfoComplete = () => {
@@ -159,12 +163,9 @@ function App() {
   }
 
   return (
-    <ThemeProvider>
-      <Router>
-        {isLoading ? (
-          <PantallaCarga />
-        ) : (
-          <Routes>
+    <>
+      {isLoading && <PantallaCarga />}
+      <Routes>
             {/* Ruta principal */}
             <Route path="/" element={
               <>
@@ -278,7 +279,7 @@ function App() {
                 <h1 style={{ color: '#667eea', marginBottom: '1rem' }}>Error 404 - Página no encontrada</h1>
                 <p style={{ color: '#666', marginBottom: '2rem' }}>La página que buscas no existe.</p>
                 <button 
-                  onClick={() => window.location.href = '/'}
+                  onClick={() => navigate('/')}
                   style={{
                     padding: '12px 24px',
                     backgroundColor: '#667eea',
@@ -294,10 +295,16 @@ function App() {
               </div>
             } />
           </Routes>
-        )}
+    </>
+  )
+}
+
+export default function App() {
+  return (
+    <ThemeProvider>
+      <Router>
+        <AppContent />
       </Router>
     </ThemeProvider>
   )
 }
-
-export default App
