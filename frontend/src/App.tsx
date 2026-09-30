@@ -10,7 +10,6 @@ import DashboardProfesor from './Componentes/DashboardProfesor/Dashboard_Profeso
 import LoginModal from './Componentes/Login/LoginModal'
 import ResetPassword from './Componentes/Login/ResetPassword'
 import NewPassword from './Componentes/Login/NewPassword'
-import UserInfoModal from './Componentes/UserInfo/UserInfoModal'
 import { authService } from './services/authService'
 import { ThemeProvider } from './context/ThemeContext'
 import { AdminLayout } from './Componentes/DashboardAdmin/layout/AdminLayout'
@@ -38,7 +37,6 @@ function AppContent() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState(() => !!localStorage.getItem('authToken'))
   const [isLoading, setIsLoading] = useState(false)
-  const [showUserInfoModal, setShowUserInfoModal] = useState(false)
   const [userRole, setUserRole] = useState<'student' | 'profesor' | 'admin' | null>(() => {
     const raw = localStorage.getItem('userRole');
     return (raw ? raw.toLowerCase() : null) as 'student' | 'profesor' | 'admin' | null;
@@ -108,11 +106,6 @@ function AppContent() {
           localStorage.setItem('userRole', role);
           console.log('Redirecting user with role:', role);
 
-          // Si el perfil no está completado, mostrar modal DESPUÉS de redirigir
-          if (!profile.profile_completed && role === 'student') {
-            setShowUserInfoModal(true);
-          }
-
           // Navegación interna SPA: fluida y sin recarga completa ni pantalla negra
           if (role === 'student') {
             navigate('/dashboard', { replace: true });
@@ -131,7 +124,6 @@ function AppContent() {
           console.error('Error getting profile:', error);
           // Si no puede obtener el perfil, asumir que es estudiante y primer login
           setUserRole('student');
-          setShowUserInfoModal(true);
           navigate('/dashboard', { replace: true });
           const restanteError = MIN_CARGA_MS - (Date.now() - inicio);
           if (restanteError > 0) {
@@ -154,12 +146,7 @@ function AppContent() {
     authService.logout()
     setIsAuthenticated(false)
     setUserRole(null)
-    setShowUserInfoModal(false)
     navigate('/', { replace: true })
-  }
-
-  const handleUserInfoComplete = () => {
-    setShowUserInfoModal(false)
   }
 
   return (
@@ -212,14 +199,7 @@ function AppContent() {
             {/* Dashboard de estudiante */}
             <Route path="/dashboard" element={
               isAuthenticated && userRole === 'student' ? (
-                <>
-                  <Dashboard onLogout={handleLogout} />
-                  <UserInfoModal 
-                    isOpen={showUserInfoModal}
-                    onClose={() => setShowUserInfoModal(false)}
-                    onComplete={handleUserInfoComplete}
-                  />
-                </>
+                <Dashboard onLogout={handleLogout} />
               ) : (
                 <Navigate to="/" replace />
               )
