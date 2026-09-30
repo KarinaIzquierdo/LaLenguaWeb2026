@@ -6,7 +6,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: #f0efe9; /* mismo crema del logo para que se funda */
+  background: radial-gradient(circle at 50% 40%, #ffffff 0%, #f2f8f8 100%);
   z-index: 9999;
   animation: carga-fadein 0.4s ease-out;
 }
@@ -16,11 +16,26 @@
   to { opacity: 1; }
 }
 
-.carga-logo {
-  width: min(340px, 70vw);
-  height: auto;
-  mix-blend-mode: multiply; /* funde el fondo crema de la imagen con el de la página */
+/* Marco circular: recorta el JPEG cuadrado y deja solo el sello teal del logo */
+.carga-logo-marco {
+  position: relative;
+  width: min(210px, 46vw);
+  height: min(210px, 46vw);
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow:
+    0 14px 40px rgba(83, 177, 180, 0.35),
+    0 0 0 6px rgba(83, 177, 180, 0.12);
   animation: carga-respirar 2.6s ease-in-out infinite;
+}
+
+/* El logo va centrado en la imagen (~22% del ancho); lo agrandamos para que llene el marco */
+.carga-logo {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 460%;
+  transform: translate(-50%, -50%);
 }
 
 /* El logo "respira" suavemente mientras carga */

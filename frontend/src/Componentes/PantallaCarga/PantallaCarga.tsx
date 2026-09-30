@@ -7,7 +7,9 @@ import './PantallaCarga.css';
 export default function PantallaCarga() {
   return (
     <div className="pantalla-carga" role="status" aria-label="Cargando La Lengua">
-      <img src="/logo-carga.jpeg" alt="La Lengua — Escuela de inglés conversacional" className="carga-logo" />
+      <div className="carga-logo-marco">
+        <img src="/logo-carga.jpeg" alt="La Lengua — Escuela de inglés conversacional" className="carga-logo" />
+      </div>
 
       <div className="carga-barra">
         <div className="carga-relleno" />
