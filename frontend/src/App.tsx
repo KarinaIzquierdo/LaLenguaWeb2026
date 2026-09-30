@@ -43,6 +43,9 @@ function App() {
   useEffect(() => {
     // Verificar si el usuario ya está autenticado al cargar la app
     const checkAuth = async () => {
+      // Duración mínima para que la pantalla de carga sea visible
+      const MIN_CARGA_MS = 1800;
+      const inicio = Date.now();
       try {
         const token = localStorage.getItem('authToken');
         if (token) {
@@ -56,7 +59,8 @@ function App() {
         console.error('Error validating token:', error);
         localStorage.removeItem('authToken');
       } finally {
-        setIsLoading(false);
+        const restante = MIN_CARGA_MS - (Date.now() - inicio);
+        setTimeout(() => setIsLoading(false), Math.max(0, restante));
       }
     };
 
