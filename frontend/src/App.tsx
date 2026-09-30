@@ -31,6 +31,7 @@ import RankingRetosAdmin from './Componentes/DashboardAdmin/RankingRetosAdmin';
 import RegistrosEliminacion from './Componentes/DashboardAdmin/RegistrosEliminacion';
 import HistorialDocente from './Componentes/DashboardAdmin/HistorialDocente';
 import NotificacionesProfesor from './Componentes/DashboardProfesor/NotificacionesProfesor';
+import PantallaCarga from './Componentes/PantallaCarga/PantallaCarga';
 
 function App() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
@@ -148,16 +149,7 @@ function App() {
     <ThemeProvider>
       <Router>
         {isLoading ? (
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'center', 
-            alignItems: 'center', 
-            height: '100vh',
-            fontSize: '1.2rem',
-            color: '#667eea'
-          }}>
-            Cargando...
-          </div>
+          <PantallaCarga />
         ) : (
           <Routes>
             {/* Ruta principal */}
