@@ -33,9 +33,9 @@
    el círculo teal llene el marco y el fondo crema quede recortado fuera */
 .carga-logo {
   position: absolute;
-  left: 47%;
+  left: 46%;
   top: 50%;
-  width: 580%;
+  width: 650%;
   transform: translate(-50%, -50%);
 }
 
