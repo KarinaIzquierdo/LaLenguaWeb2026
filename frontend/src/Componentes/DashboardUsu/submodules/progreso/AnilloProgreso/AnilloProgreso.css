@@ -21,7 +21,8 @@
   stroke: url(#anillo-gradiente);
   stroke-width: 18;
   stroke-linecap: round;
-  transition: stroke-dashoffset 0.08s linear;
+  /* Sin transition: el RAF anima a 60fps; una transición aquí hacía que
+     el arco siempre fuera detrás del porcentaje */
 }
 
 .anillo-centro {
