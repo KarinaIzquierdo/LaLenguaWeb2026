@@ -133,11 +133,19 @@ export default function CaminoNiveles({ xpTotal }: CaminoNivelesProps) {
           );
         })}
 
-        {/* Banderas: 🏁 marca la salida, ⭐ señala la meta sobre el nodo final */}
+        {/* Banderas: 🚩 marca la salida, 🏁 ondea sobre el nodo Experto y ⭐ cierra la meta */}
         <text x={NODOS_X[0] - 30} y={NODOS_Y[0] - 24} className="camino-bandera">
+          🚩
+        </text>
+        <text x={NODOS_X[5]} y={NODOS_Y[5] - 34} textAnchor="middle" className="camino-bandera">
           🏁
         </text>
-        <text x={NODOS_X[5] + 62} y={NODOS_Y[5] + 8} className="camino-bandera bandera-meta">
+        <text
+          x={NODOS_X[5] + 46}
+          y={NODOS_Y[5] + 8}
+          textAnchor="middle"
+          className="camino-bandera bandera-meta"
+        >
           ⭐
         </text>
 
