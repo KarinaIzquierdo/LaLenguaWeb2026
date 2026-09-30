@@ -19,6 +19,15 @@ export interface SkillDatos {
   expresiones: SkillDato;
 }
 
+export interface NivelPeriodoInfo {
+  nivel: string;
+  inicio: string;
+  fin: string;
+  dias_total: number;
+  dias_restantes: number;
+  reiniciado: boolean;
+}
+
 interface ProgressViewProps {
   userTitle: string;
   userTitleCode: string | null;
@@ -26,6 +35,7 @@ interface ProgressViewProps {
   progressPercentage: number;
   experience: number;
   skillDatos: SkillDatos;
+  nivelPeriodo?: NivelPeriodoInfo | null;
 }
 
 export default function ProgressView({
@@ -35,6 +45,7 @@ export default function ProgressView({
   progressPercentage,
   experience,
   skillDatos,
+  nivelPeriodo,
 }: ProgressViewProps) {
   return (
     <div className="module-view">
@@ -53,6 +64,19 @@ export default function ProgressView({
         <div className="progress-columns">
           <div className="progress-summary">
             <h3 className="progress-subtitle">Mi nivel: {userTitle || 'Principiante'}</h3>
+            {nivelPeriodo && (
+              <div
+                className={`nivel-periodo-chip ${nivelPeriodo.dias_restantes <= 14 ? 'nivel-periodo-alerta' : ''}`}
+                title={`Periodo: ${nivelPeriodo.inicio} → ${nivelPeriodo.fin}`}
+              >
+                <span className="nivel-periodo-nivel">Nivel {nivelPeriodo.nivel}</span>
+                <span className="nivel-periodo-dias">
+                  {nivelPeriodo.reiniciado
+                    ? '¡Nuevo periodo iniciado! 🎉'
+                    : `⏳ ${nivelPeriodo.dias_restantes} días restantes`}
+                </span>
+              </div>
+            )}
             <AnilloProgreso
               porcentaje={progressPercentage}
               xp={experience}

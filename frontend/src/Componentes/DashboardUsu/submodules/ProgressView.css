@@ -61,6 +61,45 @@
   flex-shrink: 0;
 }
 
+/* Chip del periodo del nivel de inglés */
+.nivel-periodo-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 7px 16px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(83, 177, 180, 0.14), rgba(83, 177, 180, 0.06));
+  border: 1.5px solid rgba(83, 177, 180, 0.35);
+}
+
+.nivel-periodo-nivel {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #23787b;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.nivel-periodo-dias {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #4a7d80;
+}
+
+.nivel-periodo-alerta {
+  background: linear-gradient(135deg, rgba(247, 197, 107, 0.22), rgba(247, 197, 107, 0.08));
+  border-color: rgba(247, 197, 107, 0.55);
+}
+
+.nivel-periodo-alerta .nivel-periodo-nivel {
+  color: #a06f1e;
+}
+
+.nivel-periodo-alerta .nivel-periodo-dias {
+  color: #8a6d2f;
+}
+
 /* Dos columnas: anillo | radar */
 .progress-columns {
   display: grid;

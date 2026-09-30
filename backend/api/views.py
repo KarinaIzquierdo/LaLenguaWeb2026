@@ -1250,6 +1250,61 @@ def daily_challenges_view(request):
     }, status=status.HTTP_200_OK)
 
 
+# --- Periodo de progreso por nivel de inglés (academia) ---
+# Duración de cada nivel en días (4 meses ≈ 120, 1.5 meses ≈ 45)
+DURACION_NIVEL_DIAS = {
+    'A1': 120,
+    'A1+': 45,
+    'A2': 120,
+    'A2+': 45,
+    'B1': 120,
+    'B1+': 120,
+    'B2': 120,
+    'B2+': 120,  # asumido: confirmar duración real
+    'C1': 120,   # asumido: confirmar duración real
+}
+
+
+def info_periodo_nivel(user):
+    """Estado del periodo del nivel de inglés. Si el periodo venció, reinicia
+    el XP del camino y arranca un ciclo nuevo a partir de hoy.
+    Devuelve dict con la info del periodo, o None si no aplica."""
+    nivel = (getattr(user, 'english_level', None) or '').strip().upper()
+    duracion = DURACION_NIVEL_DIAS.get(nivel)
+    if not nivel or not duracion:
+        return None
+
+    hoy = timezone.now().date()
+    inicio = getattr(user, 'nivel_fecha_inicio', None)
+    reiniciado = False
+
+    if inicio is None:
+        # Primer contacto con el sistema de periodos
+        inicio = hoy
+        user.nivel_fecha_inicio = inicio
+        user.save(update_fields=['nivel_fecha_inicio'])
+
+    fin = inicio + timedelta(days=duracion)
+
+    if hoy > fin:
+        # Periodo vencido: el camino vuelve a cero y arranca un ciclo nuevo
+        user.total_xp = 0
+        user.nivel_fecha_inicio = hoy
+        user.save(update_fields=['total_xp', 'nivel_fecha_inicio'])
+        inicio = hoy
+        fin = inicio + timedelta(days=duracion)
+        reiniciado = True
+
+    return {
+        'nivel': nivel,
+        'inicio': inicio.isoformat(),
+        'fin': fin.isoformat(),
+        'dias_total': duracion,
+        'dias_restantes': max(0, (fin - hoy).days),
+        'reiniciado': reiniciado,
+    }
+
+
 def get_title_from_xp(total_xp: int):
     """Devuelve el título, código y XP necesario para el siguiente título."""
     thresholds = [
@@ -1271,6 +1326,8 @@ def get_title_from_xp(total_xp: int):
 @permission_classes([IsAuthenticated])
 def gamificacion_estado_view(request):
     user = request.user
+    # Evalúa el periodo del nivel primero: si venció, reinicia el XP del camino
+    periodo = info_periodo_nivel(user)
     total_xp = getattr(user, 'total_xp', 0) or 0
     title_info = get_title_from_xp(total_xp)
 
@@ -1298,6 +1355,7 @@ def gamificacion_estado_view(request):
             'reto_conv_aciertos': getattr(user, 'reto_conv_aciertos', 0) or 0,
             'reto_expr_intentos': getattr(user, 'reto_expr_intentos', 0) or 0,
             'reto_expr_aciertos': getattr(user, 'reto_expr_aciertos', 0) or 0,
+            'nivel_periodo': periodo,
         }
     }, status=status.HTTP_200_OK)
 

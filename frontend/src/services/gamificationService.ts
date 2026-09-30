@@ -1,8 +1,18 @@
 import { getAuthHeaders, API_BASE_URL } from '../config/api';
 
+export interface NivelPeriodo {
+  nivel: string;
+  inicio: string;
+  fin: string;
+  dias_total: number;
+  dias_restantes: number;
+  reiniciado: boolean;
+}
+
 interface GamificacionEstadoResponse {
   success: boolean;
   data?: {
+    nivel_periodo?: NivelPeriodo | null;
     total_dulces: number;
     total_xp: number;
     reto_racha_actual: number;

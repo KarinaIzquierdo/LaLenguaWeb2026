@@ -75,7 +75,27 @@ class CustomUser(AbstractUser):
     
     # Progreso semanal de retos diarios (0 a 7 segmentos visuales)
     reto_semana_progreso = models.IntegerField(default=0, help_text="Segmentos completados esta semana (0-7)")
-    
+
+    # Inicio del periodo actual del nivel de inglés (para reset de progreso por periodo)
+    nivel_fecha_inicio = models.DateField(null=True, blank=True, help_text="Fecha de inicio del periodo del nivel de inglés actual")
+
+    def save(self, *args, **kwargs):
+        """Si el nivel de inglés cambia, arranca un nuevo periodo y reinicia el XP del camino."""
+        if self.pk:
+            try:
+                nivel_anterior = CustomUser.objects.only('english_level').get(pk=self.pk).english_level
+            except CustomUser.DoesNotExist:
+                nivel_anterior = None
+            if nivel_anterior != self.english_level and self.english_level:
+                self.nivel_fecha_inicio = timezone.now().date()
+                self.total_xp = 0
+                if kwargs.get('update_fields'):
+                    kwargs['update_fields'] = set(kwargs['update_fields']) | {'nivel_fecha_inicio', 'total_xp'}
+        elif self.english_level and not self.nivel_fecha_inicio:
+            # Usuario nuevo con nivel asignado
+            self.nivel_fecha_inicio = timezone.now().date()
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"{self.username} - {self.first_name} {self.last_name}"
 

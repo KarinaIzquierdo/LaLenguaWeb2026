@@ -129,6 +129,14 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
   const [userTitle, setUserTitle] = useState<string>('');
   const [userTitleCode, setUserTitleCode] = useState<string | null>(null);
   const [nextTitleXp, setNextTitleXp] = useState<number | null>(null);
+  const [nivelPeriodo, setNivelPeriodo] = useState<{
+    nivel: string;
+    inicio: string;
+    fin: string;
+    dias_total: number;
+    dias_restantes: number;
+    reiniciado: boolean;
+  } | null>(null);
 
   const [skillDatos, setSkillDatos] = useState({
     vocabulario: { valor: 0, intentos: 0, aciertos: 0 },
@@ -380,6 +388,7 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
           reto_semana_progreso,
           reto_racha_actual,
           reto_ultima_fecha,
+          nivel_periodo,
         } = estado.data as any;
         setCandies(total_dulces ?? 0);
         setExperience(total_xp ?? 0);
@@ -393,6 +402,7 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
           conversacion: { valor: skill_conversacion ?? 0, intentos: reto_conv_intentos ?? 0, aciertos: reto_conv_aciertos ?? 0 },
           expresiones: { valor: skill_expresiones ?? 0, intentos: reto_expr_intentos ?? 0, aciertos: reto_expr_aciertos ?? 0 },
         });
+        setNivelPeriodo(nivel_periodo ?? null);
         setWeeklyProgress(reto_semana_progreso ?? 0);
 
         const racha = typeof reto_racha_actual === 'number' ? reto_racha_actual : 0;
@@ -843,6 +853,7 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
             progressPercentage={progressPercentage}
             experience={experience}
             skillDatos={skillDatos}
+            nivelPeriodo={nivelPeriodo}
           />
         );
       case 'recompensas':
