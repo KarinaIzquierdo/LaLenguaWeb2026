@@ -29,14 +29,12 @@
   animation: carga-respirar 2.6s ease-in-out infinite;
 }
 
-/* El logo va centrado en la imagen (~22% del ancho); lo agrandamos para que
-   el círculo teal llene el marco y el fondo crema quede recortado fuera */
+/* El logo ya es circular y llena la imagen: se muestra completo dentro del marco */
 .carga-logo {
-  position: absolute;
-  left: 46%;
-  top: 50%;
-  width: 650%;
-  transform: translate(-50%, -50%);
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 /* El logo "respira" suavemente mientras carga */
