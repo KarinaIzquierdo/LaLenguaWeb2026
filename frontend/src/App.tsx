@@ -36,16 +36,13 @@ import PantallaCarga from './Componentes/PantallaCarga/PantallaCarga';
 function App() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(false)
   const [showUserInfoModal, setShowUserInfoModal] = useState(false)
   const [userRole, setUserRole] = useState<'student' | 'profesor' | 'admin' | null>(null)
 
   useEffect(() => {
-    // Verificar si el usuario ya está autenticado al cargar la app
+    // Verificar si el usuario ya está autenticado al cargar la app (sin pantalla de carga inicial)
     const checkAuth = async () => {
-      // Duración mínima para que la pantalla de carga sea visible
-      const MIN_CARGA_MS = 1800;
-      const inicio = Date.now();
       try {
         const token = localStorage.getItem('authToken');
         if (token) {
@@ -58,9 +55,6 @@ function App() {
       } catch (error) {
         console.error('Error validating token:', error);
         localStorage.removeItem('authToken');
-      } finally {
-        const restante = MIN_CARGA_MS - (Date.now() - inicio);
-        setTimeout(() => setIsLoading(false), Math.max(0, restante));
       }
     };
 
@@ -87,56 +81,68 @@ function App() {
 
   const handleLogin = async (credentials: any) => {
     console.log('=== HANDLE LOGIN START ===');
-    console.log('authService:', authService);
-    console.log('authService.getUserProfile:', authService.getUserProfile);
-    console.log('typeof authService.getUserProfile:', typeof authService.getUserProfile);
-    
-    const result = await authService.login(credentials)
-    
-    if (result.success) {
-      setIsAuthenticated(true)
-      setIsLoginModalOpen(false)
-      
-      // Obtener el rol del usuario y verificar si es primer login
-      try {
-        console.log('About to call getUserProfile...');
-        console.log('authService before call:', authService);
-        
-        const profile = await authService.getUserProfile()
-        console.log('Profile check:', profile)
-        console.log('Profile role:', profile.role)
-        console.log('Profile completed:', profile.profile_completed)
-        const role = (profile.role || 'student').toLowerCase() as 'student' | 'profesor' | 'admin';
-        setUserRole(role);
-        
-        // Guardar el rol en localStorage para persistencia
-        localStorage.setItem('userRole', role);
-        
-        console.log('Redirecting user with role:', role)
-        
-        // Si el perfil no está completado, mostrar modal DESPUÉS de redirigir
-        if (!profile.profile_completed && role === 'student') {
-          setShowUserInfoModal(true)
+    setIsLoading(true);
+    const MIN_CARGA_MS = 1800;
+    const inicio = Date.now();
+
+    try {
+      const result = await authService.login(credentials);
+
+      if (result.success) {
+        setIsAuthenticated(true);
+        setIsLoginModalOpen(false);
+
+        // Obtener el rol del usuario y verificar si es primer login
+        try {
+          console.log('About to call getUserProfile...');
+          const profile = await authService.getUserProfile();
+          console.log('Profile check:', profile);
+          const role = (profile.role || 'student').toLowerCase() as 'student' | 'profesor' | 'admin';
+          setUserRole(role);
+
+          // Guardar el rol en localStorage para persistencia
+          localStorage.setItem('userRole', role);
+          console.log('Redirecting user with role:', role);
+
+          // Si el perfil no está completado, mostrar modal DESPUÉS de redirigir
+          if (!profile.profile_completed && role === 'student') {
+            setShowUserInfoModal(true);
+          }
+
+          // Esperar el tiempo mínimo para que la animación de carga se aprecie
+          const restante = MIN_CARGA_MS - (Date.now() - inicio);
+          if (restante > 0) {
+            await new Promise((resolve) => setTimeout(resolve, restante));
+          }
+
+          // Forzar recarga completa de la página para evitar problemas de estado
+          if (role === 'student') {
+            window.location.replace('/dashboard');
+          } else if (role === 'profesor') {
+            window.location.replace('/dashboard-profesor');
+          } else if (role === 'admin') {
+            window.location.replace('/admin');
+          }
+        } catch (error) {
+          console.error('Error getting profile:', error);
+          // Si no puede obtener el perfil, asumir que es estudiante y primer login
+          setUserRole('student');
+          setShowUserInfoModal(true);
+          const restante = MIN_CARGA_MS - (Date.now() - inicio);
+          if (restante > 0) {
+            await new Promise((resolve) => setTimeout(resolve, restante));
+          }
+          window.location.replace('/dashboard');
         }
-        
-        // Forzar recarga completa de la página para evitar problemas de estado
-        if (role === 'student') {
-          window.location.replace('/dashboard')
-        } else if (role === 'profesor') {
-          window.location.replace('/dashboard-profesor')
-        } else if (role === 'admin') {
-          window.location.replace('/admin')
-        }
-      } catch (error) {
-        console.error('Error getting profile:', error)
-        // Si no puede obtener el perfil, asumir que es estudiante y primer login
-        setUserRole('student')
-        setShowUserInfoModal(true)
+      } else {
+        setIsLoading(false);
+        throw new Error(result.message || 'Error de autenticación');
       }
-    } else {
-      throw new Error(result.message || 'Error de autenticación')
+    } catch (error) {
+      setIsLoading(false);
+      throw error;
     }
-  }
+  };
 
   const handleLogout = () => {
     authService.logout()
