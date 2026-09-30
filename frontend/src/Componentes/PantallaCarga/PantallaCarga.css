@@ -33,7 +33,7 @@
    el círculo teal llene el marco y el fondo crema quede recortado fuera */
 .carga-logo {
   position: absolute;
-  left: 50%;
+  left: 47%;
   top: 50%;
   width: 580%;
   transform: translate(-50%, -50%);
