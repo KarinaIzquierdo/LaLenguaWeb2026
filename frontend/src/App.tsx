@@ -35,10 +35,13 @@ import PantallaCarga from './Componentes/PantallaCarga/PantallaCarga';
 
 function App() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false)
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState(() => !!localStorage.getItem('authToken'))
   const [isLoading, setIsLoading] = useState(false)
   const [showUserInfoModal, setShowUserInfoModal] = useState(false)
-  const [userRole, setUserRole] = useState<'student' | 'profesor' | 'admin' | null>(null)
+  const [userRole, setUserRole] = useState<'student' | 'profesor' | 'admin' | null>(() => {
+    const raw = localStorage.getItem('userRole');
+    return (raw ? raw.toLowerCase() : null) as 'student' | 'profesor' | 'admin' | null;
+  })
 
   useEffect(() => {
     // Verificar si el usuario ya está autenticado al cargar la app (sin pantalla de carga inicial)
