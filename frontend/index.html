@@ -5,9 +5,88 @@
     <link rel="icon" type="image/png" href="/loguito.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>La Lengua</title>
+    <style>
+      /* Splash instantáneo: se ve mientras el bundle de React descarga.
+         React lo reemplaza al montar (mismo diseño = transición invisible). */
+      body {
+        margin: 0;
+        background: radial-gradient(circle at 50% 40%, #ffffff 0%, #f2f8f8 100%);
+      }
+      #splash-carga {
+        position: fixed;
+        inset: 0;
+        background: radial-gradient(circle at 50% 40%, #ffffff 0%, #f2f8f8 100%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+      }
+      #splash-carga .sc-marco {
+        position: relative;
+        width: min(210px, 46vw);
+        height: min(210px, 46vw);
+        border-radius: 50%;
+        overflow: hidden;
+        box-shadow: 0 14px 40px rgba(83, 177, 180, 0.35), 0 0 0 6px rgba(83, 177, 180, 0.12);
+        animation: sc-respirar 2.6s ease-in-out infinite;
+      }
+      #splash-carga .sc-logo {
+        position: absolute;
+        left: 46%;
+        top: 50%;
+        width: 650%;
+        transform: translate(-50%, -50%);
+      }
+      #splash-carga .sc-barra {
+        margin-top: 34px;
+        width: min(280px, 56vw);
+        height: 10px;
+        border-radius: 999px;
+        background: rgba(83, 177, 180, 0.18);
+        overflow: hidden;
+        box-shadow: inset 0 1px 3px rgba(35, 120, 123, 0.15);
+      }
+      #splash-carga .sc-relleno {
+        height: 100%;
+        width: 45%;
+        border-radius: 999px;
+        background: linear-gradient(90deg, #7fc6c8, #53b1b4 45%, #23787b);
+        box-shadow: 0 0 12px rgba(83, 177, 180, 0.65);
+        animation: sc-barrido 1.5s ease-in-out infinite;
+      }
+      #splash-carga .sc-texto {
+        margin-top: 18px;
+        font-family: system-ui, sans-serif;
+        font-size: 15px;
+        font-weight: 600;
+        letter-spacing: 0.4px;
+        color: #23787b;
+        animation: sc-pulso 1.6s ease-in-out infinite;
+      }
+      @keyframes sc-respirar {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.04); }
+      }
+      @keyframes sc-barrido {
+        0% { transform: translateX(-120%); }
+        100% { transform: translateX(340%); }
+      }
+      @keyframes sc-pulso {
+        0%, 100% { opacity: 0.55; }
+        50% { opacity: 1; }
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div id="splash-carga">
+        <div class="sc-marco">
+          <img class="sc-logo" src="/logo-carga.jpeg" alt="La Lengua" />
+        </div>
+        <div class="sc-barra"><div class="sc-relleno"></div></div>
+        <p class="sc-texto">Cargando tu aventura…</p>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
