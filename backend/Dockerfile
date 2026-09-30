@@ -28,4 +28,5 @@ COPY . /app/
 EXPOSE 8000
 
 # Comando de arranque robusto usando el módulo de python
-CMD ["python", "-m", "daphne", "-b", "0.0.0.0", "-p", "8000", "backend.asgi:application"]
+# Aplica migraciones pendientes antes de levantar el servidor
+CMD ["sh", "-c", "python manage.py migrate --noinput && python -m daphne -b 0.0.0.0 -p 8000 backend.asgi:application"]
