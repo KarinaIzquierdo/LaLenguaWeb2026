@@ -47,19 +47,24 @@ Al entrar verás tu panel con tu nombre y las secciones principales.
 
 Menú lateral con las herramientas docentes:
 
-- **Dashboard:** resumen del día — evaluaciones pendientes de calificar y contadores.
+- **Dashboard:** resumen del día — clases totales, estudiantes activos y evaluaciones pendientes de calificar.
 - **Programar mis clases:** crear una clase nueva.
   1. Selecciona el **tema**, **fecha** y **hora**.
   2. Elige el tipo (individual/grupal) y modalidad (virtual/presencial).
   3. Si es virtual, pega el **enlace de videollamada** (puede ser con o sin `https://`).
   4. Selecciona los estudiantes de la clase.
   5. Guarda — los estudiantes reciben una notificación.
+- **Mis Clases:** listado de tus clases programadas; desde aquí las inicias (se genera el código de asistencia), las marcas como completadas y ves el enlace de videollamada.
 - **Evaluaciones:** crear y asignar evaluaciones o tareas a tus estudiantes.
 - **Calificar evaluaciones:** lista de entregas pendientes; califica y deja comentarios.
 - **Reportes de progreso:** avance de tus estudiantes.
 - **Notificaciones:** avisos del sistema.
 - **Estudiantes:** listado de tus estudiantes y su información.
+- **Historial Asistencia:** registro de asistencias de tus clases y aprobación de los códigos marcados por los estudiantes (presente / tardanza / ausente / justificado).
 - **Misiones:** revisión de misiones.
+- **Mis Clubs:** clubes que administras; gestión de material compartido (archivos, enlaces) y estudiantes miembros.
+- **Gestión LCB:** administración de los bloques y niveles (LCB) asignados a tus estudiantes.
+- **Cerrar sesión:** sale de tu cuenta y vuelve a la pantalla de bienvenida.
 
 ## 5. Rol Administrador
 
