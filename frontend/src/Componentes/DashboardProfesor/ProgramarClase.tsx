@@ -40,6 +40,7 @@ export default function ProgramarClase() {
   const [mostrarEstudiantes, setMostrarEstudiantes] = useState(false);
   const [filtroNivel, setFiltroNivel] = useState('todos');
   const [seleccionarTodos, setSeleccionarTodos] = useState(false);
+  const [alerta, setAlerta] = useState<string | null>(null);
 
   // Temas reales cargados desde la base de datos
   const [temasComunes, setTemasComunes] = useState<string[]>([]);
@@ -183,6 +184,7 @@ export default function ProgramarClase() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormulario(prev => ({ ...prev, [name]: value }));
+    setAlerta(null);
   };
 
   const toggleEstudiante = (estudianteId: string) => {
@@ -192,6 +194,7 @@ export default function ProgramarClase() {
         ? prev.estudiantesSeleccionados.filter(id => id !== estudianteId)
         : [...prev.estudiantesSeleccionados, estudianteId]
     }));
+    setAlerta(null);
   };
 
   // Función para seleccionar/deseleccionar todos los estudiantes filtrados
@@ -213,6 +216,7 @@ export default function ProgramarClase() {
       }));
     }
     setSeleccionarTodos(!seleccionarTodos);
+    setAlerta(null);
   };
 
   const nivelesDisponibles = Array.from(
@@ -239,6 +243,33 @@ export default function ProgramarClase() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setAlerta(null);
+
+    const errores: string[] = [];
+    if (!formulario.fecha) errores.push('Selecciona una fecha.');
+    if (!formulario.hora) errores.push('Selecciona una hora.');
+    if (!formulario.tema.trim()) errores.push('Selecciona o escribe el tema.');
+    if (formulario.modalidad === 'virtual' && !formulario.meetLink?.trim()) {
+      errores.push('Ingresa el enlace de videollamada.');
+    }
+    if (formulario.estudiantesSeleccionados.length === 0) {
+      errores.push('Selecciona al menos un estudiante.');
+    }
+
+    // Fecha no puede ser anterior a hoy
+    if (formulario.fecha) {
+      const hoyLocal = new Date();
+      hoyLocal.setMinutes(hoyLocal.getMinutes() - hoyLocal.getTimezoneOffset());
+      const hoyStr = hoyLocal.toISOString().split('T')[0];
+      if (formulario.fecha < hoyStr) {
+        errores.push('La fecha no puede ser anterior a hoy.');
+      }
+    }
+
+    if (errores.length > 0) {
+      setAlerta(errores.join(' '));
+      return;
+    }
     
     try {
       // Obtener el nombre del profesor desde localStorage
@@ -326,6 +357,12 @@ export default function ProgramarClase() {
         <h2>Programar Nueva Clase</h2>
         <p>Crea una nueva clase y asigna estudiantes</p>
       </div>
+
+      {alerta && (
+        <div className="alerta-validacion" role="alert">
+          <span>⚠️ {alerta}</span>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="clase-form">
         <div className="form-grid">

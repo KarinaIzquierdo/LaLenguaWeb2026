@@ -164,6 +164,24 @@ class ClaseSerializer(serializers.ModelSerializer):
                   'created_at', 'updated_at']
         read_only_fields = ['id', 'codigo_asistencia', 'codigo_expiracion']
     
+    def validate(self, attrs):
+        fecha = attrs.get('fecha')
+        hora = attrs.get('hora')
+        estudiantes_ids = attrs.get('estudiantesSeleccionados', [])
+        modalidad = attrs.get('modalidad', 'virtual')
+        meet_link = attrs.get('meet_link')
+
+        if not fecha:
+            raise serializers.ValidationError({'fecha': ['La fecha es obligatoria.']})
+        if not hora:
+            raise serializers.ValidationError({'hora': ['La hora es obligatoria.']})
+        if not estudiantes_ids:
+            raise serializers.ValidationError({'estudiantesSeleccionados': ['Debes seleccionar al menos un estudiante.']})
+        if modalidad == 'virtual' and not meet_link:
+            raise serializers.ValidationError({'meet_link': ['El enlace de videollamada es obligatorio para clases virtuales.']})
+
+        return attrs
+    
     def to_representation(self, instance):
         data = super().to_representation(instance)
         # El app móvil espera strings no nulos; el modelo permite null
