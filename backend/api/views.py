@@ -1,7 +1,8 @@
 from rest_framework import status, viewsets
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.throttling import SimpleRateThrottle
 from rest_framework.decorators import action
-from rest_framework.decorators import api_view, permission_classes, parser_classes, authentication_classes
+from rest_framework.decorators import api_view, permission_classes, parser_classes, authentication_classes, throttle_classes
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -150,9 +151,20 @@ def favicon_view(request):
 def health_check(request):
     return Response({"status": "ok", "message": "Servidor funcionando correctamente"}, status=200)
 
+class LoginRateThrottle(SimpleRateThrottle):
+    """Limita intentos de login por combinación email + IP (anti fuerza bruta)."""
+    scope = 'login'
+
+    def get_cache_key(self, request, view):
+        usuario = (request.data.get('email') or request.data.get('username') or '').lower().strip()
+        ident = f"{usuario}:{self.get_ident(request)}"
+        return self.cache_format % {'scope': self.scope, 'ident': ident}
+
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 @authentication_classes([])
+@throttle_classes([LoginRateThrottle])
 def login_view(request):
     """
     Endpoint unificado para autenticar usuarios de todos los roles y generar tokens JWT
@@ -207,6 +219,7 @@ def login_view(request):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 @authentication_classes([])
+@throttle_classes([LoginRateThrottle])
 def mobile_login_view(request):
     """
     Endpoint específico para aplicaciones móviles Android
@@ -1072,6 +1085,7 @@ def update_profile_view(request):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@throttle_classes([LoginRateThrottle])
 def profesor_login_view(request):
     """
     Endpoint para autenticar profesores y generar tokens JWT

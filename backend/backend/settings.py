@@ -209,7 +209,14 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
+    'DEFAULT_THROTTLE_RATES': {
+        'login': '10/minute',
+    },
 }
+
+# El backend corre detrás del proxy de Coolify (Traefik): confiar en X-Forwarded-For
+# para que los throttle rates y logs usen la IP real del cliente y no la del proxy.
+NUM_PROXIES = 1
 
 # Configuración de capacidad de subida de archivos (1GB)
 FILE_UPLOAD_MAX_MEMORY_SIZE = 1073741824  # 1GB en bytes
