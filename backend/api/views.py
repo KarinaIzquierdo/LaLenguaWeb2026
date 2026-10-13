@@ -1,4 +1,5 @@
 from rest_framework import status, viewsets
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.decorators import action
 from rest_framework.decorators import api_view, permission_classes, parser_classes, authentication_classes
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
@@ -1781,9 +1782,15 @@ def profesor_change_password_view(request):
 
 # ==================== ENDPOINTS PARA CLASES ====================
 
+class StandardResultsSetPagination(PageNumberPagination):
+    page_size = 100
+    page_size_query_param = 'page_size'
+    max_page_size = 500
+
 class ClaseViewSet(viewsets.ModelViewSet):
     queryset = Clase.objects.all()
     serializer_class = ClaseSerializer
+    pagination_class = StandardResultsSetPagination
 
     def get_queryset(self):
         usuario_id = self.request.query_params.get('usuario')
@@ -1793,7 +1800,7 @@ class ClaseViewSet(viewsets.ModelViewSet):
         queryset = super().get_queryset()
 
         if usuario_id:
-            queryset = queryset.filter(estudiantes__id=usuario_id)
+            queryset = queryset.filter(estudiantes__id=usuario_id).distinct()
 
         if profesor_id:
             from django.db.models import Q

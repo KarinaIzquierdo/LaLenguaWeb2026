@@ -13,8 +13,8 @@ export const ClaseService = {
   // Obtener todas las clases
   getClases: async () => {
     const res = await axios.get(`${API_URL}/clases/`, { headers: getAuthHeaders() });
-    // El backend devuelve { success, data, total }
-    return Array.isArray(res.data) ? res.data : (res.data.data || []);
+    const data = res.data?.results ?? res.data?.data ?? res.data ?? [];
+    return Array.isArray(data) ? data : [];
   },
 
   // Crear una nueva clase
@@ -67,18 +67,19 @@ export const ClaseService = {
     const url = query ? `${API_URL}/clases/?${query}` : `${API_URL}/clases/`;
 
     const res = await axios.get(url, { headers: getAuthHeaders() });
-    const todasLasClases: any[] = Array.isArray(res.data) ? res.data : (res.data.data || []);
+    const todasLasClases: any[] = (res.data?.results ?? res.data?.data ?? res.data ?? []);
 
-    return todasLasClases;
+    return Array.isArray(todasLasClases) ? todasLasClases : [];
   },
 
-  // Obtener clases por usuario
+  // Obtener clases por usuario (filtro servidor)
   getClasesPorUsuario: async (usuarioId: number) => {
-    const res = await axios.get(`${API_URL}/clases/`, { headers: getAuthHeaders() });
-    const todasLasClases: any[] = Array.isArray(res.data) ? res.data : (res.data.data || []);
+    const params = usuarioId ? `?usuario=${usuarioId}` : '';
+    const res = await axios.get(`${API_URL}/clases/${params}`, { headers: getAuthHeaders() });
+    const todasLasClases: any[] = (res.data?.results ?? res.data?.data ?? res.data ?? []);
 
     if (!usuarioId) {
-      return todasLasClases;
+      return Array.isArray(todasLasClases) ? todasLasClases : [];
     }
 
     // Filtrar solo las clases donde el usuario está asignado como estudiante
