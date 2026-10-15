@@ -606,17 +606,19 @@ def reportes_progreso_view(request):
             clases_totales = 0
             ultima_actividad = None
         
-        # Calificación promedio real (0-100)
-        respuestas_completadas = respuestas.filter(completado=True)
-        calificaciones = []
-        for respuesta in respuestas_completadas:
-            if respuesta.calificacion is not None:
-                calificaciones.append(float(respuesta.calificacion))
-            elif respuesta.advertencias is not None:
-                # Fallback: simular calificación sobre 100 cuando aún no hay calificación del profesor
-                calificacion = 100.0 - (respuesta.advertencias * 5.0)
-                calificaciones.append(max(0, calificacion))
-        
+        # Calificación promedio real (0-100). Combina todas las fuentes de notas
+        # del estudiante:
+        # 1) Notas asignadas por profesores a respuestas de evaluaciones
+        calificaciones = [
+            float(respuesta.calificacion)
+            for respuesta in respuestas.filter(calificacion__isnull=False)
+        ]
+
+        # 2) Puntajes de los quizzes/exámenes que el estudiante hizo en la
+        # plataforma (vocabulario, gramática, comprensión, etc.)
+        quizzes_estudiante = Evaluation.objects.filter(usuario=estudiante).order_by('-fecha')
+        calificaciones.extend(float(quiz.score) for quiz in quizzes_estudiante)
+
         calificacion_promedio = sum(calificaciones) / len(calificaciones) if calificaciones else 0.0
         
         # Determinar fortalezas y áreas a mejorar
@@ -671,7 +673,18 @@ def reportes_progreso_view(request):
                 'calificacion': float(resp.calificacion) if resp and resp.calificacion is not None else None,
                 'fecha_envio': resp.fecha_envio.isoformat() if resp and resp.fecha_envio else None
             })
-        
+
+        # Incluir los quizzes de la plataforma en el detalle para que el
+        # profesor vea de dónde sale el promedio
+        for quiz in quizzes_estudiante:
+            evaluaciones_detalle.append({
+                'titulo': f"Quiz de {quiz.tipo}",
+                'tipo': 'Quiz',
+                'estado': 'Calificado',
+                'calificacion': float(quiz.score),
+                'fecha_envio': quiz.fecha.isoformat() if quiz.fecha else None
+            })
+
         reporte = {
             'id': estudiante.id,
             'nombre': f"{estudiante.first_name} {estudiante.last_name}" if estudiante.first_name else estudiante.username,
