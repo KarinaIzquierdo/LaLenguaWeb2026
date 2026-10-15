@@ -36,7 +36,7 @@ interface EstudianteProgreso {
   progreso: number;
   clasesCompletadas: number;
   clasesTotales: number;
-  ultimaClase: string;
+  ultimaClase: string | null;
   fortalezas: string[];
   areasAMejorar: string[];
   calificacionPromedio: number;
@@ -98,7 +98,7 @@ export default function ReportesProgreso() {
         progreso: est.progreso || 0,
         clasesCompletadas: est.clasesCompletadas || 0,
         clasesTotales: est.clasesTotales || 0,
-        ultimaClase: est.ultimaClase || new Date().toISOString(),
+        ultimaClase: est.ultimaClase || null,
         fortalezas: est.fortalezas || [],
         areasAMejorar: est.areasAMejorar || [],
         calificacionPromedio: est.calificacionPromedio || 0,
@@ -576,7 +576,7 @@ export default function ReportesProgreso() {
                         {estudiante.calificacionPromedio.toFixed(1)}
                       </span>
                     </td>
-                    <td>{new Date(estudiante.ultimaClase).toLocaleDateString('es-ES')}</td>
+                    <td>{estudiante.ultimaClase ? new Date(estudiante.ultimaClase).toLocaleDateString('es-ES') : '—'}</td>
                     <td>
                       <div className="acciones-table">
                         <button 
