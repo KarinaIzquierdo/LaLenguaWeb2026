@@ -16,6 +16,7 @@ import EstudiantesView from './EstudiantesView';
 import HistorialAsistencias from './HistorialAsistencias';
 import CalificarEvaluaciones from './CalificarEvaluaciones';
 import MisionesAdmin from '../DashboardAdmin/MisionesAdmin';
+import RetosDiariosAdmin from '../DashboardAdmin/RetosDiariosAdmin';
 import ChatContainer from '../Chat/ChatContainer';
 
 interface DashboardProfesorProps {
@@ -201,6 +202,7 @@ export default function DashboardProfesor({ onLogout }: DashboardProfesorProps =
           {activeView === 'estudiantes' && <EstudiantesView />}
           {activeView === 'reportes' && <ReportesProgreso />}
           {activeView === 'misiones' && <MisionesAdmin />}
+          {activeView === 'retos-diarios' && <RetosDiariosAdmin />}
           {activeView === 'historial-asistencias' && <HistorialAsistencias />}
           {activeView === 'calificar-evaluaciones' && <CalificarEvaluaciones />}
           {activeView === 'notificaciones' && <NotificacionesProfesor />}

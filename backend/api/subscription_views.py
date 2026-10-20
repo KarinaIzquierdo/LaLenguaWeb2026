@@ -54,7 +54,7 @@ def asignar_plan_usuario_view(request):
         print(f"Usuario: {usuario.username}, Plan: {plan.nombre}")
         
         # Calcular fechas
-        fecha_inicio = timezone.now().date()
+        fecha_inicio = timezone.localdate()
         fecha_fin = add_months(fecha_inicio, plan.duracion_meses)
         
         # Calcular precios
@@ -219,12 +219,12 @@ def planes_por_vencer_view(request):
     """
     try:
         dias_aviso = int(request.GET.get('dias', 7))  # Por defecto 7 días
-        fecha_limite = timezone.now().date() + timedelta(days=dias_aviso)
+        fecha_limite = timezone.localdate() + timedelta(days=dias_aviso)
         
         planes_por_vencer = Venta.objects.filter(
             estado='pagado',
             fecha_fin_plan__lte=fecha_limite,
-            fecha_fin_plan__gte=timezone.now().date()
+            fecha_fin_plan__gte=timezone.localdate()
         ).select_related('estudiante', 'plan')
         
         # Crear notificaciones para estudiantes, admins y profesores con planes por vencer
@@ -245,7 +245,7 @@ def planes_por_vencer_view(request):
             ).exists()
             
             if not notificacion_existente:
-                dias_restantes = (venta.fecha_fin_plan - timezone.now().date()).days
+                dias_restantes = (venta.fecha_fin_plan - timezone.localdate()).days
                 fecha_str = venta.fecha_fin_plan.strftime('%d/%m/%Y')
                 
                 # Notificación in-app para estudiante
@@ -352,7 +352,7 @@ def enviar_recordatorio_pago_view(request):
         venta = get_object_or_404(Venta, id=venta_id)
         
         # Calcular días restantes
-        dias_restantes = (venta.fecha_fin_plan - timezone.now().date()).days
+        dias_restantes = (venta.fecha_fin_plan - timezone.localdate()).days
         
         # Crear notificación
         mensaje_default = f'Tu plan {venta.plan.nombre} vence en {dias_restantes} días ({venta.fecha_fin_plan}). ¡Renueva para continuar aprendiendo!'
@@ -396,8 +396,8 @@ def renovar_plan_view(request):
         
         # Calcular nuevas fechas (desde el fin del plan anterior)
         fecha_inicio = venta_anterior.fecha_fin_plan
-        if fecha_inicio < timezone.now().date():
-            fecha_inicio = timezone.now().date()
+        if fecha_inicio < timezone.localdate():
+            fecha_inicio = timezone.localdate()
         
         fecha_fin = add_months(fecha_inicio, plan.duracion_meses)
         

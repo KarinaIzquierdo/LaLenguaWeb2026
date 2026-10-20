@@ -12,7 +12,7 @@ def generar_notificaciones_admin(admin):
     """
     Genera notificaciones automáticas para un administrador
     """
-    hoy = timezone.now().date()
+    hoy = timezone.localdate()
     hace_24h = timezone.now() - timedelta(hours=24)
     notificaciones_creadas = []
 

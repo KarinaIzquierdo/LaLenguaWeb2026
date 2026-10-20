@@ -18,7 +18,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         dias_aviso = options['dias']
-        hoy = timezone.now().date()
+        hoy = timezone.localdate()
         fecha_limite = hoy + timedelta(days=dias_aviso)
 
         planes_por_vencer = Venta.objects.filter(

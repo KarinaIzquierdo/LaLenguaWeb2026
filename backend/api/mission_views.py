@@ -6,7 +6,7 @@ from django.utils import timezone
 from django.shortcuts import get_object_or_404
 from django.db import models
 
-from .models import MissionExternalLink
+from .models import MissionExternalLink, CustomUser
 from .serializers import MissionExternalLinkSerializer
 
 
@@ -21,6 +21,18 @@ def _active_queryset():
         # sin expiración o no expirado
         models.Q(expires_at__isnull=True) | models.Q(expires_at__gte=now)
     )
+
+
+def _bloque_for_user_id(user_id):
+    """Bloque asignado del usuario (p.ej. 'B2_Mañana'), o None si no aplica."""
+    if not user_id:
+        return None
+    try:
+        user = CustomUser.objects.get(id=user_id)
+    except (CustomUser.DoesNotExist, ValueError, TypeError):
+        return None
+    bloque = (getattr(user, 'bloque_asignado', None) or '').strip()
+    return bloque or None
 
 
 @api_view(['GET'])
@@ -45,7 +57,13 @@ def mission_current_link_view(request, mission_key: str):
     if user_id:
         obj = base.filter(audience_type='student', user_id=user_id).order_by('-start_at', '-created_at').first()
 
-    # 2) Finalmente global (bloques deshabilitados)
+    # 2) Luego por bloque del estudiante
+    if not obj:
+        bloque = _bloque_for_user_id(user_id)
+        if bloque:
+            obj = base.filter(audience_type='bloque', audience_value=bloque).order_by('-start_at', '-created_at').first()
+
+    # 3) Finalmente global
     if not obj:
         obj = base.filter(audience_type='global').order_by('-start_at', '-created_at').first()
 
@@ -72,12 +90,14 @@ def missions_available_view(request):
 
     user_id = request.query_params.get('user_id')
 
-    # Prioridad: student > global (bloques deshabilitados)
+    # Prioridad: student > bloque > global
     qs_student = base.filter(audience_type='student', user_id=user_id) if user_id else base.none()
+    bloque = _bloque_for_user_id(user_id)
+    qs_bloque = base.filter(audience_type='bloque', audience_value=bloque) if bloque else base.none()
     qs_global = base.filter(audience_type='global')
 
     # Combinar con prioridad
-    combined = qs_student | qs_global
+    combined = qs_student | qs_bloque | qs_global
     # Obtener mission_keys únicos
     mission_keys = combined.values_list('mission_key', flat=True).distinct()
 

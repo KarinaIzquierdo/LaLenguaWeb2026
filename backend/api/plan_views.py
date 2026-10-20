@@ -212,7 +212,7 @@ def estadisticas_financieras_view(request):
     """
     try:
         from django.db.models import Sum, Count
-        from datetime import datetime, timedelta
+        from django.utils import timezone
         
         # Estadísticas generales
         total_ventas = Venta.objects.count()
@@ -221,7 +221,7 @@ def estadisticas_financieras_view(request):
         ventas_pendientes = Venta.objects.filter(estado='pendiente').count()
         
         # Ingresos del mes actual
-        inicio_mes = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        inicio_mes = timezone.localtime().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         ingresos_mes = ventas_pagadas.filter(fecha_venta__gte=inicio_mes).aggregate(total=Sum('precio_total'))['total'] or 0
         
         # Tasa de conversión

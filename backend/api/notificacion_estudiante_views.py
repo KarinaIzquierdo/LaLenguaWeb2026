@@ -24,7 +24,7 @@ def generar_notificaciones_estudiante(estudiante):
     if role and role != 'student':
         return 0
 
-    hoy = timezone.now().date()
+    hoy = timezone.localdate()
     notificaciones_creadas = []
 
     # Clases
@@ -86,10 +86,11 @@ def generar_notificaciones_estudiante(estudiante):
         models.Q(expires_at__isnull=True) | models.Q(expires_at__gte=now)
     )
 
-    misiones = mission_base.filter(
-        models.Q(audience_type='global') |
-        models.Q(audience_type='student', user=estudiante)
-    ).distinct()
+    misiones_q = models.Q(audience_type='global') | models.Q(audience_type='student', user=estudiante)
+    bloque_estudiante = (getattr(estudiante, 'bloque_asignado', None) or '').strip()
+    if bloque_estudiante:
+        misiones_q |= models.Q(audience_type='bloque', audience_value=bloque_estudiante)
+    misiones = mission_base.filter(misiones_q).distinct()
 
     for mision in misiones:
         mission_key = mision.mission_key
