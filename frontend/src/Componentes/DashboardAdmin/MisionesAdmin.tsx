@@ -61,6 +61,10 @@ export default function MisionesAdmin() {
         alert('Selecciona el estudiante al que va dirigida la misión, o cambia la audiencia a Global.');
         return;
       }
+      if (form.audience_type === 'bloque' && !form.audience_value?.trim()) {
+        alert('Escribe el bloque al que va dirigida la misión (p.ej. B2_Mañana), o cambia la audiencia a Global.');
+        return;
+      }
       await missionService.create(form);
       setForm({ mission_key: '', platform: 'custom', url: '', is_active: true, audience_type: 'global' as any, audience_value: '', user: undefined });
       await load();
@@ -105,8 +109,12 @@ export default function MisionesAdmin() {
           <input placeholder="URL" value={form.url || ''} onChange={e => setForm({ ...form, url: e.target.value })} />
           <select value={(form.audience_type as any) || 'global'} onChange={e => setForm({ ...form, audience_type: e.target.value as any })}>
             <option value="global">Global</option>
+            <option value="bloque">Por Bloque</option>
             <option value="student">Por Estudiante</option>
           </select>
+          {form.audience_type === 'bloque' && (
+            <input placeholder="Bloque (p.ej. B2_Mañana)" value={form.audience_value || ''} onChange={e => setForm({ ...form, audience_value: e.target.value })} />
+          )}
           {form.audience_type === 'student' && (
             <select value={form.user as any || ''} onChange={e => setForm({ ...form, user: Number(e.target.value) })}>
               <option value="">Seleccione estudiante…</option>
