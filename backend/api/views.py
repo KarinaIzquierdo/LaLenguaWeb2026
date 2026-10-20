@@ -1702,11 +1702,13 @@ def gamificacion_ranking_retos_view(request):
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def daily_challenges_admin_list_create_view(request):
-    """Lista y crea retos diarios (solo admins)."""
-    if not (request.user.is_staff or getattr(request.user, 'role', None) == 'admin'):
+    """Lista y crea retos diarios (admins y profesores)."""
+    user_role = getattr(request.user, 'role', None)
+    is_profesor = getattr(request.user, 'is_profesor', False) or user_role == 'profesor'
+    if not (request.user.is_staff or user_role == 'admin' or is_profesor):
         return Response({
             'success': False,
-            'message': 'Solo administradores pueden gestionar retos diarios'
+            'message': 'Solo administradores y profesores pueden gestionar retos diarios'
         }, status=status.HTTP_403_FORBIDDEN)
 
     if request.method == 'GET':
@@ -1729,11 +1731,13 @@ def daily_challenges_admin_list_create_view(request):
 @api_view(['GET', 'PUT', 'PATCH', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def daily_challenges_admin_detail_view(request, pk):
-    """Detalle/actualización/eliminación de un reto diario (solo admins)."""
-    if not (request.user.is_staff or getattr(request.user, 'role', None) == 'admin'):
+    """Detalle/actualización/eliminación de un reto diario (admins y profesores)."""
+    user_role = getattr(request.user, 'role', None)
+    is_profesor = getattr(request.user, 'is_profesor', False) or user_role == 'profesor'
+    if not (request.user.is_staff or user_role == 'admin' or is_profesor):
         return Response({
             'success': False,
-            'message': 'Solo administradores pueden gestionar retos diarios'
+            'message': 'Solo administradores y profesores pueden gestionar retos diarios'
         }, status=status.HTTP_403_FORBIDDEN)
 
     try:

@@ -57,6 +57,10 @@ export default function MisionesAdmin() {
         alert('mission_key y url son obligatorios');
         return;
       }
+      if (form.audience_type === 'student' && !form.user) {
+        alert('Selecciona el estudiante al que va dirigida la misión, o cambia la audiencia a Global.');
+        return;
+      }
       await missionService.create(form);
       setForm({ mission_key: '', platform: 'custom', url: '', is_active: true, audience_type: 'global' as any, audience_value: '', user: undefined });
       await load();
