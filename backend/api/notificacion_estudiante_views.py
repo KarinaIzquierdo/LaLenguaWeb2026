@@ -24,7 +24,7 @@ def generar_notificaciones_estudiante(estudiante):
     if role and role != 'student':
         return 0
 
-    hoy = timezone.now().date()
+    hoy = timezone.localdate()
     notificaciones_creadas = []
 
     # Clases

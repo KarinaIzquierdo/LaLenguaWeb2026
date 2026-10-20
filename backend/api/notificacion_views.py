@@ -16,7 +16,7 @@ def generar_notificaciones_automaticas(profesor_id):
     notificaciones_creadas = []
     
     # 1. CLASES DE HOY
-    hoy = timezone.now().date()
+    hoy = timezone.localdate()
     clases_hoy = Clase.objects.filter(
         profesor=profesor.get_full_name(),
         fecha=hoy,

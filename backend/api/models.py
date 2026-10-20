@@ -87,13 +87,13 @@ class CustomUser(AbstractUser):
             except CustomUser.DoesNotExist:
                 nivel_anterior = None
             if nivel_anterior != self.english_level and self.english_level:
-                self.nivel_fecha_inicio = timezone.now().date()
+                self.nivel_fecha_inicio = timezone.localdate()
                 self.total_xp = 0
                 if kwargs.get('update_fields'):
                     kwargs['update_fields'] = set(kwargs['update_fields']) | {'nivel_fecha_inicio', 'total_xp'}
         elif self.english_level and not self.nivel_fecha_inicio:
             # Usuario nuevo con nivel asignado
-            self.nivel_fecha_inicio = timezone.now().date()
+            self.nivel_fecha_inicio = timezone.localdate()
         super().save(*args, **kwargs)
 
     def __str__(self):

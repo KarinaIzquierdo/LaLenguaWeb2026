@@ -1289,7 +1289,7 @@ def info_periodo_nivel(user):
     if not nivel or not duracion:
         return None
 
-    hoy = timezone.now().date()
+    hoy = timezone.localdate()
     inicio = getattr(user, 'nivel_fecha_inicio', None)
     reiniciado = False
 
@@ -2097,7 +2097,7 @@ class ClaseViewSet(viewsets.ModelViewSet):
         if not clase.estudiantes.filter(id=estudiante.id).exists():
             clase.estudiantes.add(estudiante)
 
-        fecha = clase.fecha if clase.fecha else timezone.now().date()
+        fecha = clase.fecha if clase.fecha else timezone.localdate()
 
         asistencia, created = Asistencia.objects.get_or_create(
             estudiante=estudiante,
@@ -2189,7 +2189,7 @@ class ClaseViewSet(viewsets.ModelViewSet):
         except Asistencia.DoesNotExist:
             # Crear asistencia si el profesor la marca manualmente
             estudiante = get_object_or_404(CustomUser, id=estudiante_id)
-            fecha = clase.fecha if clase.fecha else timezone.now().date()
+            fecha = clase.fecha if clase.fecha else timezone.localdate()
             asistencia = Asistencia.objects.create(
                 estudiante=estudiante,
                 clase=clase,
@@ -2236,7 +2236,7 @@ class ClaseViewSet(viewsets.ModelViewSet):
 
         guardados = []
         errores = []
-        fecha = clase.fecha if clase.fecha else timezone.now().date()
+        fecha = clase.fecha if clase.fecha else timezone.localdate()
         estados_validos = {'presente', 'ausente', 'tardanza', 'justificado', 'pendiente'}
         finalizar_clase = request.data.get('finalizar_clase', False)
 
@@ -2442,7 +2442,7 @@ def list_users_view(request):
 
 def _build_admin_chart_data():
     """Helper que devuelve datos de la gráfica de estudiantes nuevos vs egresados por mes."""
-    today = timezone.now().date().replace(day=1)
+    today = timezone.localdate().replace(day=1)
     months = []
     for i in range(5, -1, -1):
         m = today.month - i
@@ -2485,7 +2485,7 @@ def admin_dashboard_stats_view(request):
             'message': 'Solo administradores pueden ver estas estadísticas'
         }, status=status.HTTP_403_FORBIDDEN)
 
-    today = timezone.now().date()
+    today = timezone.localdate()
     start_of_month = today.replace(day=1)
 
     # Total de estudiantes activos
@@ -2554,7 +2554,7 @@ def admin_dashboard_charts_view(request):
             'message': 'Solo administradores pueden ver estas estadísticas'
         }, status=status.HTTP_403_FORBIDDEN)
 
-    today = timezone.now().date()
+    today = timezone.localdate()
 
     # ========== 1) NUEVOS ESTUDIANTES Y EGRESADOS POR MES ==========
     students_monthly = _build_admin_chart_data()
@@ -2642,7 +2642,7 @@ def profesor_dashboard_stats_view(request):
             'message': 'Solo profesores pueden ver estas estadísticas'
         }, status=status.HTTP_403_FORBIDDEN)
 
-    today = timezone.now().date()
+    today = timezone.localdate()
     profesor_name = f"{user.first_name or ''} {user.last_name or ''}".strip() or user.username
 
     # Clases del mes actual asignadas a este profesor
