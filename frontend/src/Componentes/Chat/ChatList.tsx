@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import type { ChatRoom } from '../../services/chatService';
 import { chatService } from '../../services/chatService';
 import { FiMessageSquare, FiUser, FiSearch } from 'react-icons/fi';
+import { toast } from '../../utils/toast';
 
 interface ChatListProps {
   onSelectRoom: (roomId: number, otherUserName: string) => void;
@@ -46,7 +47,7 @@ const ChatList: React.FC<ChatListProps> = ({ onSelectRoom }) => {
     } catch (error: any) {
       console.error("❌ Error iniciando chat:", error);
       const errorMsg = error.response?.data?.error || error.message || "Error desconocido";
-      alert(`No se pudo iniciar el chat: ${errorMsg}. Por favor, intenta de nuevo.`);
+      toast(`No se pudo iniciar el chat: ${errorMsg}. Por favor, intenta de nuevo.`, 'error');
     } finally {
       setSelectingId(null);
     }

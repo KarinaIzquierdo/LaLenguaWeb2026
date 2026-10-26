@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import "./Nav_Usu.css";
 import ProfileModal from "../Profile/ProfileModal";
 // @ts-ignore
@@ -20,6 +21,7 @@ export default function NavUsu({ candies, experience, userName, onLogout, onOpen
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const navigate = useNavigate();
 
   // Cargar notificaciones
   useEffect(() => {
@@ -153,6 +155,34 @@ export default function NavUsu({ candies, experience, userName, onLogout, onOpen
                           <div className="notification-content">
                             <p className="notification-message">{notif.mensaje}</p>
                             <span className="notification-time">{formatFecha(notif.fecha_creacion)}</span>
+                            {notif.datos_adicionales?.meet_link && (
+                              <a
+                                className="notification-action"
+                                href={notif.datos_adicionales.meet_link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (!notif.leida) handleMarkAsRead(notif.id);
+                                }}
+                              >
+                                Unirse ahora
+                              </a>
+                            )}
+                            {(notif.tipo === 'evaluacion_asignada' || notif.tipo === 'calificacion_disponible') && (
+                              <button
+                                type="button"
+                                className="notification-action"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (!notif.leida) handleMarkAsRead(notif.id);
+                                  setIsNotificationsOpen(false);
+                                  navigate('/dashboard', { state: { module: 'evaluaciones' } });
+                                }}
+                              >
+                                {notif.tipo === 'evaluacion_asignada' ? 'Ver tarea' : 'Ver nota'}
+                              </button>
+                            )}
                           </div>
                           {!notif.leida && <div className="unread-dot"></div>}
                         </div>

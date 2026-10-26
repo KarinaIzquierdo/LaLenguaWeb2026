@@ -11,6 +11,7 @@ import { userService } from '../../services/userService';
 import type { RegisterData } from '../../services/userService';
 import { rolMapFrontendToBackend } from '../../services/rolMap';
 import { especializacionService, type Especializacion } from '../../services/especializacionService';
+import { toast } from '../../utils/toast';
 
 const ITEMS_PER_PAGE = 20;
 
@@ -264,15 +265,15 @@ export default function FormularioUsuarios() {
         const data = await userService.getAll();
         setUsers(data);
         setPaginaActual(1);
-        alert(`Usuario "${userName}" eliminado exitosamente.`);
+        toast(`Usuario "${userName}" eliminado exitosamente.`);
       } else {
         console.error('Error en deleteUser:', result);
         const message = (result && (result.message || result.error)) || 'La operación de eliminación no se completó en el servidor.';
-        alert(`Error al eliminar el usuario: ${message}`);
+        toast(`Error al eliminar el usuario: ${message}`, 'error');
       }
     } catch (error) {
       console.error('Error al eliminar usuario:', error);
-      alert('Error al eliminar el usuario. Inténtalo nuevamente.');
+      toast('Error al eliminar el usuario. Inténtalo nuevamente.', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -345,7 +346,7 @@ export default function FormularioUsuarios() {
       }
     } catch (error) {
       console.error('Error al guardar usuario:', error);
-      alert('Error al guardar el usuario. Inténtalo nuevamente.');
+      toast('Error al guardar el usuario. Inténtalo nuevamente.', 'error');
     } finally {
       setIsLoading(false);
     }

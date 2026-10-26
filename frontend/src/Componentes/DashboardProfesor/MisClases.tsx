@@ -5,6 +5,7 @@ import { authService } from '../../services/authService';
 import TomarAsistencia from './TomarAsistencia';
 import HistorialAsistencias from './HistorialAsistencias';
 import './MisClases.css';
+import { toast } from '../../utils/toast';
 
 interface Clase {
   id: number;
@@ -111,7 +112,7 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
 
     if (!clase) {
       console.error('Clase no encontrada con ID:', claseId);
-      alert('Error: No se pudo encontrar la clase.');
+      toast('Error: No se pudo encontrar la clase.', 'error');
       return;
     }
 
@@ -123,7 +124,7 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
       meetLink.includes('meet.google.com/new');
 
     if (esLinkInvalido) {
-      alert('Esta clase no tiene aún un enlace de videoconferencia válido. Edita la clase y agrega el enlace (Zoom, Meet, Teams, etc.) antes de iniciarla.');
+      toast('Esta clase no tiene aún un enlace de videoconferencia válido. Edita la clase y agrega el enlace (Zoom, Meet, Teams, etc.) antes de iniciarla.');
       return;
     }
 
@@ -165,11 +166,11 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
         ? `\n\n🎫 Código de asistencia: ${claseActualizada.codigo_asistencia}`
         : '';
 
-      alert(`¡Clase "${clase.nombre || clase.tema}" iniciada! Los estudiantes pueden acceder ahora.${codigoMsg}`);
+      toast(`¡Clase "${clase.nombre || clase.tema}" iniciada! Los estudiantes pueden acceder ahora.${codigoMsg}`);
     } catch (error: any) {
       console.error('Error al iniciar clase:', error);
       console.error('Detalles del error:', error?.response?.data);
-      alert('Error al iniciar la clase. Intenta nuevamente.');
+      toast('Error al iniciar la clase. Intenta nuevamente.', 'error');
     }
   };
 
@@ -198,13 +199,13 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
       setClasesDelBloque(prev => prev.map(actualizar));
 
       if (mostrarAlerta) {
-        alert('¡Clase finalizada exitosamente! Ahora puedes aprobar o rechazar las asistencias pendientes.');
+        toast('¡Clase finalizada exitosamente! Ahora puedes aprobar o rechazar las asistencias pendientes.');
       }
     } catch (error: any) {
       console.error('Error al finalizar clase:', error);
       console.error('Detalles del error:', error?.response?.data);
       if (mostrarAlerta) {
-        alert('Error al finalizar la clase. Intenta nuevamente.');
+        toast('Error al finalizar la clase. Intenta nuevamente.', 'error');
       }
     }
   };
@@ -302,10 +303,10 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
       setClases(prev => prev.map(c => (c.id === selectedClase.id ? { ...c, ...editForm, estudiantes: updatedStudentIds.map(String) } : c)));
       setSelectedClase((prev: any) => ({ ...prev, ...editForm, estudiantes: updatedStudentIds.map(String) }));
       setModoModal('ver');
-      alert('✅ Clase actualizada correctamente');
+      toast('✅ Clase actualizada correctamente');
     } catch (error: any) {
       console.error('Error guardando clase:', error);
-      alert(error.response?.data?.message || error.message || 'Error al guardar la clase');
+      toast(error.response?.data?.message || error.message || 'Error al guardar la clase', 'error');
     } finally {
       setSavingClase(false);
     }
@@ -667,7 +668,7 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
                               if (esLinkValido) {
                                 window.open(meetLink, '_blank');
                               } else {
-                                alert('No hay enlace de videoconferencia configurado para esta clase. Edita la clase y agrega el enlace (Zoom, Meet, Teams, etc.).');
+                                toast('No hay enlace de videoconferencia configurado para esta clase. Edita la clase y agrega el enlace (Zoom, Meet, Teams, etc.).');
                               }
                             }}
                           >
@@ -769,7 +770,7 @@ export default function MisClases({ profesorId }: { profesorId?: number }) {
                           if (esLinkValido) {
                             window.open(meetLink, '_blank');
                           } else {
-                            alert('No hay enlace de videoconferencia configurado para esta clase. Edita la clase y agrega el enlace (Zoom, Meet, Teams, etc.).');
+                            toast('No hay enlace de videoconferencia configurado para esta clase. Edita la clase y agrega el enlace (Zoom, Meet, Teams, etc.).');
                           }
                         }}
                       >

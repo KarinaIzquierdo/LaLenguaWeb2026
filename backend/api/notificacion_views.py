@@ -7,6 +7,12 @@ from datetime import timedelta
 from .models import CustomUser, Clase, Evaluacion, RespuestaEvaluacion, Notificacion
 from .serializers import NotificacionSerializer
 
+# Tipos que el profesor puede ver en sus notificaciones. El resto de tipos
+# pueden seguir existiendo en la base de datos pero no se muestran ni cuentan.
+TIPOS_VISIBLES_PROFESOR = [
+    'evaluacion_subida',
+]
+
 
 def generar_notificaciones_automaticas(profesor_id):
     """
@@ -14,68 +20,17 @@ def generar_notificaciones_automaticas(profesor_id):
     """
     profesor = CustomUser.objects.get(id=profesor_id, role='profesor')
     notificaciones_creadas = []
-    
-    # 1. CLASES DE HOY
-    hoy = timezone.localdate()
-    clases_hoy = Clase.objects.filter(
-        profesor=profesor.get_full_name(),
-        fecha=hoy,
-        estado='programada'
-    )
-    
-    for clase in clases_hoy:
-        # Verificar si ya existe notificación para esta clase hoy
-        if not Notificacion.objects.filter(
-            profesor=profesor,
-            tipo='clase_hoy',
-            clase_relacionada=clase,
-            created_at__date=hoy
-        ).exists():
-            notif = Notificacion.objects.create(
-                profesor=profesor,
-                tipo='clase_hoy',
-                titulo=f"Clase hoy: {clase.tema}",
-                mensaje=f"Tienes una clase programada hoy a las {clase.hora}. Tema: {clase.tema}. {clase.estudiantes.count()} estudiante(s) asignados.",
-                prioridad='alta',
-                clase_relacionada=clase
-            )
-            notificaciones_creadas.append(notif)
-    
-    # 2. CLASES PRÓXIMAS (MAÑANA)
-    manana = hoy + timedelta(days=1)
-    clases_manana = Clase.objects.filter(
-        profesor=profesor.get_full_name(),
-        fecha=manana,
-        estado='programada'
-    )
-    
-    for clase in clases_manana:
-        if not Notificacion.objects.filter(
-            profesor=profesor,
-            tipo='clase_proxima',
-            clase_relacionada=clase,
-            created_at__date=hoy
-        ).exists():
-            notif = Notificacion.objects.create(
-                profesor=profesor,
-                tipo='clase_proxima',
-                titulo=f"Clase mañana: {clase.tema}",
-                mensaje=f"Tienes una clase programada mañana a las {clase.hora}. Prepara el material para: {clase.tema}",
-                prioridad='media',
-                clase_relacionada=clase
-            )
-            notificaciones_creadas.append(notif)
-    
-    # 3. EVALUACIONES SUBIDAS POR ESTUDIANTES (últimas 24 horas)
+
+    # TRABAJOS / TAREAS ENTREGADAS POR ESTUDIANTES (últimas 24 horas)
     hace_24h = timezone.now() - timedelta(hours=24)
     evaluaciones_profesor = Evaluacion.objects.filter(profesor=profesor)
-    
+
     respuestas_recientes = RespuestaEvaluacion.objects.filter(
         evaluacion__in=evaluaciones_profesor,
         fecha_envio__gte=hace_24h,
         completado=True
     )
-    
+
     for respuesta in respuestas_recientes:
         if not Notificacion.objects.filter(
             profesor=profesor,
@@ -84,74 +39,18 @@ def generar_notificaciones_automaticas(profesor_id):
             estudiante_relacionado=respuesta.estudiante,
             created_at__gte=hace_24h
         ).exists():
+            nombre = respuesta.estudiante.get_full_name() or respuesta.estudiante.username
             notif = Notificacion.objects.create(
                 profesor=profesor,
                 tipo='evaluacion_subida',
-                titulo=f"Nueva respuesta: {respuesta.evaluacion.titulo}",
-                mensaje=f"{respuesta.estudiante.get_full_name()} ha enviado su respuesta para '{respuesta.evaluacion.titulo}'. Tiempo: {respuesta.tiempo_gastado//60} min.",
+                titulo=f"Tarea entregada: {respuesta.evaluacion.titulo}",
+                mensaje=f"{nombre} ha enviado su tarea para revisión: '{respuesta.evaluacion.titulo}'.",
                 prioridad='media',
                 evaluacion_relacionada=respuesta.evaluacion,
                 estudiante_relacionado=respuesta.estudiante
             )
             notificaciones_creadas.append(notif)
-    
-    # 4. EVALUACIONES PENDIENTES POR CALIFICAR
-    for evaluacion in evaluaciones_profesor.filter(estado='publicada'):
-        respuestas_sin_calificar = RespuestaEvaluacion.objects.filter(
-            evaluacion=evaluacion,
-            completado=True
-        ).count()
-        
-        if respuestas_sin_calificar > 0:
-            # Solo crear notificación si no existe una reciente
-            if not Notificacion.objects.filter(
-                profesor=profesor,
-                tipo='evaluacion_pendiente',
-                evaluacion_relacionada=evaluacion,
-                created_at__date=hoy
-            ).exists():
-                notif = Notificacion.objects.create(
-                    profesor=profesor,
-                    tipo='evaluacion_pendiente',
-                    titulo=f"Pendiente calificar: {evaluacion.titulo}",
-                    mensaje=f"Tienes {respuestas_sin_calificar} respuesta(s) pendiente(s) por calificar en '{evaluacion.titulo}'",
-                    prioridad='media',
-                    evaluacion_relacionada=evaluacion
-                )
-                notificaciones_creadas.append(notif)
-    
-    # 5. ESTUDIANTES SIN EVALUAR (evaluaciones vencidas)
-    evaluaciones_vencidas = evaluaciones_profesor.filter(
-        fecha_limite__lt=timezone.now(),
-        estado='publicada'
-    )
-    
-    for evaluacion in evaluaciones_vencidas:
-        estudiantes_asignados = evaluacion.estudiantes_asignados.count()
-        respuestas_enviadas = RespuestaEvaluacion.objects.filter(
-            evaluacion=evaluacion,
-            completado=True
-        ).count()
-        
-        estudiantes_faltantes = estudiantes_asignados - respuestas_enviadas
-        
-        if estudiantes_faltantes > 0:
-            if not Notificacion.objects.filter(
-                profesor=profesor,
-                tipo='evaluacion_vencida',
-                evaluacion_relacionada=evaluacion,
-                created_at__date=hoy
-            ).exists():
-                notif = Notificacion.objects.create(
-                    profesor=profesor,
-                    tipo='evaluacion_vencida',
-                    titulo=f"Evaluación vencida: {evaluacion.titulo}",
-                    mensaje=f"{estudiantes_faltantes} estudiante(s) no enviaron '{evaluacion.titulo}' (vencida el {evaluacion.fecha_limite.strftime('%d/%m/%Y')})",
-                    prioridad='alta',
-                    evaluacion_relacionada=evaluacion
-                )
-                notificaciones_creadas.append(notif)
-    
+
     return notificaciones_creadas
 
 
@@ -178,6 +77,7 @@ def obtener_notificaciones(request):
         
         notificaciones = Notificacion.objects.filter(
             profesor=request.user,
+            tipo__in=TIPOS_VISIBLES_PROFESOR,
             created_at__gte=hace_30_dias
         ).order_by('-created_at')
         

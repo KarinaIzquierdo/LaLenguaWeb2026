@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { subscriptionService, type Usuario, type Plan, type Suscripcion } from '../../services/subscriptionService';
 import './GestionSuscripciones.css';
+import { toast } from '../../utils/toast';
 
 const GestionSuscripciones: React.FC = () => {
   const [usuariosSinPlan, setUsuariosSinPlan] = useState<Usuario[]>([]);
@@ -75,20 +76,20 @@ const GestionSuscripciones: React.FC = () => {
       // Recargar datos
       await loadData();
       
-      alert('Plan asignado exitosamente');
+      toast('Plan asignado exitosamente');
     } catch (err) {
       console.error('Error assigning plan:', err);
-      alert('Error al asignar el plan');
+      toast('Error al asignar el plan', 'error');
     }
   };
 
   const handleEnviarRecordatorio = async (suscripcion: Suscripcion) => {
     try {
       await subscriptionService.enviarRecordatorio(suscripcion.id);
-      alert(`Recordatorio enviado a ${getNombreEstudiante(suscripcion)}`);
+      toast(`Recordatorio enviado a ${getNombreEstudiante(suscripcion)}`);
     } catch (err) {
       console.error('Error sending reminder:', err);
-      alert('Error al enviar recordatorio');
+      toast('Error al enviar recordatorio', 'error');
     }
   };
 
@@ -96,10 +97,10 @@ const GestionSuscripciones: React.FC = () => {
     try {
       await subscriptionService.renovarPlan(suscripcion.id);
       await loadData();
-      alert(`Plan renovado para ${getNombreEstudiante(suscripcion)}`);
+      toast(`Plan renovado para ${getNombreEstudiante(suscripcion)}`);
     } catch (err) {
       console.error('Error renewing plan:', err);
-      alert('Error al renovar plan');
+      toast('Error al renovar plan', 'error');
     }
   };
 
@@ -119,10 +120,10 @@ const GestionSuscripciones: React.FC = () => {
       // Recargar datos
       await loadData();
       
-      alert(`Plan cancelado exitosamente para ${suscripcion.estudiante_nombre}.`);
+      toast(`Plan cancelado exitosamente para ${suscripcion.estudiante_nombre}.`);
     } catch (err) {
       console.error('Error canceling plan:', err);
-      alert('Error al cancelar plan');
+      toast('Error al cancelar plan', 'error');
     }
   };
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { calificacionService, type PanelCalificacionItem } from '../../services/calificacionService';
 import './CalificarEvaluaciones.css';
+import { toast } from '../../utils/toast';
 
 interface CalificarEvaluacionesProps {}
 
@@ -66,13 +67,13 @@ export default function CalificarEvaluaciones({}: CalificarEvaluacionesProps) {
     const rowKey = `${item.evaluacion_id}-${item.estudiante_id}`;
     const valor = notas[rowKey] ?? '';
     if (!valor.trim()) {
-      alert('Por favor ingresa una calificación');
+      toast('Por favor ingresa una calificación');
       return;
     }
 
     const calificacionNum = parseFloat(valor);
     if (isNaN(calificacionNum) || calificacionNum < 0 || calificacionNum > 100) {
-      alert('La calificación debe ser un número entre 0 y 100');
+      toast('La calificación debe ser un número entre 0 y 100');
       return;
     }
 
@@ -92,17 +93,17 @@ export default function CalificarEvaluaciones({}: CalificarEvaluacionesProps) {
       );
 
       if (response.success) {
-        alert(response.message || 'Calificación guardada exitosamente');
+        toast(response.message || 'Calificación guardada exitosamente');
         await cargarPanel();
         if (activeTab === 'por-calificar') {
           setActiveTab('calificadas');
         }
       } else {
-        alert(response.error || 'Error al guardar calificación');
+        toast(response.error || 'Error al guardar calificación', 'error');
       }
     } catch (err) {
       console.error('Error guardando calificación:', err);
-      alert('Error de conexión');
+      toast('Error de conexión', 'error');
     } finally {
       setGuardando(false);
     }

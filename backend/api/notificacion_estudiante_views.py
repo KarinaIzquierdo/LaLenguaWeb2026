@@ -3,10 +3,22 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from django.utils import timezone
-from datetime import timedelta
-from django.db import models
-from .models import NotificacionEstudiante, Clase, MissionExternalLink, DailyChallengeQuestion
+from datetime import datetime, timedelta
+from .models import NotificacionEstudiante, Clase, Evaluacion, RespuestaEvaluacion
 from .serializers import NotificacionEstudianteSerializer
+
+# Tipos que el estudiante puede ver en su campanita. El resto (planes,
+# misiones, retos, etc.) se siguen pudiendo crear internamente pero no
+# se muestran ni cuentan como no leídas.
+TIPOS_VISIBLES = [
+    'clase_proxima',
+    'clase_pronto',
+    'evaluacion_asignada',
+    'calificacion_disponible',
+]
+
+# Antigüedad máxima del evento para notificarlo (evita avisar de cosas viejas)
+DIAS_MAX_NOTIFICAR = 7
 
 
 def _get_estudiante_role(estudiante):
@@ -14,6 +26,18 @@ def _get_estudiante_role(estudiante):
     if role:
         return role
     return 'student' if getattr(estudiante, 'is_student', False) else None
+
+
+def _clase_inicio_dt(clase):
+    """Combina fecha + hora de la clase en un datetime con zona horaria.
+    Retorna None si la clase no tiene hora válida."""
+    if not clase.fecha or not clase.hora:
+        return None
+    try:
+        hora = datetime.strptime(str(clase.hora).strip(), '%H:%M').time()
+    except ValueError:
+        return None
+    return timezone.make_aware(datetime.combine(clase.fecha, hora))
 
 
 def generar_notificaciones_estudiante(estudiante):
@@ -25,9 +49,10 @@ def generar_notificaciones_estudiante(estudiante):
         return 0
 
     hoy = timezone.localdate()
+    ahora = timezone.now()
     notificaciones_creadas = []
 
-    # Clases
+    # 1. Recordatorio de clase
     clases = Clase.objects.filter(
         estudiantes=estudiante,
         fecha__gte=hoy,
@@ -36,25 +61,36 @@ def generar_notificaciones_estudiante(estudiante):
 
     for clase in clases:
         if clase.fecha == hoy:
-            if not NotificacionEstudiante.objects.filter(
+            # Aviso "empieza en X minutos": desde 30 min antes hasta 10 min después del inicio
+            inicio = _clase_inicio_dt(clase)
+            if not inicio:
+                continue
+            minutos = int((inicio - ahora).total_seconds() // 60)
+            if not (-10 <= minutos <= 30):
+                continue
+            if NotificacionEstudiante.objects.filter(
                 estudiante=estudiante,
-                tipo='clase_hoy',
-                datos_adicionales__contains={'clase_id': clase.id},
-                fecha_creacion__date=hoy
+                tipo='clase_pronto',
+                datos_adicionales__contains={'clase_id': clase.id}
             ).exists():
-                notificaciones_creadas.append(NotificacionEstudiante.objects.create(
-                    estudiante=estudiante,
-                    tipo='clase_hoy',
-                    mensaje=f'Tienes clase hoy: {clase.tema or clase.nombre} a las {clase.hora} con {clase.profesor}.',
-                    datos_adicionales={
-                        'clase_id': clase.id,
-                        'tema': clase.tema,
-                        'fecha': str(clase.fecha),
-                        'hora': clase.hora,
-                        'profesor': clase.profesor,
-                        'meet_link': clase.meet_link
-                    }
-                ))
+                continue
+            if minutos > 0:
+                mensaje = f'Tu clase de {clase.tema or clase.nombre} empieza en {minutos} minutos.'
+            else:
+                mensaje = f'Tu clase de {clase.tema or clase.nombre} acaba de empezar.'
+            notificaciones_creadas.append(NotificacionEstudiante.objects.create(
+                estudiante=estudiante,
+                tipo='clase_pronto',
+                mensaje=mensaje,
+                datos_adicionales={
+                    'clase_id': clase.id,
+                    'tema': clase.tema,
+                    'fecha': str(clase.fecha),
+                    'hora': clase.hora,
+                    'profesor': clase.profesor,
+                    'meet_link': clase.meet_link
+                }
+            ))
         elif clase.fecha == hoy + timedelta(days=1):
             if not NotificacionEstudiante.objects.filter(
                 estudiante=estudiante,
@@ -76,62 +112,62 @@ def generar_notificaciones_estudiante(estudiante):
                     }
                 ))
 
-    # Misiones
-    now = timezone.now()
-    mission_base = MissionExternalLink.objects.filter(
-        is_active=True
-    ).filter(
-        models.Q(start_at__isnull=True) | models.Q(start_at__lte=now)
-    ).filter(
-        models.Q(expires_at__isnull=True) | models.Q(expires_at__gte=now)
-    )
+    # 2. Tarea / evaluación asignada (solo evaluaciones publicadas recientes)
+    evaluaciones = Evaluacion.objects.filter(
+        estudiantes_asignados=estudiante,
+        estado='publicada',
+        updated_at__gte=ahora - timedelta(days=DIAS_MAX_NOTIFICAR)
+    ).distinct()
 
-    misiones_q = models.Q(audience_type='global') | models.Q(audience_type='student', user=estudiante)
-    bloque_estudiante = (getattr(estudiante, 'bloque_asignado', None) or '').strip()
-    if bloque_estudiante:
-        misiones_q |= models.Q(audience_type='bloque', audience_value=bloque_estudiante)
-    misiones = mission_base.filter(misiones_q).distinct()
-
-    for mision in misiones:
-        mission_key = mision.mission_key
-        if not NotificacionEstudiante.objects.filter(
+    for evaluacion in evaluaciones:
+        if NotificacionEstudiante.objects.filter(
             estudiante=estudiante,
-            tipo='mision_disponible',
-            datos_adicionales__contains={'mission_key': mission_key}
+            tipo='evaluacion_asignada',
+            datos_adicionales__contains={'evaluacion_id': evaluacion.id}
         ).exists():
-            notificaciones_creadas.append(NotificacionEstudiante.objects.create(
-                estudiante=estudiante,
-                tipo='mision_disponible',
-                mensaje=f'Nueva misión disponible: {mission_key.replace("_", " ").title()}.',
-                datos_adicionales={
-                    'mission_key': mission_key,
-                    'platform': mision.platform,
-                    'url': mision.url,
-                    'notes': mision.notes
-                }
-            ))
-
-    # Retos diarios
-    retos_activos = DailyChallengeQuestion.objects.filter(activo=True)
-    if retos_activos.exists():
-        if not NotificacionEstudiante.objects.filter(
+            continue
+        if evaluacion.fecha_limite:
+            fecha_str = timezone.localtime(evaluacion.fecha_limite).strftime('%d/%m/%Y')
+            mensaje = f'Tu profesor ha subido una nueva tarea: "{evaluacion.titulo}", con fecha límite para el {fecha_str}.'
+        else:
+            mensaje = f'Tu profesor ha subido una nueva tarea: "{evaluacion.titulo}".'
+        notificaciones_creadas.append(NotificacionEstudiante.objects.create(
             estudiante=estudiante,
-            tipo='reto_diario_disponible',
-            fecha_creacion__date=hoy
+            tipo='evaluacion_asignada',
+            mensaje=mensaje,
+            datos_adicionales={
+                'evaluacion_id': evaluacion.id,
+                'titulo': evaluacion.titulo,
+                'tipo_evaluacion': evaluacion.tipo,
+                'fecha_limite': evaluacion.fecha_limite.isoformat() if evaluacion.fecha_limite else None
+            }
+        ))
+
+    # 3. Calificación disponible (solo calificaciones recientes)
+    respuestas_calificadas = RespuestaEvaluacion.objects.filter(
+        estudiante=estudiante,
+        calificacion__isnull=False,
+        fecha_calificacion__gte=ahora - timedelta(days=DIAS_MAX_NOTIFICAR)
+    ).select_related('evaluacion')
+
+    for respuesta in respuestas_calificadas:
+        if NotificacionEstudiante.objects.filter(
+            estudiante=estudiante,
+            tipo='calificacion_disponible',
+            datos_adicionales__contains={'respuesta_id': respuesta.id}
         ).exists():
-            reto = retos_activos.first()
-            total_retos = retos_activos.count()
-            notificaciones_creadas.append(NotificacionEstudiante.objects.create(
-                estudiante=estudiante,
-                tipo='reto_diario_disponible',
-                mensaje=f'El reto diario te espera. Tienes {total_retos} reto{"s" if total_retos > 1 else ""} disponible{"s" if total_retos > 1 else ""} para hoy.',
-                datos_adicionales={
-                    'total_retos': total_retos,
-                    'reto_id': reto.id,
-                    'categoria': reto.categoria,
-                    'nivel': reto.nivel
-                }
-            ))
+            continue
+        notificaciones_creadas.append(NotificacionEstudiante.objects.create(
+            estudiante=estudiante,
+            tipo='calificacion_disponible',
+            mensaje=f'Tu profesor calificó tu entrega de "{respuesta.evaluacion.titulo}". Obtuviste {float(respuesta.calificacion):g}/100.',
+            datos_adicionales={
+                'respuesta_id': respuesta.id,
+                'evaluacion_id': respuesta.evaluacion_id,
+                'titulo': respuesta.evaluacion.titulo,
+                'calificacion': float(respuesta.calificacion)
+            }
+        ))
 
     return len(notificaciones_creadas)
 
@@ -147,7 +183,8 @@ def notificaciones_estudiante_view(request):
         generar_notificaciones_estudiante(estudiante)
 
         notificaciones = NotificacionEstudiante.objects.filter(
-            estudiante=estudiante
+            estudiante=estudiante,
+            tipo__in=TIPOS_VISIBLES
         ).order_by('-fecha_creacion')[:50]
         
         serializer = NotificacionEstudianteSerializer(notificaciones, many=True)
@@ -224,7 +261,8 @@ def contador_no_leidas_view(request):
     try:
         count = NotificacionEstudiante.objects.filter(
             estudiante=request.user,
-            leida=False
+            leida=False,
+            tipo__in=TIPOS_VISIBLES
         ).count()
         
         return Response({

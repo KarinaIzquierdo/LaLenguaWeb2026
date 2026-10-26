@@ -5,6 +5,7 @@ import { authService } from '../../services/authService';
 import { asistenciaService } from '../../services/asistenciaService';
 import { calificacionService } from '../../services/calificacionService';
 import './EstudiantesView.css';
+import { toast } from '../../utils/toast';
 
 interface Estudiante {
   id: string;
@@ -328,7 +329,7 @@ export default function EstudiantesView() {
   // Manejar cambio de asistencia: guarda inmediatamente en el backend vinculado a la clase
   const handleAsistenciaChange = async (estudianteId: string, estado: 'presente' | 'ausente') => {
     if (!claseSeleccionada?.id) {
-      alert('Selecciona una clase antes de marcar asistencia');
+      toast('Selecciona una clase antes de marcar asistencia');
       return;
     }
 
@@ -363,7 +364,7 @@ export default function EstudiantesView() {
       ));
     } catch (error) {
       console.error('Error guardando asistencia individual:', error);
-      alert('❌ No se pudo guardar la asistencia. Usa el botón "Guardar Asistencia" para reintentar.');
+      toast('❌ No se pudo guardar la asistencia. Usa el botón "Guardar Asistencia" para reintentar.');
     } finally {
       setGuardandoAsistencia(prev => ({ ...prev, [estudianteId]: false }));
     }
@@ -373,13 +374,13 @@ export default function EstudiantesView() {
   const guardarTodasAsistencias = async () => {
     try {
       if (!claseSeleccionada?.id) {
-        alert('Selecciona una clase antes de guardar las asistencias');
+        toast('Selecciona una clase antes de guardar las asistencias');
         return;
       }
 
       // Validar que haya al menos una asistencia marcada
       if (Object.keys(asistenciasTemporal).length === 0) {
-        alert('Por favor marca al menos una asistencia antes de guardar');
+        toast('Por favor marca al menos una asistencia antes de guardar');
         return;
       }
 
@@ -410,11 +411,11 @@ export default function EstudiantesView() {
         clasesCompletadas: stats[est.id]?.presentes || 0
       })));
 
-      alert('✅ Asistencia guardada correctamente');
+      toast('✅ Asistencia guardada correctamente');
       console.log(`Asistencias guardadas: ${claseSeleccionada?.nombre || 'sin clase'} (${claseSeleccionada?.fecha || 'sin fecha'})`);
     } catch (error) {
       console.error('Error guardando asistencias:', error);
-      alert('❌ Error al guardar las asistencias. Por favor intenta de nuevo.');
+      toast('❌ Error al guardar las asistencias. Por favor intenta de nuevo.', 'error');
     } finally {
       setGuardandoTodasAsistencias(false);
     }

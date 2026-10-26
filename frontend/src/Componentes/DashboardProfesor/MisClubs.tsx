@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import './Dashboard_Profesor.css';
 import { clbService, type Club } from '../../services/clbService';
 import { FaCalendarAlt, FaClock, FaPencilAlt, FaPlus } from 'react-icons/fa';
+import { toast } from '../../utils/toast';
 
 interface MisClubsProps {}
 
@@ -96,7 +97,7 @@ export default function MisClubs(_props: MisClubsProps) {
   const createClub = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim()) {
-      alert('El nombre es obligatorio');
+      toast('El nombre es obligatorio');
       return;
     }
     try {
@@ -113,7 +114,7 @@ export default function MisClubs(_props: MisClubsProps) {
       setSelectedClub(created);
     } catch (e) {
       console.error('Error creating club:', e);
-      alert('No se pudo crear el club');
+      toast('No se pudo crear el club');
     } finally {
       setCreating(false);
     }
@@ -134,7 +135,7 @@ export default function MisClubs(_props: MisClubsProps) {
     e.preventDefault();
     if (!editForm.id) return;
     if (!editForm.name.trim()) {
-      alert('El nombre es obligatorio');
+      toast('El nombre es obligatorio');
       return;
     }
     try {
@@ -150,7 +151,7 @@ export default function MisClubs(_props: MisClubsProps) {
       setShowEditClub(false);
     } catch (e) {
       console.error('Error updating club:', e);
-      alert('No se pudo actualizar el club');
+      toast('No se pudo actualizar el club');
     } finally {
       setSavingEdit(false);
     }
@@ -176,7 +177,7 @@ export default function MisClubs(_props: MisClubsProps) {
       });
     } catch (e) {
       console.error('Error deleting club:', e);
-      alert('No se pudo eliminar el club');
+      toast('No se pudo eliminar el club');
     } finally {
       setDeletingClubId(null);
     }
@@ -239,7 +240,7 @@ export default function MisClubs(_props: MisClubsProps) {
   const addSelectedUsers = async () => {
     if (!selectedClub) return;
     if (selectedUserIds.length === 0) {
-      alert('Selecciona al menos un estudiante.');
+      toast('Selecciona al menos un estudiante.');
       return;
     }
     try {
@@ -250,7 +251,7 @@ export default function MisClubs(_props: MisClubsProps) {
       await loadStudents(selectedClub.id);
     } catch (e) {
       console.error('Error adding selected students:', e);
-      alert('No se pudieron agregar algunos estudiantes.');
+      toast('No se pudieron agregar algunos estudiantes.');
     }
   };
 
@@ -262,7 +263,7 @@ export default function MisClubs(_props: MisClubsProps) {
       await loadStudents(selectedClub.id);
     } catch (e) {
       console.error('Error removing student:', e);
-      alert('No se pudo remover el estudiante.');
+      toast('No se pudo remover el estudiante.');
     }
   };
 
@@ -449,7 +450,7 @@ export default function MisClubs(_props: MisClubsProps) {
                                     await loadStudents(selectedClub.id);
                                   } catch (e) {
                                     console.error('Error adding student:', e);
-                                    alert('No se pudo agregar el estudiante.');
+                                    toast('No se pudo agregar el estudiante.');
                                   }
                                 }}>
                                   Asignar

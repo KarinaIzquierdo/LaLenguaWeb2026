@@ -1,0 +1,45 @@
+/* Toasts de marca — verde-azulado del logo de La Lengua */
+.app-toast-stack {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 99999;
+  pointer-events: none;
+}
+
+.app-toast {
+  background: #6fa8a4;
+  color: #fff;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 4px 14px rgba(111, 168, 164, 0.4);
+  max-width: 340px;
+  animation: app-toast-in 0.25s ease;
+  pointer-events: auto;
+}
+
+.app-toast-error {
+  background: #dc2626;
+  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.35);
+}
+
+.app-toast-info {
+  background: #4b54a1;
+  box-shadow: 0 4px 14px rgba(75, 84, 161, 0.35);
+}
+
+@keyframes app-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

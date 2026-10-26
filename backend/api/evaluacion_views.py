@@ -301,10 +301,10 @@ def upload_respuesta_view(request, pk):
                     Notificacion.objects.create(
                         profesor=profesor,
                         tipo='evaluacion_subida',
-                        titulo=f'Nueva respuesta a "{evaluacion.titulo}"',
+                        titulo=f'Tarea entregada: "{evaluacion.titulo}"',
                         mensaje=(
-                            f'El estudiante {request.user.get_full_name() or request.user.username} '
-                            f'ha subido su tarea para "{evaluacion.titulo}".'
+                            f'{request.user.get_full_name() or request.user.username} '
+                            f'ha enviado su tarea para revisión: "{evaluacion.titulo}".'
                         ),
                         prioridad='media',
                         evaluacion_relacionada=evaluacion,

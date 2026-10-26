@@ -3,6 +3,7 @@ import './ProgramarClase.css';
 import { userService } from '../../services/userService';
 import axios from 'axios';
 import { API_BASE_URL } from '../../config/api';
+import { toast } from '../../utils/toast';
 
 interface EstudianteDisponible {
   id: string;
@@ -316,7 +317,7 @@ export default function ProgramarClase() {
       const { ClaseService } = await import('../../services/claseService');
       const claseCreada = await ClaseService.createClase(claseData);
       
-      alert('¡Clase programada exitosamente!');
+      toast('¡Clase programada exitosamente!');
       
       // Resetear formulario
       setFormulario({
@@ -341,9 +342,9 @@ export default function ProgramarClase() {
           .map(([campo, msgs]) => `${campo}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
           .join(' | ') || null;
       }
-      alert(detalleBackend
+      toast(detalleBackend
         ? `Error al programar la clase: ${detalleBackend}`
-        : 'Error al programar la clase. Intenta nuevamente.');
+        : 'Error al programar la clase. Intenta nuevamente.', 'error');
     }
   };
 

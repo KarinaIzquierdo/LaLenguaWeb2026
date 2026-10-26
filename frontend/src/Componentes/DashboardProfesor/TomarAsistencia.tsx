@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { userService } from '../../services/userService';
 import { asistenciaService } from '../../services/asistenciaService';
 import './TomarAsistencia.css';
+import { toast } from '../../utils/toast';
 
 interface Estudiante {
   id: number;
@@ -106,19 +107,19 @@ export default function TomarAsistencia({
       }));
 
     if (asistenciasParaEnviar.length === 0) {
-      alert('Selecciona al menos un estudiante como Presente o Ausente antes de guardar');
+      toast('Selecciona al menos un estudiante como Presente o Ausente antes de guardar');
       setGuardando(false);
       return;
     }
 
     try {
       const resultado = await asistenciaService.guardarAsistenciaClase(claseId, asistenciasParaEnviar, true);
-      alert(`✅ ${resultado.message || 'Asistencias guardadas correctamente'}`);
+      toast(`✅ ${resultado.message || 'Asistencias guardadas correctamente'}`);
       await onGuardar(asistencias);
     } catch (error: any) {
       const msg = error?.response?.data?.error || error?.response?.data?.message || error.message || 'Error guardando asistencias';
       console.error('Error guardando asistencias:', error);
-      alert(`❌ ${msg}`);
+      toast(`❌ ${msg}`);
     } finally {
       setGuardando(false);
     }

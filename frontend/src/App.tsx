@@ -29,7 +29,7 @@ import RetosDiariosAdmin from './Componentes/DashboardAdmin/RetosDiariosAdmin';
 import RankingRetosAdmin from './Componentes/DashboardAdmin/RankingRetosAdmin';
 import RegistrosEliminacion from './Componentes/DashboardAdmin/RegistrosEliminacion';
 import HistorialDocente from './Componentes/DashboardAdmin/HistorialDocente';
-import NotificacionesProfesor from './Componentes/DashboardProfesor/NotificacionesProfesor';
+import NotificacionesAdmin from './Componentes/DashboardAdmin/NotificacionesAdmin';
 import PantallaCarga from './Componentes/PantallaCarga/PantallaCarga';
 
 function AppContent() {
@@ -240,7 +240,7 @@ function AppContent() {
               <Route path="misiones" element={<MisionesAdmin />} />
               <Route path="retos-diarios" element={<RetosDiariosAdmin />} />
               <Route path="ranking-retos" element={<RankingRetosAdmin />} />
-              <Route path="notificaciones" element={<NotificacionesProfesor />} />
+              <Route path="notificaciones" element={<NotificacionesAdmin />} />
             </Route>
             
             {/* Ruta de login - redirige al home */}

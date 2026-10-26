@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './admin.css';
 import { bloqueService, type BloqueData, type Bloque } from '../../services/bloqueService';
 import { profesorService, type Profesor } from '../../services/profesorService';
+import { toast } from '../../utils/toast';
 
 const niveles = bloqueService.getNivelesDisponibles();
 const turnos = bloqueService.getTurnosDisponibles();
@@ -142,7 +143,7 @@ export default function BloquesView() {
     
     // Validar que se hayan seleccionado profesores
     if (profesoresSeleccionados.length === 0) {
-      alert('Debes seleccionar al menos un profesor');
+      toast('Debes seleccionar al menos un profesor');
       return;
     }
     

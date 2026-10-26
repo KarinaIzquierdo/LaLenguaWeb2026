@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import './CrearEvaluacion.css';
+import { toast } from '../../utils/toast';
 
 interface Pregunta {
   id: string;
@@ -170,7 +171,7 @@ export default function CrearEvaluacion() {
     e.preventDefault();
     console.log('Evaluación creada:', formulario);
     // Aquí iría la lógica para enviar al backend
-    alert('Evaluación creada exitosamente!');
+    toast('Evaluación creada exitosamente!');
     
     // Resetear formulario
     setFormulario({

@@ -3,6 +3,7 @@ import { missionService, type MissionLink } from '../../services/missionService'
 import { userService } from '../../services/userService';
 import './admin.css';
 import './MisionesAdmin.css';
+import { toast } from '../../utils/toast';
 
 export default function MisionesAdmin() {
   const [items, setItems] = useState<MissionLink[]>([]);
@@ -54,22 +55,22 @@ export default function MisionesAdmin() {
     e.preventDefault();
     try {
       if (!form.mission_key || !form.url) {
-        alert('mission_key y url son obligatorios');
+        toast('mission_key y url son obligatorios');
         return;
       }
       if (form.audience_type === 'student' && !form.user) {
-        alert('Selecciona el estudiante al que va dirigida la misión, o cambia la audiencia a Global.');
+        toast('Selecciona el estudiante al que va dirigida la misión, o cambia la audiencia a Global.');
         return;
       }
       if (form.audience_type === 'bloque' && !form.audience_value?.trim()) {
-        alert('Escribe el bloque al que va dirigida la misión (p.ej. B2_Mañana), o cambia la audiencia a Global.');
+        toast('Escribe el bloque al que va dirigida la misión (p.ej. B2_Mañana), o cambia la audiencia a Global.');
         return;
       }
       await missionService.create(form);
       setForm({ mission_key: '', platform: 'custom', url: '', is_active: true, audience_type: 'global' as any, audience_value: '', user: undefined });
       await load();
     } catch (e: any) {
-      alert(e.message || 'No se pudo crear');
+      toast(e.message || 'No se pudo crear');
     }
   };
 

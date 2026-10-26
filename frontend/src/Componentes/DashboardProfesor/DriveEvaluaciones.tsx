@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './DriveEvaluaciones.css';
 import { evaluacionProfesorService, type Estudiante } from '../../services/evaluacionProfesorService';
 import { userService } from '../../services/userService';
+import { toast } from '../../utils/toast';
 
 interface Evaluacion {
   id: number;
@@ -141,7 +142,7 @@ export default function DriveEvaluaciones() {
     try {
       // Validar que haya un enlace
       if (!formData.enlace.trim()) {
-        alert('Debes ingresar un enlace de evaluación.');
+        toast('Debes ingresar un enlace de evaluación.');
         return;
       }
 
@@ -149,7 +150,7 @@ export default function DriveEvaluaciones() {
       if (formData.fecha_limite) {
         const selectedYear = new Date(formData.fecha_limite).getFullYear();
         if (selectedYear > 9999 || selectedYear < 1000) {
-          alert('Por favor, ingresa una fecha límite con un año válido (entre 1000 y 9999).');
+          toast('Por favor, ingresa una fecha límite con un año válido (entre 1000 y 9999).');
           return;
         }
       }
@@ -158,7 +159,7 @@ export default function DriveEvaluaciones() {
       let estudiantesAsignados: number[] = [];
       if (formData.dirigidaA === 'individual') {
         if (!selectedStudentId) {
-          alert('Debes seleccionar un estudiante para una evaluación individual.');
+          toast('Debes seleccionar un estudiante para una evaluación individual.');
           return;
         }
         estudiantesAsignados = [parseInt(selectedStudentId, 10)];
@@ -178,9 +179,9 @@ export default function DriveEvaluaciones() {
           setEvaluaciones(prev => 
             prev.map(ev => ev.id === editingEvaluacion.id ? { ...ev, ...formData, dirigidaA: formData.dirigidaA as 'individual' | 'grupo', estudiantes_asignados: estudiantesAsignados } : ev)
           );
-          alert('Evaluación actualizada correctamente');
+          toast('Evaluación actualizada correctamente');
         } else {
-          alert(result.message || 'Error al actualizar evaluación');
+          toast(result.message || 'Error al actualizar evaluación', 'error');
           return;
         }
       } else {
@@ -218,9 +219,9 @@ export default function DriveEvaluaciones() {
           };
           
           setEvaluaciones(prev => [...prev, nuevaEvaluacion]);
-          alert('Evaluación creada correctamente');
+          toast('Evaluación creada correctamente');
         } else {
-          alert(result.message || 'Error al crear evaluación');
+          toast(result.message || 'Error al crear evaluación', 'error');
           return;
         }
       }
@@ -233,7 +234,7 @@ export default function DriveEvaluaciones() {
       
     } catch (error) {
       console.error('Error guardando evaluación:', error);
-      alert('Error al guardar la evaluación');
+      toast('Error al guardar la evaluación', 'error');
     }
   };
 
@@ -265,13 +266,13 @@ export default function DriveEvaluaciones() {
         
         if (result.success) {
           setEvaluaciones(prev => prev.filter(ev => ev.id !== id));
-          alert(result.message || 'Evaluación eliminada correctamente');
+          toast(result.message || 'Evaluación eliminada correctamente');
         } else {
-          alert(result.message || 'Error al eliminar evaluación');
+          toast(result.message || 'Error al eliminar evaluación', 'error');
         }
       } catch (error) {
         console.error('Error eliminando evaluación:', error);
-        alert('Error al eliminar evaluación');
+        toast('Error al eliminar evaluación', 'error');
       }
     }
   };
@@ -286,13 +287,13 @@ export default function DriveEvaluaciones() {
             ev.id === id ? { ...ev, activa: !ev.activa } : ev
           )
         );
-        alert(result.message || 'Estado actualizado correctamente');
+        toast(result.message || 'Estado actualizado correctamente');
       } else {
-        alert(result.message || 'Error al cambiar estado');
+        toast(result.message || 'Error al cambiar estado', 'error');
       }
     } catch (error) {
       console.error('Error cambiando estado:', error);
-      alert('Error al cambiar estado');
+      toast('Error al cambiar estado', 'error');
     }
   };
 
@@ -328,7 +329,7 @@ export default function DriveEvaluaciones() {
 
   const handleAssignEvaluacion = async () => {
     if (!assigningEvaluacion || selectedStudents.length === 0) {
-      alert('Selecciona al menos un estudiante');
+      toast('Selecciona al menos un estudiante');
       return;
     }
 
@@ -339,7 +340,7 @@ export default function DriveEvaluaciones() {
       );
       
       if (result.success) {
-        alert(result.message || `Evaluación "${assigningEvaluacion.titulo}" asignada a ${selectedStudents.length} estudiante(s)`);
+        toast(result.message || `Evaluación "${assigningEvaluacion.titulo}" asignada a ${selectedStudents.length} estudiante(s)`);
         
         // Recargar evaluaciones para actualizar el contador
         await cargarEvaluaciones();
@@ -348,11 +349,11 @@ export default function DriveEvaluaciones() {
         setAssigningEvaluacion(null);
         setSelectedStudents([]);
       } else {
-        alert(result.message || 'Error al asignar evaluación');
+        toast(result.message || 'Error al asignar evaluación', 'error');
       }
     } catch (error) {
       console.error('Error asignando evaluación:', error);
-      alert('Error al asignar evaluación');
+      toast('Error al asignar evaluación', 'error');
     }
   };
 

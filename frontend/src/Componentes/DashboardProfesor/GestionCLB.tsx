@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import './Dashboard_Profesor.css';
 import './GestionCLB.css';
 import { clbService, type Club, type ClubMaterial } from '../../services/clbService';
+import { toast } from '../../utils/toast';
 
 interface GestionCLBProps {
   profesorId?: number;
@@ -70,15 +71,15 @@ export default function GestionCLB({ profesorId = 1 }: GestionCLBProps) {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedClub) {
-      alert('Selecciona un club');
+      toast('Selecciona un club');
       return;
     }
     if (!form.week || !form.title) {
-      alert('Semana y Título son obligatorios');
+      toast('Semana y Título son obligatorios');
       return;
     }
     if (!editingMaterial && !form.file) {
-      alert('Selecciona un archivo para continuar');
+      toast('Selecciona un archivo para continuar');
       return;
     }
 
@@ -106,7 +107,7 @@ export default function GestionCLB({ profesorId = 1 }: GestionCLBProps) {
     } catch (err: any) {
       console.error('Error creating material:', err);
       const message = err?.message || 'Error al guardar el material. Revisa tu conexión o permisos.';
-      alert(message);
+      toast(message);
     } finally {
       setSaving(false);
     }
@@ -133,7 +134,7 @@ export default function GestionCLB({ profesorId = 1 }: GestionCLBProps) {
       setMaterials(prev => prev.filter(m => m.id !== item.id));
     } catch (err) {
       console.error('Error deleting material:', err);
-      alert('No se pudo eliminar el material.');
+      toast('No se pudo eliminar el material.');
     } finally {
       setDeletingId(null);
     }

@@ -3,6 +3,7 @@ import type { ChatMessage } from '../../services/chatService';
 import { chatService } from '../../services/chatService';
 import { FiSend, FiUser, FiX } from 'react-icons/fi';
 import './Chat.css';
+import { toast } from '../../utils/toast';
 
 interface ChatWindowProps {
   roomId: number;
@@ -105,7 +106,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ roomId, onClose, otherUserName 
       }
     } catch (error) {
       console.error("❌ Error enviando mensaje:", error);
-      alert("No se pudo enviar el mensaje. Reintenta en un momento.");
+      toast("No se pudo enviar el mensaje. Reintenta en un momento.");
     }
   };
 

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { evaluacionService } from '../../services/evaluacionService';
 import QuizTaker from './QuizTaker';
 import './EvaluacionesEstudiante.css';
+import { toast } from '../../utils/toast';
 
 interface EvaluacionEstudiante {
   id: string;
@@ -151,11 +152,11 @@ export default function EvaluacionesEstudiante() {
         link.remove();
         window.URL.revokeObjectURL(url);
       } else {
-        alert('Error al descargar: ' + response.message);
+        toast('Error al descargar: ' + response.message, 'error');
       }
     } catch (error) {
       console.error('Error al descargar evaluación:', error);
-      alert('Error al descargar evaluación');
+      toast('Error al descargar evaluación', 'error');
     }
   };
 
@@ -173,15 +174,15 @@ export default function EvaluacionesEstudiante() {
             comentarios: ''
           });
           if (response.success) {
-            alert('Respuesta subida exitosamente');
+            toast('Respuesta subida exitosamente');
             loadEvaluaciones(); // Recargar evaluaciones
             loadRespuestas();   // Actualizar estado de tareas enviadas
           } else {
-            alert('Error al subir respuesta: ' + response.message);
+            toast('Error al subir respuesta: ' + response.message, 'error');
           }
         } catch (error) {
           console.error('Error al subir respuesta:', error);
-          alert('Error al subir respuesta');
+          toast('Error al subir respuesta', 'error');
         } finally {
           setSubiendoRespuesta(null);
         }

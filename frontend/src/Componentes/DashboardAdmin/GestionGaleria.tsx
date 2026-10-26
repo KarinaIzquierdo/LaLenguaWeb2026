@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './GestionGaleria.css';
 import { galleryService, type MediaItem } from '../../services/galleryService';
+import { toast } from '../../utils/toast';
 
 // Función para cargar medios desde el backend
 const loadMediaFromBackend = async (): Promise<MediaItem[]> => {
@@ -46,7 +47,7 @@ export default function GestionGaleria() {
     try {
       // Subida de archivo con FormData
       if (!formData.file) {
-        alert('Selecciona un archivo para subir.');
+        toast('Selecciona un archivo para subir.');
         setLoading(false);
         return;
       }
@@ -73,7 +74,7 @@ export default function GestionGaleria() {
       setMediaItems(updatedData);
     } catch (error) {
       console.error('Error saving media:', error);
-      alert('Error al guardar el elemento. Por favor intenta de nuevo.');
+      toast('Error al guardar el elemento. Por favor intenta de nuevo.', 'error');
     }
     
     // Reset form
@@ -117,7 +118,7 @@ export default function GestionGaleria() {
         setMediaItems(updatedData);
       } catch (error) {
         console.error('Error deleting media:', error);
-        alert('Error al eliminar el elemento. Por favor intenta de nuevo.');
+        toast('Error al eliminar el elemento. Por favor intenta de nuevo.', 'error');
       }
       setLoading(false);
     }

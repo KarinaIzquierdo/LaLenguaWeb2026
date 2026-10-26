@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import './SubirEvaluaciones.css';
 import evaluacionService from '../../services/evaluacionService';
+import { toast } from '../../utils/toast';
 
 interface EvaluacionSubida {
   id: string;
@@ -101,7 +102,7 @@ export default function SubirEvaluaciones() {
       if (tiposPermitidos.includes(archivo.type)) {
         setArchivoSeleccionado(archivo);
       } else {
-        alert('Por favor selecciona un archivo PDF, Word o de texto');
+        toast('Por favor selecciona un archivo PDF, Word o de texto');
         e.target.value = '';
       }
     }
@@ -128,12 +129,12 @@ export default function SubirEvaluaciones() {
     e.preventDefault();
     
     if (!archivoSeleccionado) {
-      alert('Por favor selecciona un archivo');
+      toast('Por favor selecciona un archivo');
       return;
     }
 
     if (formulario.estudiantesSeleccionados.length === 0) {
-      alert('Por favor selecciona al menos un estudiante');
+      toast('Por favor selecciona al menos un estudiante');
       return;
     }
 
@@ -165,13 +166,13 @@ export default function SubirEvaluaciones() {
         setMostrarFormulario(false);
         
         await loadEvaluaciones(); // Recargar la lista
-        alert('Evaluación subida exitosamente');
+        toast('Evaluación subida exitosamente');
       } else {
         throw new Error(response.message || 'Error al crear la evaluación');
       }
     } catch (err) {
       console.error('Error creating evaluacion:', err);
-      alert(err instanceof Error ? err.message : 'Error al crear la evaluación');
+      toast(err instanceof Error ? err.message : 'Error al crear la evaluación', 'error');
     } finally {
       setLoading(false);
     }
@@ -183,10 +184,10 @@ export default function SubirEvaluaciones() {
       const response = await evaluacionService.publishEvaluacion(id);
       if (response.success) {
         await loadEvaluaciones(); // Recargar la lista
-        alert('Evaluación publicada exitosamente');
+        toast('Evaluación publicada exitosamente');
       }
     } catch (err) {
-      alert('Error al publicar la evaluación');
+      toast('Error al publicar la evaluación', 'error');
       console.error('Error publishing evaluacion:', err);
     } finally {
       setLoading(false);
@@ -200,10 +201,10 @@ export default function SubirEvaluaciones() {
         const response = await evaluacionService.deleteEvaluacion(id);
         if (response.success) {
           await loadEvaluaciones(); // Recargar la lista
-          alert('Evaluación eliminada exitosamente');
+          toast('Evaluación eliminada exitosamente');
         }
       } catch (err) {
-        alert('Error al eliminar la evaluación');
+        toast('Error al eliminar la evaluación', 'error');
         console.error('Error deleting evaluacion:', err);
       } finally {
         setLoading(false);

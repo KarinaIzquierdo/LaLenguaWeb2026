@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import './admin.css';
 import { API_BASE_URL } from '../../config/api';
 import { authService } from '../../services/authService';
+import { toast } from '../../utils/toast';
 
 export interface DailyChallengeAdminItem {
   id: number;
@@ -75,7 +76,7 @@ const RetosDiariosAdmin: React.FC = () => {
     e.preventDefault();
 
     if (!form.pregunta || !form.opcion_a || !form.opcion_b) {
-      alert('La pregunta y al menos las opciones A y B son obligatorias');
+      toast('La pregunta y al menos las opciones A y B son obligatorias');
       return;
     }
 
@@ -111,7 +112,7 @@ const RetosDiariosAdmin: React.FC = () => {
       await load();
     } catch (e: any) {
       console.error('Error guardando reto diario:', e);
-      alert(e.message || 'No se pudo guardar el reto');
+      toast(e.message || 'No se pudo guardar el reto');
     }
   };
 
@@ -135,7 +136,7 @@ const RetosDiariosAdmin: React.FC = () => {
       await load();
     } catch (e: any) {
       console.error('Error eliminando reto diario:', e);
-      alert(e.message || 'No se pudo eliminar el reto');
+      toast(e.message || 'No se pudo eliminar el reto');
     }
   };
 
@@ -153,7 +154,7 @@ const RetosDiariosAdmin: React.FC = () => {
       await load();
     } catch (e: any) {
       console.error('Error actualizando reto diario:', e);
-      alert(e.message || 'No se pudo actualizar el reto');
+      toast(e.message || 'No se pudo actualizar el reto');
     }
   };
 

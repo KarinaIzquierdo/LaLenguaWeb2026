@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './QuizTaker.css';
+import { toast } from '../../utils/toast';
 
 interface QuizTakerProps {
   evaluacion: any;
@@ -152,12 +153,12 @@ export default function QuizTaker({ evaluacion, onClose, onComplete }: QuizTaker
   };
 
   const handleTimeUp = () => {
-    alert('¡Tiempo agotado! El quiz se enviará automáticamente.');
+    toast('¡Tiempo agotado! El quiz se enviará automáticamente.');
     handleSubmitQuiz();
   };
 
   const handleForceClose = () => {
-    alert('Has salido del quiz. Se cerrará automáticamente.');
+    toast('Has salido del quiz. Se cerrará automáticamente.');
     onClose();
   };
 

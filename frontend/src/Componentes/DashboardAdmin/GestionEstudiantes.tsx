@@ -5,6 +5,7 @@ import { especializacionService } from '../../services/especializacionService';
 import { generateStudentReportPDF } from '../../utils/generateStudentReportPDF';
 import ModalEliminarEstudiante from './ModalEliminarEstudiante';
 import type { EliminacionData } from './ModalEliminarEstudiante';
+import { toast } from '../../utils/toast';
 
 const ITEMS_PER_PAGE = 20;
 interface Student {
@@ -160,10 +161,10 @@ const GestionEstudiantes = () => {
       await userService.update(selectedStudent.id, dataToSend);
       setShowEditModal(false);
       loadStudents();
-      alert('Estudiante actualizado correctamente');
+      toast('Estudiante actualizado correctamente');
     } catch (error) {
       console.error('Error actualizando estudiante:', error);
-      alert('Error al actualizar estudiante');
+      toast('Error al actualizar estudiante', 'error');
     }
   };
 
@@ -179,16 +180,16 @@ const GestionEstudiantes = () => {
       const result = await userService.deleteUser(studentToDelete.id, data);
 
       if (result.success) {
-        alert('Estudiante eliminado correctamente. Se ha creado un registro de eliminación.');
+        toast('Estudiante eliminado correctamente. Se ha creado un registro de eliminación.');
         loadStudents();
         setShowDeleteModal(false);
         setStudentToDelete(null);
       } else {
-        alert('Error al eliminar estudiante: ' + result.message);
+        toast('Error al eliminar estudiante: ' + result.message, 'error');
       }
     } catch (error) {
       console.error('Error eliminando estudiante:', error);
-      alert('Error al eliminar estudiante');
+      toast('Error al eliminar estudiante', 'error');
     }
   };
 

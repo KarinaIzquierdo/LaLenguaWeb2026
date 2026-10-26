@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import './DashboardStudent.css';
 import EvaluationModal from './EvaluationModal';
 import ResultsModal from './ResultsModal';
@@ -26,6 +27,7 @@ import ClubMaterialsView from './submodules/ClubMaterialsView';
 import ClassesView from './submodules/ClassesView';
 import ProgressView from './submodules/ProgressView';
 import RewardsView from './submodules/RewardsView';
+import { toast } from '../../utils/toast';
 
 interface DashboardProps {
   onLogout?: () => void;
@@ -83,7 +85,10 @@ const prizeThresholds = [
 ];
 
 export default function LingoLearn({ onLogout }: DashboardProps = {}) {
-  const [activeModule, setActiveModule] = useState<StudentModule>('inicio');
+  const location = useLocation();
+  const [activeModule, setActiveModule] = useState<StudentModule>(
+    (location.state as { module?: StudentModule } | null)?.module || 'inicio'
+  );
 
   const [candies, setCandies] = useState(0);
   const [experience, setExperience] = useState(0);
@@ -259,11 +264,11 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
 
   const openChallengeModal = () => {
     if (hasCompletedToday) {
-      alert('⏰ Ya completaste tu reto de hoy. ¡Vuelve mañana para continuar tu racha!');
+      toast('⏰ Ya completaste tu reto de hoy. ¡Vuelve mañana para continuar tu racha!');
       return;
     }
     if (!dailyChallenges.length) {
-      alert('No hay retos configurados por ahora. Intenta más tarde.');
+      toast('No hay retos configurados por ahora. Intenta más tarde.');
       return;
     }
 
@@ -303,14 +308,14 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
 
   const accederClase = (clase: any) => {
     if (clase.estado !== 'activa') {
-      alert('Esta clase no está disponible aún. El profesor debe iniciarla primero.');
+      toast('Esta clase no está disponible aún. El profesor debe iniciarla primero.');
       return;
     }
     const meetLink = clase.meet_link || clase.meetLink;
     const esLinkInvalido =
       !meetLink || meetLink.trim() === '' || meetLink === 'undefined' || meetLink.includes('meet.google.com/new');
     if (esLinkInvalido) {
-      alert('Esta clase aún no tiene enlace de videoconferencia configurado. Pide a tu profesor que agregue el enlace (Zoom, Meet, Teams, etc.).');
+      toast('Esta clase aún no tiene enlace de videoconferencia configurado. Pide a tu profesor que agregue el enlace (Zoom, Meet, Teams, etc.).');
       return;
     }
     let enlaceCompleto = meetLink;
@@ -755,7 +760,7 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
       await refreshClubs();
     } catch (e) {
       console.error('Error joining club:', e);
-      alert('No se pudo inscribir al club');
+      toast('No se pudo inscribir al club');
     } finally {
       setIsJoiningClub(false);
     }
@@ -769,7 +774,7 @@ export default function LingoLearn({ onLogout }: DashboardProps = {}) {
       setClubMaterials([]);
     } catch (e) {
       console.error('Error leaving club:', e);
-      alert('No se pudo salir del club');
+      toast('No se pudo salir del club');
     }
   };
 

@@ -537,6 +537,25 @@
   color: #94a3b8;
 }
 
+.notification-action {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  background: #667eea;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.2s ease;
+}
+
+.notification-action:hover {
+  background: #5a6fd6;
+}
+
 .unread-dot {
   width: 8px;
   height: 8px;
