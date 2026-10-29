@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { FaPencilAlt, FaTrashAlt, FaPlus, FaSpinner } from 'react-icons/fa';
 import { ClaseService } from '../../services/claseService';
+import { toast } from '../../utils/toast';
 import './GestionClases.css';
 
 interface Clase {
@@ -74,8 +75,11 @@ export default function GestionClases() {
     try {
       await ClaseService.deleteClase(id);
       await cargarClases();
+      toast('Tema de clase eliminado', 'info');
     } catch (err: any) {
-      setError(err?.message || 'Error eliminando clase');
+      const msg = err?.message || 'Error eliminando clase';
+      setError(msg);
+      toast(msg, 'error');
     } finally {
       setIsLoading(false);
     }
@@ -94,13 +98,17 @@ export default function GestionClases() {
       const payload = { ...formData, tema: formData.nombre, profesor: '', hora: '', meet_link: '', estudiantes: [] };
       if (editingClass) {
         await ClaseService.updateClase(editingClass.id, payload);
+        toast('Tema de clase actualizado exitosamente');
       } else {
         await ClaseService.createClase({ ...payload, estado: 'programada' });
+        toast('Tema de clase registrado exitosamente');
       }
       await cargarClases();
       resetForm();
     } catch (err: any) {
-      setError(err?.response?.data?.message || err?.message || 'Error guardando clase');
+      const msg = err?.response?.data?.message || err?.message || 'Error guardando clase';
+      setError(msg);
+      toast(msg, 'error');
     } finally {
       setIsLoading(false);
     }

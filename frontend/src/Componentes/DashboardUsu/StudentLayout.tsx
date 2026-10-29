@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './DashboardStudent.css';
 import { notificationService, type Notificacion } from '../../services/notificationService';
+import { toast } from '../../utils/toast';
 
 export type StudentModule =
   | 'inicio'
@@ -49,6 +50,8 @@ export default function StudentLayout({
   const [unreadCount, setUnreadCount] = useState(0);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
+  const previousNotifIdsRef = useRef<number[] | null>(null);
+
   // Cargar notificaciones
   useEffect(() => {
     loadNotifications();
@@ -64,6 +67,15 @@ export default function StudentLayout({
       ]);
       setNotificaciones(notifs);
       setUnreadCount(count);
+
+      // Si llegan notificaciones nuevas sin leer mientras está conectado, mostrar toast arriba
+      if (previousNotifIdsRef.current !== null) {
+        const nuevas = notifs.filter(n => !n.leida && !previousNotifIdsRef.current?.includes(n.id));
+        nuevas.forEach(n => {
+          toast(n.mensaje, 'info', 'Nueva clase / notificación');
+        });
+      }
+      previousNotifIdsRef.current = notifs.map(n => n.id);
     } catch (error) {
       console.error('Error loading notifications in StudentLayout:', error);
     }

@@ -10,6 +10,7 @@ import { FaEdit, FaTrash, FaPlus, FaSpinner } from 'react-icons/fa';
 import { ClaseService } from '../../services/claseService';
 import { userService } from '../../services/userService';
 import { API_BASE_URL } from '../../config/api';
+import { toast } from '../../utils/toast';
 import './ProgramarClases.css';
 
 /**
@@ -274,8 +275,9 @@ export default function ProgramarClases() {
       const data = await ClaseService.getClases();
       setClases(data);
       setPaginaActual(1);
-    } catch (err) {
-      // Puedes mostrar un error aquí si lo deseas
+      toast('Clase eliminada exitosamente', 'info');
+    } catch (err: any) {
+      toast('Error al eliminar la clase', 'error');
     }
     setIsLoading(false);
   };
@@ -338,8 +340,10 @@ export default function ProgramarClases() {
       
       if (editingClass) {
         await ClaseService.updateClase(editingClass.id, dataToSend);
+        toast('¡Clase actualizada exitosamente!');
       } else {
         await ClaseService.createClase(dataToSend);
+        toast('¡Clase programada exitosamente!');
       }
       const data = await ClaseService.getClases();
       setClases(data);
@@ -352,6 +356,7 @@ export default function ProgramarClases() {
       console.error('Error guardando clase:', err);
       const errorMsg = err?.response?.data?.message || err?.response?.data?.detail || err?.message || 'Error al guardar la clase. Intenta nuevamente.';
       setSubmitError(errorMsg);
+      toast(errorMsg, 'error');
     }
     setIsLoading(false);
   };

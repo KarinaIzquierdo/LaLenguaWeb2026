@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Nav_Usu.css";
 import ProfileModal from "../Profile/ProfileModal";
 // @ts-ignore
 import SettingsModal from "../Settings/SettingsModal";
 import { notificationService, type Notificacion } from "../../services/notificationService";
+import { toast } from "../../utils/toast";
 
 interface NavUsuProps {
   candies: number;
@@ -23,6 +24,8 @@ export default function NavUsu({ candies, experience, userName, onLogout, onOpen
   const [unreadCount, setUnreadCount] = useState(0);
   const navigate = useNavigate();
 
+  const previousNotifIdsRef = useRef<number[] | null>(null);
+
   // Cargar notificaciones
   useEffect(() => {
     loadNotifications();
@@ -39,6 +42,15 @@ export default function NavUsu({ candies, experience, userName, onLogout, onOpen
       ]);
       setNotificaciones(notifs);
       setUnreadCount(count);
+
+      // Si llegan notificaciones nuevas sin leer mientras está en la app, mostrar toast arriba
+      if (previousNotifIdsRef.current !== null) {
+        const nuevas = notifs.filter(n => !n.leida && !previousNotifIdsRef.current?.includes(n.id));
+        nuevas.forEach(n => {
+          toast(n.mensaje, 'info', 'Nueva clase / notificación');
+        });
+      }
+      previousNotifIdsRef.current = notifs.map(n => n.id);
     } catch (error) {
       console.error('Error loading notifications:', error);
     }
