@@ -1,38 +1,41 @@
-/* Toasts de marca — Verde azulado oficial del logo La Lengua (loguito.png) */
+/* Toasts de marca — En el centro de la pantalla con fondo transparente / glass */
 .app-toast-stack {
   position: fixed;
-  top: 24px;
-  right: 24px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 12px;
   z-index: 99999;
   pointer-events: none;
 }
 
 .app-toast {
-  background: linear-gradient(135deg, #377d7b 0%, #4e9b99 100%);
+  background: rgba(55, 125, 123, 0.5);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   color: #ffffff;
-  padding: 12px 16px;
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  box-shadow: 0 12px 30px rgba(55, 125, 123, 0.35), 0 4px 10px rgba(0, 0, 0, 0.1);
+  padding: 14px 20px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.2), 0 4px 16px rgba(55, 125, 123, 0.25);
   min-width: 320px;
-  max-width: 440px;
+  max-width: 480px;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   animation: app-toast-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   pointer-events: auto;
-  backdrop-filter: blur(8px);
 }
 
 .app-toast-icon-wrap {
-  width: 40px;
-  height: 40px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   background: #ffffff;
-  border: 2px solid rgba(255, 255, 255, 0.9);
+  border: 2px solid rgba(255, 255, 255, 0.95);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   display: flex;
   align-items: center;
@@ -58,24 +61,26 @@
   font-weight: 700;
   letter-spacing: 0.5px;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(255, 255, 255, 0.95);
   margin-bottom: 2px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
 }
 
 .app-toast-message {
-  font-size: 13.5px;
-  font-weight: 500;
+  font-size: 14px;
+  font-weight: 600;
   line-height: 1.35;
   color: #ffffff;
   word-break: break-word;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
 }
 
 .app-toast-close {
   background: none;
   border: none;
   color: #ffffff;
-  opacity: 0.75;
-  font-size: 15px;
+  opacity: 0.85;
+  font-size: 16px;
   cursor: pointer;
   padding: 4px;
   border-radius: 6px;
@@ -88,35 +93,33 @@
 
 .app-toast-close:hover {
   opacity: 1;
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .app-toast-error {
-  background: linear-gradient(135deg, #b91c1c 0%, #dc2626 100%);
-  box-shadow: 0 12px 30px rgba(220, 38, 38, 0.35), 0 4px 10px rgba(0, 0, 0, 0.1);
+  background: rgba(220, 38, 38, 0.6);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.2), 0 4px 16px rgba(220, 38, 38, 0.25);
 }
 
 .app-toast-info {
-  background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
-  box-shadow: 0 12px 30px rgba(37, 99, 235, 0.35), 0 4px 10px rgba(0, 0, 0, 0.1);
+  background: rgba(37, 99, 235, 0.6);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.2), 0 4px 16px rgba(37, 99, 235, 0.25);
 }
 
 @keyframes app-toast-in {
   from {
     opacity: 0;
-    transform: translateY(-20px) scale(0.96);
+    transform: scale(0.88);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: scale(1);
   }
 }
 
 @media (max-width: 480px) {
   .app-toast-stack {
-    top: 16px;
-    right: 16px;
-    left: 16px;
+    width: 90%;
   }
   .app-toast {
     min-width: 0;
