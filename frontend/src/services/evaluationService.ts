@@ -16,12 +16,13 @@ export interface EvaluationResultPayload {
 export const EvaluationService = {
   async getEvaluationsForUser(token: string): Promise<any[]> {
     try {
-      const response = await axios.get(`${API_URL}/evaluaciones/`, {
+      const response = await axios.get(`${API_URL}/student/evaluaciones/`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
       });
-      return response.data;
+      const data = response.data?.data ?? response.data ?? [];
+      return Array.isArray(data) ? data : [];
     } catch (error) {
       return [];
     }

@@ -11,9 +11,11 @@ const ChatContainer: React.FC = () => {
   const [selectedRoom, setSelectedRoom] = useState<{id: number, name: string} | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  // Polling para mensajes no leídos
+  // Polling optimizado para mensajes no leídos (reduce sobrecarga de peticiones al servidor)
   useEffect(() => {
     const fetchUnreadCount = async () => {
+      // Si la pestaña está en segundo plano o el usuario no está autenticado, no consumir peticiones
+      if (document.hidden || !localStorage.getItem('token')) return;
       try {
         const count = await chatService.getUnreadCount();
         setUnreadCount(count);
@@ -23,9 +25,21 @@ const ChatContainer: React.FC = () => {
     };
 
     fetchUnreadCount();
-    const interval = setInterval(fetchUnreadCount, 5000); // Cada 5 segundos
+    // Consulta cada 25 segundos en lugar de 5s (reduce el tráfico en un 80%)
+    const interval = setInterval(fetchUnreadCount, 25000);
 
-    return () => clearInterval(interval);
+    // Al regresar a la pestaña activa, actualizar inmediatamente
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        fetchUnreadCount();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [isOpen, selectedRoom]); // Recargar si se abre o se cambia de sala
 
   const toggleChat = () => {
